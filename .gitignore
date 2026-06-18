@@ -1,5 +1,26 @@
+# IDE 및 OS 임시 파일
+.vscode/
+.idea/
+
 *.hex
 *.elf
 *.o
-.vscode/
-.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Flutter / Dart 파트
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/build/
+
+# Android 파트
+app/android/.gradle/
+app/android/local.properties
+app/android/app/generated/
+app/android/app/build/
+
