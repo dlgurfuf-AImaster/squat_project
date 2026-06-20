@@ -1,6 +1,8 @@
+import 'package:app/screens/signup_screen.dart';
+import 'package:app/screens/squat_screen.dart';
 import 'package:flutter/material.dart';
 import '/services/api_service.dart';
-// 나중에 import 화면 추가해줄 것
+import 'main_holder.dart';
 
 /// 로그인 페이지
 class LoginScreen extends StatefulWidget {

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// import provider 필요?
+import '../providers/squat_provider.dart';
 
 /// 스쿼트 페이지
 class SquatScreen extends StatelessWidget {

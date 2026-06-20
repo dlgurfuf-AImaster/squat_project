@@ -1,3 +1,4 @@
+import 'package:app/screens/squat_screen.dart';
 import 'package:flutter/material.dart';
 
 // 탭 바 스크린
