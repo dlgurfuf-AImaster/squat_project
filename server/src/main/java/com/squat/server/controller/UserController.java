@@ -5,6 +5,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.squat.server.dto.LoginRequest;
+import com.squat.server.dto.SignupRequest;
 
 /// 로그인용 유저 컨트롤러
 @RestController
@@ -19,7 +21,7 @@ public class UserController {
 
     // 회원가입 API
     @PostMapping("/signup")
-    public ResponseEntity<String> signup(@RequestBody SignRequest request) {
+    public ResponseEntity<String> signup(@RequestBody SignupRequest request) {
         try {
             String result = userService.signup(request);
             return ResponseEntity.ok(result);
