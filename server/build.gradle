@@ -18,8 +18,13 @@ repositories {
 }
 
 dependencies {
-	// Spring web 만 있는 상태
+	// Spring web
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	// JPA
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	// MariaDB
+	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
