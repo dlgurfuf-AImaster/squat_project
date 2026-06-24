@@ -2,6 +2,7 @@ package com.squat.server.model;
 
 import jakarta.persistence.*;
 
+/// 유저 정보
 @Entity
 @Table(name = "user")
 public class User {
