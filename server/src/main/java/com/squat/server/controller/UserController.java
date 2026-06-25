@@ -1,5 +1,7 @@
 package com.squat.server.controller;
 
+import com.squat.server.model.User;
+import com.squat.server.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
