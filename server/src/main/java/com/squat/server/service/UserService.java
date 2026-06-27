@@ -4,6 +4,7 @@ import com.squat.server.dto.LoginRequest;
 import com.squat.server.dto.SignupRequest;
 import com.squat.server.model.User;
 import com.squat.server.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -12,9 +13,11 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     // 회원가입 서비스
@@ -28,8 +31,11 @@ public class UserService {
         // DTO를 이용해서 받은 정보 새 객체로
         User user = new User();
         user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword()); //TODO 암호화 로직 필요
         user.setName(request.getName());
+
+        // 비밀번호 암호화
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+        user.setPassword(encodedPassword);
 
         // DB에 저장
         userRepository.save(user);
@@ -43,9 +49,10 @@ public class UserService {
         // 아이디로 유저 찾기
         User user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new IllegalArgumentException(loginFailMessage));
         // 비밀번호 대조
-        if (!user.getPassword().equals(request.getPassword())) {
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException(loginFailMessage);
         }
+
         // 성공 시 유저 정보 반환
         return user;
     }
