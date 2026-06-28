@@ -95,21 +95,39 @@ class SquatProvider with ChangeNotifier {
     notifyListeners(); // squat_screen한테 정보 전달
   }
 
-  // 상대 각도 계산 수학 로직
+  // =========================================================================
+  // 🎯 [축별 가중치 필터 세팅] 각 축의 민감도를 0.0 ~ 1.0 사이로 조절하세요!
+  // =========================================================================
+  // 예: X축 위주로 움직이고 Y, Z축이 노이즈라면 Y와 Z의 가중치를 확 낮춥니다.
+  double _weightX = 0.5;
+  double _weightY = 0.1; // 노이즈가 심한 축은 0.1 ~ 0.3 등으로 깎아버리기
+  double _weightZ = 0.1;
+  // =========================================================================
+
+  /// 📐 [필터 적용] 가중치가 반영된 상대 각도 계산 수학 로직
   double _calculateRelativeAngle(List<double> base, List<double> current) {
-    double dotProduct =
-        base[0] * current[0] + base[1] * current[1] + base[2] * current[2];
-    double magnitude =
-        sqrt(base[0] * base[0] + base[1] * base[1] + base[2] * base[2]) *
-        sqrt(
-          current[0] * current[0] +
-              current[1] * current[1] +
-              current[2] * current[2],
-        );
+    // 1. 기준(base) 벡터와 현재(current) 벡터 각각에 축별 가중치(Filter) 적용
+    double bX = base[0] * _weightX;
+    double bY = base[1] * _weightY;
+    double bZ = base[2] * _weightZ;
+
+    double cX = current[0] * _weightX;
+    double cY = current[1] * _weightY;
+    double cZ = current[2] * _weightZ;
+
+    // 2. 가중치가 적용된 새로운 성분으로 내적(Dot Product) 계산
+    double dotProduct = (bX * cX) + (bY * cY) + (bZ * cZ);
+
+    // 3. 가중치가 적용된 벡터들의 크기(Magnitude) 계산
+    double magnitude = sqrt(bX * bX + bY * bY + bZ * bZ) *
+        sqrt(cX * cX + cY * cY + cZ * cZ);
+
+    // 분모가 0이 되어 NaN 에러가 나는 것을 방지
+    if (magnitude == 0) return 0.0;
+
+    // 4. 최종 사이각 계산 및 아크코사인 변환
     return acos((dotProduct / magnitude).clamp(-1.0, 1.0)) * (180.0 / pi);
   }
-
-
 
 
   // 테스트용 (나중에 삭제예정)
