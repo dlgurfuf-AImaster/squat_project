@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:async';
 import '../models/squat_model.dart';
 import 'package:app/services/squat_analyzer.dart';
-import 'package:app/services/MyBluetoothService.dart';
+import 'package:app/services/my_bluetooth_service.dart';
 
 /// 중심 컨트롤 provider
 class SquatProvider with ChangeNotifier {
@@ -41,19 +41,40 @@ class SquatProvider with ChangeNotifier {
     _updateState(status: "영점 조절 완료! 시작하세요.");
   }
 
-  // 아두이노를 켜고 운동 시작 메서드
-  void startBluetoothWorkout() async {
-    _updateState(status: "아두이노 연결 시도 중...");
+  // 프로바이더 내부 상태 정의 (예시)
+  String _connectionStatus = 'DISCONNECTED'; // DISCONNECTED, CONNECTING, CONNECTED
+  String get connectionStatus => _connectionStatus;
 
-    // 아두이노를 찾아 연결 시도
-    await _bluetoothService.connectToArduino("BT05", (waistVec, thighVec) {
-      // 영점 잡기 버튼을 누르는 순간에 영점이 저장 ?? 영점 잡는 시점 수정 필요!, 영점 버튼 만들기
-      if (_baseWaistVec == null || _baseThighVec == null) {
-        calibrate(waistVec, thighVec);
-      }
-      // 데이터 전송
-      updateRawData(waistVec, thighVec);
-    });
+// 아두이노를 켜고 운동 시작 메서드
+  Future<void> startBluetoothWorkout() async {
+    try {
+      // 1. 연결 시도 상태로 변경 및 UI에 알림
+      _connectionStatus = 'CONNECTING';
+      _updateState(status: "아두이노 연결 시도 중...");
+      notifyListeners(); // 👈 상태 변경을 UI에 전파
+
+      // 2. 아두이노를 찾아 연결 시도
+      // (여기서 연결이 완료될 때까지 await이 기다려줍니다)
+      await _bluetoothService.connectToArduino("BT05", (waistVec, thighVec) {
+        // [데이터 콜백 영역] : 연결된 후 센서 데이터가 들어올 때마다 실행됨
+        if (_baseWaistVec == null || _baseThighVec == null) {
+          calibrate(waistVec, thighVec);
+        }
+        updateRawData(waistVec, thighVec);
+      });
+
+      // 3. 🌟 중요: 연결이 성공적으로 수립되면 상태를 'CONNECTED'로 변경
+      _connectionStatus = 'CONNECTED';
+      _updateState(status: "아두이노 연결 완료");
+      notifyListeners(); // 👈 UI 버튼과 카드가 '연결됨'으로 바뀌도록 전파
+
+    } catch (error) {
+      // 연결 실패 시 에러 처리
+      _connectionStatus = 'DISCONNECTED';
+      _updateState(status: "연결 실패: $error");
+      notifyListeners();
+      rethrow; // UI단에서도 에러를 인지할 수 있도록 에러를 던짐
+    }
   }
 
   // 블루투스로부터 오는 데이터 수신처

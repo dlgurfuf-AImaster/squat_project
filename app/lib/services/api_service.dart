@@ -9,7 +9,7 @@ class ApiService {
 
   // ip 주소 계속 바뀜에 유의
   // 서버 ip 주소 입력할 것, ip 주소가 계속 바뀌니까 고려해야 함
-  final String _baseUrl = "http://192.168.219.139:9000/api";
+  final String _baseUrl = "http://10.0.2.2:9000/api";
 
   ApiService._internal() {
     _dio.options.baseUrl = _baseUrl;
