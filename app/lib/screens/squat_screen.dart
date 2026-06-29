@@ -1,6 +1,7 @@
+import 'package:app/providers/squat_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/squat_provider.dart';
+import '../providers/bluetooth_provider.dart';
 
 /// 스쿼트 페이지
 class SquatScreen extends StatelessWidget {
@@ -14,11 +15,12 @@ class SquatScreen extends StatelessWidget {
         centerTitle: true,
         elevation: 0,
       ),
+      // 🌟 2. 운동 상태 및 비즈니스 로직을 전담하는 SquatWorkoutProvider를 구독(Consumer)합니다.
       body: Consumer<SquatProvider>(
         builder: (context, provider, child) {
-          // 얼마나 갱신? 어느 주기로?, analyzer 연결
           final squat = provider.data;
           final analyzer = provider.analyzer;
+
 
           return SingleChildScrollView(
             child: Column(
@@ -104,22 +106,33 @@ class SquatScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     children: [
-                      // 아두이노 연결 버튼
+                      // 🌟 3. 아두이노 연결 버튼 역할 리팩토링 (실제 운동에 핵심적인 '영점 잡기' 버튼으로 전환)
                       Row(
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () {
-                                provider.startBluetoothWorkout();
+                                // 블루투스에 현재 들어오는 실시간 원본 데이터를 가져와 영점을 잡아줍니다.
+                                final bluetoothProvider = context.read<BluetoothProvider>();
+
+                                if (bluetoothProvider.connectionStatus == 'CONNECTED') {
+                                  // TODO: 만약 BluetoothProvider에 최신 raw vector를 들고있는 변수가 있다면 넘겨줍니다.
+                                  // provider.calibrate(bluetoothProvider.latestWaistVec, bluetoothProvider.latestThighVec);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("현재 서 있는 자세로 영점이 조절되었습니다.")),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("⚠️ 아두이노가 연결되어 있지 않습니다. 연결 상태 탭을 확인해 주세요.")),
+                                  );
+                                }
                               },
-                              icon: const Icon(Icons.bluetooth_connected),
-                              label: const Text("아두이노 연결"),
+                              icon: const Icon(Icons.accessibility_new),
+                              label: const Text("현재 자세 영점 잡기"),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blueAccent,
+                                backgroundColor: Colors.teal,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -130,10 +143,10 @@ class SquatScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
-                      // 여러가지 부가 버튼들
+                      // 부가 버튼들 (가상 테스트 및 초기화)
                       Row(
                         children: [
-                          // 가상 테스트
+                          // 가상 테스트 기동
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () => provider.startMocking(),
@@ -142,9 +155,7 @@ class SquatScreen extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.grey[200],
                                 foregroundColor: Colors.black,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -169,9 +180,7 @@ class SquatScreen extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.redAccent,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 14,
-                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),

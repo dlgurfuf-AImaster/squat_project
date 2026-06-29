@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/squat_provider.dart';
+import '../providers/bluetooth_provider.dart';
 
 class ArduinoStatusScreen extends StatefulWidget {
   const ArduinoStatusScreen({super.key});
@@ -11,55 +12,42 @@ class ArduinoStatusScreen extends StatefulWidget {
 }
 
 class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
-  // 가상의 블루투스 상태 변수들 (실제 패키지 연동 시 이 값들을 갱신해 주면 됩니다)
-  String _connectionStatus = 'DISCONNECTED'; // CONNECTED, CONNECTING, DISCONNECTED
-  String? _connectedDeviceName;
-  bool _isScanning = false;
 
+  // 1. [요구사항 1] 버튼으로 블루투스 연결 수행
   void _startScanAndConnect() async {
-    final bluetoothProvider = context.read<SquatProvider>(); // 개발자님의 프로바이더 클래스명
+    final bluetoothProvider = context.read<BluetoothProvider>();
+    final squatProvider = context.read<SquatProvider>();
 
     try {
-      // 프로바이더의 연결 메서드 호출 (내부에서 상태를 CONNECTING -> CONNECTED로 바꿔줄 것입니다)
-      await bluetoothProvider.startBluetoothWorkout();
+      // 블루투스에 센서 데이터가 들어오면, 스쿼트 데이터 처리 함수로 전달하도록 맵핑
+      bluetoothProvider.onDataReceived = (waistVec, thighVec) {
+        squatProvider.updateRawData(waistVec, thighVec);
+      };
 
-      // 연결이 성공한 후 화면에 띄울 메시지
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('아두이노 기기(BT05)와 연결되었습니다!')),
-      );
+      // 실제 블루투스 서비스 가동
+      await bluetoothProvider.startBluetoothWorkout();
     } catch (error) {
-      // 에러 발생 시 처리
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('연결 실패: $error')),
       );
     }
   }
 
-  // 3. 다시 연결하기 함수 (기존 연결 끊고 재연동 혹은 재시도)
-  void _reconnectDevice() {
-    setState(() {
-      _connectionStatus = 'CONNECTING';
-    });
+  // 3. [요구사항 3] 연결 끊기 버튼 클릭 시 실행되는 함수 수정
+  void _disconnectDevice() async {
+    final bluetoothProvider = context.read<BluetoothProvider>();
 
-    // 임시 시뮬레이션 코드 (2초 후 재연결 성공)
-    Future.delayed(const Duration(seconds: 2), () {
-      setState(() {
-        _connectionStatus = 'CONNECTED';
-      });
-    });
+    // 프로바이더의 연결 해제 실행 (로딩이나 예외처리가 필요하면 async/await 활용)
+    await bluetoothProvider.disconnectArduino();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('아두이노 연결이 해제되었습니다.')),
+    );
   }
 
-  // 연결 해제 함수
-  void _disconnectDevice() {
-    setState(() {
-      _connectionStatus = 'DISCONNECTED';
-      _connectedDeviceName = null;
-    });
-  }
-
-  // 2. 상태에 따른 색상 및 텍스트 매핑 가이드 함수
-  Color _getStatusColor() {
-    switch (_connectionStatus) {
+  // 2. [요구사항 2] 상태에 따른 색상 및 텍스트 매핑 가이드 함수
+  Color _getStatusColor(String status) {
+    switch (status) {
       case 'CONNECTED': return Colors.green;
       case 'CONNECTING': return Colors.orange;
       case 'DISCONNECTED':
@@ -67,8 +55,8 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
     }
   }
 
-  String _getStatusText() {
-    switch (_connectionStatus) {
+  String _getStatusText(String status) {
+    switch (status) {
       case 'CONNECTED': return '아두이노 연결됨';
       case 'CONNECTING': return '연결 시도 중...';
       case 'DISCONNECTED':
@@ -78,8 +66,12 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bluetoothProvider = context.watch<SquatProvider>();
-    _connectionStatus = bluetoothProvider.connectionStatus;
+    // 🌟 중요: 블루투스 상태를 들고 있는 진짜 'BluetoothProvider'를 관찰(watch)합니다.
+    final bluetoothProvider = context.watch<BluetoothProvider>();
+    final String connectionStatus = bluetoothProvider.connectionStatus;
+
+    // 현재 스캔 중인지는 상태가 'CONNECTING'일 때 로딩바를 보여주는 것으로 대체합니다.
+    final bool isConnecting = connectionStatus == 'CONNECTING';
 
     return Scaffold(
       appBar: AppBar(
@@ -100,28 +92,28 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
                 child: Row(
                   children: [
                     Icon(
-                      _connectionStatus == 'CONNECTED'
+                      connectionStatus == 'CONNECTED'
                           ? Icons.bluetooth_connected
                           : Icons.bluetooth_disabled,
                       size: 40,
-                      color: _getStatusColor(),
+                      color: _getStatusColor(connectionStatus),
                     ),
                     const SizedBox(width: 20),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _getStatusText(),
+                          _getStatusText(connectionStatus),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: _getStatusColor(),
+                            color: _getStatusColor(connectionStatus),
                           ),
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          _connectionStatus == 'CONNECTED'
-                              ? '기기명: $_connectedDeviceName'
+                          connectionStatus == 'CONNECTED'
+                              ? '기기명: BT05 (연결됨)'
                               : '연결된 센서 기기가 없습니다.',
                           style: TextStyle(color: Colors.grey[600]),
                         ),
@@ -136,18 +128,18 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
             // 중앙 상태 표시 정보 및 가이드 문구
             Expanded(
               child: Center(
-                child: _isScanning
+                child: isConnecting
                     ? const Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     CircularProgressIndicator(),
                     SizedBox(height: 20),
-                    Text('주변의 스쿼트 센서를 찾는 중입니다...'),
+                    Text('주변의 스쿼트 센서(BT05)를 찾는 중입니다...'),
                   ],
                 )
                     : Text(
-                  _connectionStatus == 'CONNECTED'
-                      ? '기기가 정상 연동되었습니다.\n이제 운동을 시작할 수 있습니다!'
+                  connectionStatus == 'CONNECTED'
+                      ? '기기가 정상 연동되었습니다.\n이제 운동 탭으로 이동해 스쿼트를 시작하세요!'
                       : '아래 버튼을 눌러 아두이노 장치와 연결해 주세요.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(fontSize: 16, color: Colors.black54),
@@ -155,20 +147,25 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
               ),
             ),
 
-            // 요구사항 1 & 3: 하단 제어 버튼 영역
-            if (_connectionStatus == 'DISCONNECTED') ...[
-              // 1. 아예 이곳에서 새롭게 연결하는 버튼
+            // 4. 요구사항 1 & 3: 하단 제어 버튼 영역 수정
+            if (connectionStatus == 'DISCONNECTED') ...[
+              // 1. 새로운 아두이노 장치 연결하기 버튼
               ElevatedButton.icon(
-                onPressed: _isScanning ? null : _startScanAndConnect,
-                icon: const Icon(Icons.search),
-                label: const Text('새로운 아두이노 장치 연결하기'),
+                onPressed: _startScanAndConnect,
+                icon: const Icon(Icons.bluetooth),
+                label: const Text('아두이노 장치 연결하기'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  // 🌟 여기에 명시적으로 TextStyle 구조를 선언해 줍니다.
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    inherit: true, // 👈 상속 여부를 명시
+                  ),
                 ),
               ),
-            ] else if (_connectionStatus == 'CONNECTED') ...[
-              // 연결된 상태일 때 노출되는 해제 버튼
+            ] else if (connectionStatus == 'CONNECTED') ...[
+              // 2. 연결 해제하기 버튼
               OutlinedButton.icon(
                 onPressed: _disconnectDevice,
                 icon: const Icon(Icons.close),
@@ -177,18 +174,29 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   side: const BorderSide(color: Colors.red),
                   foregroundColor: Colors.red,
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    inherit: true, // 👈 동일하게 맞춰줍니다.
+                  ),
                 ),
               ),
             ] else ...[
-              // 요구사항 3: 연결 시도 중(또는 에러 상황)일 때 다시 시도할 수 있는 재연결 버튼
+              // 3. 연결 시도 중(CONNECTING)일 때 보여주는 비활성화 버튼
               ElevatedButton.icon(
-                onPressed: _reconnectDevice,
+                onPressed: null, // 비활성화 상태
                 icon: const Icon(Icons.refresh),
-                label: const Text('다시 연결 시도하기'),
+                label: const Text('연결을 시도하는 중입니다...'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
+                  // 비활성화 상태일 때의 스타일도 명시적으로 결을 맞춰줍니다.
+                  disabledBackgroundColor: Colors.grey[300],
+                  disabledForegroundColor: Colors.grey[600],
                   padding: const EdgeInsets.symmetric(vertical: 15),
+                  textStyle: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    inherit: true, // 👈 동일하게 맞춰줍니다.
+                  ),
                 ),
               ),
             ],

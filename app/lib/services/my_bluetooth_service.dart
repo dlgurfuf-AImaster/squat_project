@@ -1,60 +1,81 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class MyBluetoothService {
   BluetoothDevice? targetDevice;
   BluetoothCharacteristic? rxCharacteristic;
-
-  // 쪼개져서 들어오는 문자열 조각들을 모아둘 임시 버퍼
   String _dataBuffer = "";
 
+  // 🌟 Future<void>가 진짜 연결 완료 시점을 보장하도록 수정
   Future<void> connectToArduino(String deviceName, Function(List<double> w, List<double> t) onDataReceived) async {
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
 
-    FlutterBluePlus.scanResults.listen((results) async {
+    // 비동기 작업을 수동으로 제어하기 위한 완료 신호기
+    final Completer<void> connectionCompleter = Completer<void>();
+
+    print("🔎 주변 블루투스 기기 스캔 시작...");
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 7));
+
+    // 스캔 리스트 구독
+    StreamSubscription<List<ScanResult>>? subscription;
+    subscription = FlutterBluePlus.scanResults.listen((results) async {
       for (ScanResult r in results) {
+        // 기기 이름이나 ID가 매칭되는지 확인
         if (r.device.platformName == deviceName || r.device.remoteId.str == deviceName) {
+          print("🎯 기기 발견: ${r.device.platformName} [${r.device.remoteId.str}]");
+
           targetDevice = r.device;
           FlutterBluePlus.stopScan();
+          subscription?.cancel(); // 스캔 구독 해제
 
-          await targetDevice!.connect();
+          try {
+            print("⚡ 아두이노에 물리적 연결 시도 중...");
+            await targetDevice!.connect();
 
-          List<BluetoothService> services = await targetDevice!.discoverServices();
-          for (var service in services) {
-            for (var c in service.characteristics) {
-              if (c.properties.notify) {
-                rxCharacteristic = c;
-                await rxCharacteristic!.setNotifyValue(true);
+            print("📂 서비스 및 캐릭터리스틱 탐색 중...");
+            List<BluetoothService> services = await targetDevice!.discoverServices();
+            for (var service in services) {
+              for (var c in service.characteristics) {
+                if (c.properties.notify) {
+                  rxCharacteristic = c;
+                  await rxCharacteristic!.setNotifyValue(true);
 
-                // 버퍼 초기화
-                _dataBuffer = "";
+                  _dataBuffer = "";
+                  rxCharacteristic!.lastValueStream.listen((value) {
+                    _dataBuffer += utf8.decode(value);
+                    while (_dataBuffer.contains('\n')) {
+                      int newlineIndex = _dataBuffer.indexOf('\n');
+                      String completePacket = _dataBuffer.substring(0, newlineIndex);
+                      _dataBuffer = _dataBuffer.substring(newlineIndex + 1);
+                      _parseAndSend(completePacket, onDataReceived);
+                    }
+                  });
 
-                rxCharacteristic!.lastValueStream.listen((value) {
-                  // 1. 들어온 바이트 데이터를 문자열로 변환하여 버퍼에 계속 이어 붙임
-                  _dataBuffer += utf8.decode(value);
-
-                  // 2. 버퍼 줄바꿈(\n)이 포함되어 있다면 하나의 완성된 패킷. 정보
-                  while (_dataBuffer.contains('\n')) {
-                    int newlineIndex = _dataBuffer.indexOf('\n');
-
-                    // 완성된 한 줄
-                    String completePacket = _dataBuffer.substring(0, newlineIndex);
-                    // 남은 내용은 다시 버퍼에 보관
-                    _dataBuffer = _dataBuffer.substring(newlineIndex + 1);
-
-                    // 3. 조립 완료된 깨끗한 패킷만 파싱 함수로 보냄
-                    _parseAndSend(completePacket, onDataReceived);
-                  }
-                });
-
-                print("🎯 블루투스 버퍼 스트림 개통 완료!");
-                return;
+                  print("🟢 [연결 완전 성공] 블루투스 소켓 및 데이터 스트림 개통 완료!");
+                  connectionCompleter.complete(); // 📢 기다리던 await에게 성공 신호 전달!
+                  return;
+                }
               }
             }
+          } catch (e) {
+            print("❌ 연결 도중 에러 발생: $e");
+            connectionCompleter.completeError("기기 연결 실패: $e");
           }
         }
       }
     });
+
+    // 🌟 7초 동안 기기를 아예 못 찾았을 때의 타임아웃 예외 처리
+    Future.delayed(const Duration(seconds: 7), () {
+      if (!connectionCompleter.isCompleted) {
+        FlutterBluePlus.stopScan();
+        subscription?.cancel();
+        connectionCompleter.completeError("주변에 '$deviceName' 기기를 찾을 수 없습니다. 아두이노 전원을 확인하세요.");
+      }
+    });
+
+    // 🌟 중요: 주입된 completer가 complete() 될 때까지 이 함수는 여기서 딱 멈춰서 기다립니다!
+    return connectionCompleter.future;
   }
 
   void _parseAndSend(String raw, Function(List<double> w, List<double> t) callback) {
@@ -84,6 +105,29 @@ class MyBluetoothService {
     } catch (e) {
       // 파싱 실패하더라도 튕기지 않고 다음 패킷을 기다림
       print("⚠️ 패킷 조립 및 파싱 스킵: $e");
+    }
+  }
+
+  Future<void> disconnectFromArduino() async {
+    try {
+      if (rxCharacteristic != null) {
+        await rxCharacteristic!.setNotifyValue(false);
+        rxCharacteristic = null;
+      }
+
+      // 물리적인 블루투스 연결 해제
+      if (targetDevice != null) {
+        await targetDevice!.disconnect();
+        targetDevice = null;
+      }
+
+      _dataBuffer = "";
+      print("아두이노 블루투스 연결이 해제되었음");
+    } catch (e) {
+      print("연결 해제 중 오류 발생: $e");
+      rxCharacteristic = null;
+      targetDevice = null;
+      _dataBuffer = "";
     }
   }
 }
