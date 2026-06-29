@@ -16,16 +16,13 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
   // 1. [요구사항 1] 버튼으로 블루투스 연결 수행
   void _startScanAndConnect() async {
     final bluetoothProvider = context.read<BluetoothProvider>();
-    final squatProvider = context.read<SquatProvider>();
+    final squatProvider = context.read<SquatProvider>(); // 🌟 운동 프로바이더 가져오기
 
     try {
-      // 블루투스에 센서 데이터가 들어오면, 스쿼트 데이터 처리 함수로 전달하도록 맵핑
-      bluetoothProvider.onDataReceived = (waistVec, thighVec) {
-        squatProvider.updateRawData(waistVec, thighVec);
-      };
-
-      // 실제 블루투스 서비스 가동
-      await bluetoothProvider.startBluetoothWorkout();
+      // 🌟 연결을 시작할 때 운동 타워의 updateRawData 함수를 커넥터로 결합!
+      await bluetoothProvider.startBluetoothWorkout(
+        onParsedData: (w, t) => squatProvider.updateRawData(w, t),
+      );
     } catch (error) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('연결 실패: $error')),
