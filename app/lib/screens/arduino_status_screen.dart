@@ -1,53 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
 import '../providers/squat_provider.dart';
 import '../providers/bluetooth_provider.dart';
 
-class ArduinoStatusScreen extends StatefulWidget {
+class ArduinoStatusScreen extends StatelessWidget {
   const ArduinoStatusScreen({super.key});
 
-  @override
-  State<ArduinoStatusScreen> createState() => _ArduinoStatusScreenState();
-}
-
-class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
-
-  // 1. [요구사항 1] 버튼으로 블루투스 연결 수행
-  void _startScanAndConnect() async {
+  // 장치 연결 수행
+  void _startScanAndConnect(BuildContext context) async {
     final bluetoothProvider = context.read<BluetoothProvider>();
-    final squatProvider = context.read<SquatProvider>(); // 🌟 운동 프로바이더 가져오기
-
     try {
-      // 🌟 연결을 시작할 때 운동 타워의 updateRawData 함수를 커넥터로 결합!
-      await bluetoothProvider.startBluetoothWorkout(
-        onParsedData: (w, t) => squatProvider.updateRawData(w, t),
-      );
+      await bluetoothProvider.startBluetoothWorkout(context);
     } catch (error) {
+      if (!context.mounted) return; // 비동기 작업 후 컨텍스트 유효성 체크
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('연결 실패: $error')),
       );
     }
   }
 
-  // 3. [요구사항 3] 연결 끊기 버튼 클릭 시 실행되는 함수 수정
-  void _disconnectDevice() async {
+  // 장치 연결 해제 수행
+  void _disconnectDevice(BuildContext context) async {
     final bluetoothProvider = context.read<BluetoothProvider>();
+    final squatProvider = context.read<SquatProvider>();
 
-    // 프로바이더의 연결 해제 실행 (로딩이나 예외처리가 필요하면 async/await 활용)
-    await bluetoothProvider.disconnectArduino();
+    await bluetoothProvider.disconnectArduino(squatProvider);
 
+    if (!context.mounted) return; // 비동기 작업 후 컨텍스트 유효성 체크
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('아두이노 연결이 해제되었습니다.')),
     );
   }
 
-  // 2. [요구사항 2] 상태에 따른 색상 및 텍스트 매핑 가이드 함수
   Color _getStatusColor(String status) {
     switch (status) {
       case 'CONNECTED': return Colors.green;
       case 'CONNECTING': return Colors.orange;
-      case 'DISCONNECTED':
       default: return Colors.red;
     }
   }
@@ -56,18 +44,15 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
     switch (status) {
       case 'CONNECTED': return '아두이노 연결됨';
       case 'CONNECTING': return '연결 시도 중...';
-      case 'DISCONNECTED':
       default: return '연결 끊어짐';
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // 🌟 중요: 블루투스 상태를 들고 있는 진짜 'BluetoothProvider'를 관찰(watch)합니다.
+    // 글로벌 블루투스 연결 상태 관찰
     final bluetoothProvider = context.watch<BluetoothProvider>();
     final String connectionStatus = bluetoothProvider.connectionStatus;
-
-    // 현재 스캔 중인지는 상태가 'CONNECTING'일 때 로딩바를 보여주는 것으로 대체합니다.
     final bool isConnecting = connectionStatus == 'CONNECTING';
 
     return Scaffold(
@@ -80,7 +65,7 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 요구사항 2: 현재 상태를 시각적으로 확인할 수 있는 상단 카드 영역
+            // 상태 시각화 카드
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -122,7 +107,7 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
             ),
             const SizedBox(height: 40),
 
-            // 중앙 상태 표시 정보 및 가이드 문구
+            // 중앙 안내 문구 및 인디케이터 영역
             Expanded(
               child: Center(
                 child: isConnecting
@@ -144,56 +129,39 @@ class _ArduinoStatusScreenState extends State<ArduinoStatusScreen> {
               ),
             ),
 
-            // 4. 요구사항 1 & 3: 하단 제어 버튼 영역 수정
+            // 하단 상태별 제어 버튼 분기
             if (connectionStatus == 'DISCONNECTED') ...[
-              // 1. 새로운 아두이노 장치 연결하기 버튼
               ElevatedButton.icon(
-                onPressed: _startScanAndConnect,
+                onPressed: () => _startScanAndConnect(context),
                 icon: const Icon(Icons.bluetooth),
                 label: const Text('아두이노 장치 연결하기'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  // 🌟 여기에 명시적으로 TextStyle 구조를 선언해 줍니다.
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    inherit: true, // 👈 상속 여부를 명시
-                  ),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, inherit: true),
                 ),
               ),
             ] else if (connectionStatus == 'CONNECTED') ...[
-              // 2. 연결 해제하기 버튼
               OutlinedButton.icon(
-                onPressed: _disconnectDevice,
+                onPressed: () => _disconnectDevice(context),
                 icon: const Icon(Icons.close),
                 label: const Text('연결 해제하기'),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   side: const BorderSide(color: Colors.red),
                   foregroundColor: Colors.red,
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    inherit: true, // 👈 동일하게 맞춰줍니다.
-                  ),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, inherit: true),
                 ),
               ),
             ] else ...[
-              // 3. 연결 시도 중(CONNECTING)일 때 보여주는 비활성화 버튼
               ElevatedButton.icon(
-                onPressed: null, // 비활성화 상태
+                onPressed: null,
                 icon: const Icon(Icons.refresh),
                 label: const Text('연결을 시도하는 중입니다...'),
                 style: ElevatedButton.styleFrom(
-                  // 비활성화 상태일 때의 스타일도 명시적으로 결을 맞춰줍니다.
                   disabledBackgroundColor: Colors.grey[300],
                   disabledForegroundColor: Colors.grey[600],
                   padding: const EdgeInsets.symmetric(vertical: 15),
-                  textStyle: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    inherit: true, // 👈 동일하게 맞춰줍니다.
-                  ),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, inherit: true),
                 ),
               ),
             ],

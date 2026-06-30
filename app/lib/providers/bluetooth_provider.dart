@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:app/providers/squat_provider.dart';
 import 'package:app/services/my_bluetooth_service.dart';
 
 class BluetoothProvider with ChangeNotifier {
@@ -7,31 +9,20 @@ class BluetoothProvider with ChangeNotifier {
   String _connectionStatus = 'DISCONNECTED';
   String get connectionStatus => _connectionStatus;
 
-  Function(List<double> waistVec, List<double> thighVec)? onDataReceived;
-
-  List<double>? _latestWaistVec;
-  List<double>? _latestThighVec;
-  List<double>? get latestWaistVec => _latestWaistVec;
-  List<double>? get latestThighVec => _latestThighVec;
-
-  // 🌟 변경 포인트: 메서드가 실행될 때 외부(SquatProvider의 수신부) 콜백을 주입받습니다.
-  Future<void> startBluetoothWorkout({Function(List<double> w, List<double> t)? onParsedData}) async {
+  /// 아두이노 블루투스 연결 및 데이터 흐름 개통
+  Future<void> startBluetoothWorkout(BuildContext context) async {
     try {
       _connectionStatus = 'CONNECTING';
       notifyListeners();
 
+      // 블루투스 기기(BT05) 연결 및 실시간 데이터 바인딩 시도
       await _bluetoothService.connectToArduino("BT05", (waistVec, thighVec) {
-        _latestWaistVec = waistVec;
-        _latestThighVec = thighVec;
-
-        // 1. 기존에 클래스 내부 필드에 등록된 콜백이 있다면 실행
-        if (onDataReceived != null) {
-          onDataReceived!(waistVec, thighVec);
-        }
-
-        // 🌟 2. 메서드 인자로 들어온 실시간 파이프라인 콜백(SquatProvider)으로 데이터 토스!
-        if (onParsedData != null) {
-          onParsedData(waistVec, thighVec);
+        try {
+          // 실시간으로 유입되는 원본 센서 데이터를 현재 활성화된 SquatProvider로 전송
+          final squatProvider = context.read<SquatProvider>();
+          squatProvider.updateRawData(waistVec, thighVec);
+        } catch (e) {
+          print("🚨 스트림 내부에서 SquatProvider 호출 실패: $e");
         }
       });
 
@@ -44,11 +35,18 @@ class BluetoothProvider with ChangeNotifier {
     }
   }
 
-  Future<void> disconnectArduino() async {
+  /// 아두이노 연결 해제 및 상위 상태 원점 복구
+  Future<void> disconnectArduino(SquatProvider squatProvider) async {
     try {
+      // 1) 하드웨어 연결 및 소켓 스트림 완전 종료 (Service 내부에서 취소 처리됨)
       await _bluetoothService.disconnectFromArduino();
     } finally {
+      // 2) 프로바이더 연결 상태 값 갱신
       _connectionStatus = 'DISCONNECTED';
+
+      // 3) 운동 중이던 상태 스위치를 강제로 내림 (안전장치 구동)
+      squatProvider.stopReadingOnDisconnect();
+
       notifyListeners();
     }
   }
