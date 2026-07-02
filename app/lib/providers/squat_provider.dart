@@ -3,7 +3,7 @@ import 'dart:math';
 import 'dart:async';
 import '../models/squat_model.dart';
 import 'package:app/services/squat_analyzer.dart';
-import 'package:app/services/MyBluetoothService.dart';
+import 'package:app/services/my_bluetooth_service.dart';
 
 /// 중심 컨트롤 provider
 class SquatProvider with ChangeNotifier {
