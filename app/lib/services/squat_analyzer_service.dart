@@ -1,4 +1,4 @@
-class SquatAnalyzer {
+class SquatAnalyzerService {
   // 현재 유저의 운동 상태를 정의
   String _currentState = "STAND";
 
