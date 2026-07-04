@@ -1,5 +1,3 @@
-import 'dart:math';
-import 'dart:async'; // startMocking 타이머용
 import 'package:flutter/material.dart';
 import '../models/squat_model.dart';
 import 'package:app/services/squat_analyzer_service.dart';
@@ -95,7 +93,7 @@ class SquatProvider with ChangeNotifier {
       status: "아두이노 연결 후 운동 시작을 눌러주세요.",
     );
     notifyListeners();
-  } //TODO 이 메소드도 서비스로 옮길 생각
+  }
 
   /// 내부 상태 객체 일괄 갱신 헬퍼 메서드
   void _updateState({double? waist, double? thigh, int? count, String? status}) {
@@ -106,24 +104,5 @@ class SquatProvider with ChangeNotifier {
       status: status ?? _data.status,
     );
     notifyListeners(); // UI 계층 실시간 새로고침 전파
-  }
-
-  /// [테스트용] 가상 센서 패킷 제너레이터 (Mocking)
-  void startMocking() {
-    reset();
-    _isReading = true;
-    int tick = 0;
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!_isReading) {
-        timer.cancel();
-        return;
-      }
-      tick++;
-      double factor = (sin(tick * 0.1).abs());
-      List<double> virtualThighVec = [10.0 * (1 - factor), 3.0 * factor, -10.0 * factor];
-      List<double> virtualWaistVec = [10.0 * (1 - factor * 0.3), 1.0 * factor * 0.3, -3.0 * factor * 0.3];
-
-      updateRawData(virtualWaistVec, virtualThighVec);
-    });
   }
 }
