@@ -1,3 +1,5 @@
+import 'dart:math';
+
 class SquatAnalyzerService {
   // 현재 유저의 운동 상태를 정의
   String _currentState = "STAND";
@@ -20,16 +22,12 @@ class SquatAnalyzerService {
   // 튜닝 파라미터? 튜닝 포인트!
   // 1. 시작 각도 설정
   final double _startSquatThreshold = 30.0;
-
   // 2. 정석 스쿼트 깊이 정도
   final double _fullSquatThreshold = 85.0;
-
   // 3. 완전히 일어남 인정 각도
   final double _getUpThreshold = 30.0;
-
   // 4. 허리가 과도하게 숙여졌을 때, 허리 각도
   final double _waistLeanMax = 40.0;
-
   // 얕은 스쿼트를 잡아내기 위해 가장 깊이 앉은 각도 기록 (문제가 생길 수 있을 듯)
   double _maxThighAngleInCurrentRep = 0.0;
 
@@ -111,4 +109,17 @@ class SquatAnalyzerService {
     }
     return message;
   }
+
+  /// 3차원 공간 상의 두 벡터 간 사이 각도를 구하는 수학 메서드
+  double calculateRelativeAngle(List<double> base, List<double> current) {
+    if (base.length < 3 || current.length < 3) return 0.0; // 데이터 누락 예외 방어
+
+    double dotProduct = base[0] * current[0] + base[1] * current[1] + base[2] * current[2];
+    double magnitude = sqrt(base[0] * base[0] + base[1] * base[1] + base[2] * base[2]) *
+        sqrt(current[0] * current[0] + current[1] * current[1] + current[2] * current[2]);
+
+    if (magnitude == 0) return 0.0; // 0 나누기 오류 방지
+    return acos((dotProduct / magnitude).clamp(-1.0, 1.0)) * (180.0 / pi);
+  }
+
 }

@@ -52,8 +52,8 @@ class SquatProvider with ChangeNotifier {
 
     try {
       // 3차원 공간 벡터 삼각함수 연산을 통한 상대 각도 추출
-      double wAngle = _calculateRelativeAngle(_baseWaistVec!, currentW);
-      double tAngle = _calculateRelativeAngle(_baseThighVec!, currentT);
+      double wAngle = _analyzer.calculateRelativeAngle(_baseWaistVec!, currentW);
+      double tAngle = _analyzer.calculateRelativeAngle(_baseThighVec!, currentT);
 
       // 자세 분석기를 통한 스쿼트 성공/실패 판별
       String analysisResult = _analyzer.analyze(wAngle, tAngle);
@@ -107,18 +107,6 @@ class SquatProvider with ChangeNotifier {
     );
     notifyListeners(); // UI 계층 실시간 새로고침 전파
   }
-
-  /// 3차원 공간 상의 두 벡터 간 사이 각도를 구하는 수학 메서드
-  double _calculateRelativeAngle(List<double> base, List<double> current) {
-    if (base.length < 3 || current.length < 3) return 0.0; // 데이터 누락 예외 방어
-
-    double dotProduct = base[0] * current[0] + base[1] * current[1] + base[2] * current[2];
-    double magnitude = sqrt(base[0] * base[0] + base[1] * base[1] + base[2] * base[2]) *
-        sqrt(current[0] * current[0] + current[1] * current[1] + current[2] * current[2]);
-
-    if (magnitude == 0) return 0.0; // 0 나누기 오류 방지
-    return acos((dotProduct / magnitude).clamp(-1.0, 1.0)) * (180.0 / pi);
-  } //TODO 이 메소드는 서비스 파트로 옮길 것
 
   /// [테스트용] 가상 센서 패킷 제너레이터 (Mocking)
   void startMocking() {
