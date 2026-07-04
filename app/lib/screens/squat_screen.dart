@@ -12,7 +12,6 @@ class SquatScreen extends StatelessWidget {
     // 두 프로바이더의 상태 변화를 상단에서 정확하게 관찰
     final squatProvider = context.watch<SquatProvider>();
     final squat = squatProvider.data;
-    final analyzer = squatProvider.analyzer;
 
     final connectionStatus = context.select<BluetoothProvider, String>(
           (p) => p.connectionStatus, // 여기는 선택적으로 이곳만 보면 되서 select
@@ -50,7 +49,7 @@ class SquatScreen extends StatelessWidget {
 
             // 3. 메인 스쿼트 성공 카운터
             Text(
-              "${squat.count}",
+              "${squat.successCount}",
               style: const TextStyle(fontSize: 90, fontWeight: FontWeight.bold, color: Colors.blueAccent),
             ),
             const Text(
@@ -73,9 +72,9 @@ class SquatScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildErrorCard("허리 과숙임", analyzer.waistErrorCount, Colors.orange),
-                      _buildErrorCard("얕은 깊이", analyzer.depthErrorCount, Colors.red),
-                      _buildErrorCard("상체 선행", analyzer.goodMorningCount, Colors.purple),
+                      _buildErrorCard("허리 과숙임", squat.waistErrorCount, Colors.orange),
+                      _buildErrorCard("얕은 깊이", squat.depthErrorCount, Colors.red),
+                      _buildErrorCard("상체 선행", squat.goodMorningCount, Colors.purple),
                     ],
                   ),
                 ],

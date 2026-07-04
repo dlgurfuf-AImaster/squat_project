@@ -53,16 +53,8 @@ class SquatProvider with ChangeNotifier {
       double wAngle = _analyzer.calculateRelativeAngle(_baseWaistVec!, currentW);
       double tAngle = _analyzer.calculateRelativeAngle(_baseThighVec!, currentT);
 
-      // 자세 분석기를 통한 스쿼트 성공/실패 판별
-      String analysisResult = _analyzer.analyze(wAngle, tAngle);
-      String newStatus = analysisResult.isNotEmpty ? analysisResult : _data.status;
-
-      _updateState(
-        waist: wAngle,
-        thigh: tAngle,
-        count: _analyzer.successCount,
-        status: newStatus,
-      );
+      _data = _analyzer.analyze(_data, wAngle, tAngle);
+      notifyListeners();
     } catch (e) {
       print("🚨 상대 각도 연산 및 자세 분석 도중 예외 발생: $e");
     }
@@ -70,12 +62,14 @@ class SquatProvider with ChangeNotifier {
 
   /// 순수 운동 카운트 및 피드백 통계만 초기화 (영점/각도는 유지)
   void resetCountersOnly() {
-    _analyzer.reset();
-    _data = SquatData(
-      waistAngle: _data.waistAngle,
-      thighAngle: _data.thighAngle,
-      count: 0,
+    _analyzer.resetMaxAngle();
+    _data = _data.copyWith(
+      successCount: 0,
+      waistErrorCount: 0,
+      depthErrorCount: 0,
+      goodMorningCount: 0,
       status: "📊 운동 기록이 초기화되었습니다. 계속 운동해 주세요!",
+      currentState: "STAND",
     );
     notifyListeners();
   }
@@ -85,23 +79,21 @@ class SquatProvider with ChangeNotifier {
     _isReading = false;
     _baseWaistVec = null;
     _baseThighVec = null;
-    _analyzer.reset();
+    _analyzer.resetMaxAngle();
     _data = SquatData(
       waistAngle: 0.0,
       thighAngle: 0.0,
-      count: 0,
-      status: "아두이노 연결 후 운동 시작을 눌러주세요.",
+      status: "정지됨",
     );
     notifyListeners();
   }
 
   /// 내부 상태 객체 일괄 갱신 헬퍼 메서드
-  void _updateState({double? waist, double? thigh, int? count, String? status}) {
-    _data = SquatData(
-      waistAngle: waist ?? _data.waistAngle,
-      thighAngle: thigh ?? _data.thighAngle,
-      count: count ?? _data.count,
-      status: status ?? _data.status,
+  void _updateState({double? waist, double? thigh, String? status}) {
+    _data = _data.copyWith(
+      waistAngle: waist,
+      thighAngle: thigh,
+      status: status,
     );
     notifyListeners(); // UI 계층 실시간 새로고침 전파
   }
