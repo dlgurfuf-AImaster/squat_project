@@ -62,7 +62,7 @@ class SquatProvider with ChangeNotifier {
 
   /// 순수 운동 카운트 및 피드백 통계만 초기화 (영점/각도는 유지)
   void resetCountersOnly() {
-    _analyzer.resetMaxAngle();
+    _analyzer.resetCurrentRepFlags();
     _data = _data.copyWith(
       successCount: 0,
       waistErrorCount: 0,
@@ -79,7 +79,7 @@ class SquatProvider with ChangeNotifier {
     _isReading = false;
     _baseWaistVec = null;
     _baseThighVec = null;
-    _analyzer.resetMaxAngle();
+    _analyzer.resetCurrentRepFlags();
     _data = SquatData(
       waistAngle: 0.0,
       thighAngle: 0.0,
