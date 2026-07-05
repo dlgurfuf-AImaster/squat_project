@@ -1,62 +1,38 @@
+import 'dart:math';
+import '../models/squat_model.dart';
+
 class SquatAnalyzerService {
-  // 현재 유저의 운동 상태를 정의
-  String _currentState = "STAND";
-
-  String get currentState => _currentState;
-
-  // 통계용 카운터 변수들
-  int _successCount = 0; // 성공 개수
-  int _waistErrorCount = 0; // 허리 과숙임 개수
-  int _depthErrorCount = 0; // 얕은 스쿼트 개수
-  int _goodMorningCount = 0; // 엉덩이 선행 개수
-
-  // 외부에서 값을 읽어갈 수 있도록 getter
-  int get successCount => _successCount;
-
-  int get waistErrorCount => _waistErrorCount; // 1번 오류
-  int get depthErrorCount => _depthErrorCount; // 2번 오류
-  int get goodMorningCount => _goodMorningCount; // 3번 오류
-
-  // 튜닝 파라미터? 튜닝 포인트!
-  // 1. 시작 각도 설정
+  // 튜닝 파라미터 고정
   final double _startSquatThreshold = 30.0;
-
-  // 2. 정석 스쿼트 깊이 정도
   final double _fullSquatThreshold = 85.0;
-
-  // 3. 완전히 일어남 인정 각도
   final double _getUpThreshold = 30.0;
-
-  // 4. 허리가 과도하게 숙여졌을 때, 허리 각도
   final double _waistLeanMax = 40.0;
 
-  // 얕은 스쿼트를 잡아내기 위해 가장 깊이 앉은 각도 기록 (문제가 생길 수 있을 듯)
   double _maxThighAngleInCurrentRep = 0.0;
 
-  /// 상태 및 카운트 초기화 (영점 잡을 때 호출)
-  void reset() {
-    _currentState = "STAND";
-    _successCount = 0;
-    _waistErrorCount = 0;
-    _depthErrorCount = 0;
-    _goodMorningCount = 0;
+  void resetMaxAngle() {
     _maxThighAngleInCurrentRep = 0.0;
   }
 
-  /// [핵심 알고리즘] 3대 불량 자세 및 정상 스쿼트 판별 로직
-  String analyze(double waistAngle, double thighAngle) {
-    // 1. 센서 노이즈로 인해 각도가 마이너스로 튀거나 역전되는 현상 방지
+  /// [핵심 알고리즘]
+  /// 이전 SquatData 상태를 받아와서, 새로운 각도로 계산된 '새로운 SquatData'를 반환합니다.
+  SquatData analyze(SquatData previousData, double waistAngle, double thighAngle) {
     double cleanThigh = thighAngle.clamp(0.0, 180.0);
     double cleanWaist = waistAngle.clamp(0.0, 180.0);
 
-    String message = "";
+    // 기본적으로 이전 카운트 상태를 그대로 복사해옵니다.
+    String nextState = previousData.currentState;
+    String message = previousData.status;
+    int success = previousData.successCount;
+    int waistErr = previousData.waistErrorCount;
+    int depthErr = previousData.depthErrorCount;
+    int gmErr = previousData.goodMorningCount;
 
-    switch (_currentState) {
+    switch (nextState) {
       case "STAND":
         _maxThighAngleInCurrentRep = 0.0;
-
         if (cleanThigh > _startSquatThreshold) {
-          _currentState = "GOING_DOWN";
+          nextState = "GOING_DOWN";
           message = "내려가는 중... 더 깊게 앉으세요!";
         } else {
           message = "바르게 서서 스쿼트를 시작하세요.";
@@ -64,51 +40,73 @@ class SquatAnalyzerService {
         break;
 
       case "GOING_DOWN":
-        // 실시간 내려간 각도 중 가장 깊은 각도 갱신
         if (cleanThigh > _maxThighAngleInCurrentRep) {
           _maxThighAngleInCurrentRep = cleanThigh;
         }
 
         // [1번 오류 감지]
         if (cleanWaist > _waistLeanMax) {
-          _waistErrorCount++;
+          waistErr++;
           message = "❌ 경고: 허리가 너무 숙여졌습니다! (상체 세우기)";
-          _currentState = "STAND"; // 상태 리셋
+          nextState = "STAND";
           break;
         }
 
         if (cleanThigh >= _fullSquatThreshold) {
-          _currentState = "FULL_SQUAT";
+          nextState = "FULL_SQUAT";
           message = "좋습니다! 그대로 천천히 일어나세요.";
         }
-        // [2번 오류 감지] 너무 일찍 일어나 버린 경우 처리
+        // [2번 오류 감지]
         else if (cleanThigh < _getUpThreshold) {
           if (_maxThighAngleInCurrentRep < _fullSquatThreshold) {
-            _depthErrorCount++;
+            depthErr++;
             message = "❌ 무효: 너무 얕게 앉았습니다! 더 깊게 앉으세요.";
           }
-          _currentState = "STAND";
+          nextState = "STAND";
         }
         break;
 
       case "FULL_SQUAT":
         if (cleanThigh <= _getUpThreshold) {
-          // [3번 오류 감지] 허벅지는 일어났는데, 허리는 여전히 숙여져 있는 경우
+          // [3번 오류 감지]
           if (cleanWaist > _waistLeanMax) {
-            _goodMorningCount++;
+            gmErr++;
             message = "❌ 무효: 일어날 때 상체가 뒤늦게 펴졌습니다 (허리 부담 위험)!";
-            _currentState = "STAND";
+            nextState = "STAND";
           } else {
-            _successCount++;
-            message = "✨ 스쿼트 ${_successCount}회 성공! 아주 좋습니다.";
-            _currentState = "STAND";
+            success++;
+            message = "✨ 스쿼트 ${success}회 성공! 아주 좋습니다.";
+            nextState = "STAND";
           }
         } else {
-          // 유지 메세지
           message = "좋습니다! 끝까지 무릎을 펴고 일어나세요.";
         }
         break;
     }
-    return message;
+
+    // 💡 최종 계산된 알맹이들을 copyWith를 통해 완전 새 스냅샷 객체로 조립하여 반환!
+    return previousData.copyWith(
+      waistAngle: cleanWaist,
+      thighAngle: cleanThigh,
+      status: message,
+      currentState: nextState,
+      successCount: success,
+      waistErrorCount: waistErr,
+      depthErrorCount: depthErr,
+      goodMorningCount: gmErr,
+    );
   }
+
+  /// 3차원 공간 상의 두 벡터 간 사이 각도를 구하는 수학 메서드
+  double calculateRelativeAngle(List<double> base, List<double> current) {
+    if (base.length < 3 || current.length < 3) return 0.0; // 데이터 누락 예외 방어
+
+    double dotProduct = base[0] * current[0] + base[1] * current[1] + base[2] * current[2];
+    double magnitude = sqrt(base[0] * base[0] + base[1] * base[1] + base[2] * base[2]) *
+        sqrt(current[0] * current[0] + current[1] * current[1] + current[2] * current[2]);
+
+    if (magnitude == 0) return 0.0; // 0 나누기 오류 방지
+    return acos((dotProduct / magnitude).clamp(-1.0, 1.0)) * (180.0 / pi);
+  }
+
 }
