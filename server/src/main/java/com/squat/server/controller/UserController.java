@@ -1,5 +1,6 @@
 package com.squat.server.controller;
 
+import com.squat.server.dto.LoginResponse;
 import com.squat.server.model.User;
 import com.squat.server.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -36,8 +37,8 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         try {
-            User loggedInUser = userService.login(request);
-            return ResponseEntity.ok(loggedInUser); // 세션 유지를 위해 리턴 할 것
+            LoginResponse response = userService.login(request);
+            return ResponseEntity.ok(response); // 세션 유지를 위해 리턴 할 것
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

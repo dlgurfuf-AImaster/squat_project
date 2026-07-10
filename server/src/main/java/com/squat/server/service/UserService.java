@@ -1,7 +1,9 @@
 package com.squat.server.service;
 
 import com.squat.server.dto.LoginRequest;
+import com.squat.server.dto.LoginResponse;
 import com.squat.server.dto.SignupRequest;
+import com.squat.server.jwt.JwtProvider;
 import com.squat.server.model.User;
 import com.squat.server.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,10 +16,12 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtProvider jwtProvider) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtProvider = jwtProvider;
     }
 
     // 회원가입 서비스
@@ -43,17 +47,20 @@ public class UserService {
     }
 
     // 로그인 서비스
-    public User login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request) {
         String loginFailMessage = "아이디 또는 비밀번호가 일치하지 않습니다.";
 
         // 아이디로 유저 찾기
-        User user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new IllegalArgumentException(loginFailMessage));
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new IllegalArgumentException(loginFailMessage));
         // 비밀번호 대조
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException(loginFailMessage);
         }
 
+        String token = jwtProvider.createToken(user.getUsername());
+
         // 성공 시 유저 정보 반환
-        return user;
+        return new LoginResponse(token, user.getName());
     }
 }
