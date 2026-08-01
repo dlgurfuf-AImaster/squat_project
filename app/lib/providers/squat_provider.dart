@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/squat_model.dart';
 import 'package:app/services/squat_analyzer_service.dart';
 
+import '../utils/low_pass_filter.dart';
+
 class SquatProvider with ChangeNotifier {
   // 화면에 그릴 상태 데이터 계층 (상태값 캡슐화)
   SquatData _data = SquatData(waistAngle: 0.0, thighAngle: 0.0);
@@ -12,6 +14,10 @@ class SquatProvider with ChangeNotifier {
 
   List<double>? _baseWaistVec; // 기준점(영점) 허리 벡터
   List<double>? _baseThighVec; // 기준점(영점) 허벅지 벡터
+
+  // 허리와 허벅지 독립 필터 인스턴스 멤버 변수로 추가 (alpha = 0.15)
+  final LowPassFilter _waistFilter = LowPassFilter(alpha: 0.15);
+  final LowPassFilter _thighFilter = LowPassFilter(alpha: 0.15);
 
   bool _isReading = false;
   bool get isReading => _isReading;
@@ -28,6 +34,10 @@ class SquatProvider with ChangeNotifier {
     _isReading = false;
     _baseWaistVec = null;
     _baseThighVec = null;
+
+    // 연결 해제 시 필터 초기화
+    _waistFilter.reset();
+    _thighFilter.reset();
 
     _updateState(
       waist: 0.0,
@@ -50,10 +60,14 @@ class SquatProvider with ChangeNotifier {
 
     try {
       // 3차원 공간 벡터 삼각함수 연산을 통한 상대 각도 추출
-      double wAngle = _analyzer.calculateRelativeAngle(_baseWaistVec!, currentW);
-      double tAngle = _analyzer.calculateRelativeAngle(_baseThighVec!, currentT);
+      double rawWAngle = _analyzer.calculateRelativeAngle(_baseWaistVec!, currentW);
+      double rawTAngle = _analyzer.calculateRelativeAngle(_baseThighVec!, currentT);
 
-      _data = _analyzer.analyze(_data, wAngle, tAngle);
+      // 로우 패스 필터를 통과시켜 노이즈가 제거된 부드러운 각도 획득
+      double cleanWAngle = _waistFilter.filter(rawWAngle);
+      double cleanTAngle = _thighFilter.filter(rawTAngle);
+
+      _data = _analyzer.analyze(_data, cleanWAngle, cleanTAngle);
       notifyListeners();
     } catch (e) {
       print("🚨 상대 각도 연산 및 자세 분석 도중 예외 발생: $e");
@@ -79,6 +93,11 @@ class SquatProvider with ChangeNotifier {
     _isReading = false;
     _baseWaistVec = null;
     _baseThighVec = null;
+
+    // 전면 리셋 시 필터 상태도 함께 초기화
+    _waistFilter.reset();
+    _thighFilter.reset();
+
     _analyzer.resetCurrentRepFlags();
     _data = SquatData(
       waistAngle: 0.0,
