@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../models/squat_model.dart';
 import 'package:app/services/squat_analyzer_service.dart';
-
 import '../utils/low_pass_filter.dart';
+import '../models/squat_record.dart';
+import '../services/database_helper.dart';
 
 class SquatProvider with ChangeNotifier {
   // 화면에 그릴 상태 데이터 계층 (상태값 캡슐화)
@@ -115,5 +116,35 @@ class SquatProvider with ChangeNotifier {
       status: status,
     );
     notifyListeners(); // UI 계층 실시간 새로고침 전파
+  }
+
+  /// 현재 진행된 운동 세션의 기록을 로컬 DB에 저장하는 메서드
+  Future<bool> saveCurrentSessionRecord() async {
+    // 1. 유효성 검사: 성공 횟수와 에러 횟수가 모두 0이면 저장하지 않음 (의미 없는 빈 기록 방지)
+    if (_data.successCount == 0 &&
+        _data.waistErrorCount == 0 &&
+        _data.depthErrorCount == 0 &&
+        _data.goodMorningCount == 0) {
+      print("⚠️ 스쿼트 수행 기록이 없어 저장을 스킵합니다.");
+      return false;
+    }
+
+    try {
+      // 2. SquatData 객체에서 SquatRecord 객체로 변환
+      final record = SquatRecord.fromSquatData(_data);
+
+      // 3. DatabaseHelper를 통해 SQLite DB에 Insert
+      final savedId = await DatabaseHelper.instance.insertRecord(record);
+      print("💾 스쿼트 기록이 DB에 성공적으로 저장되었습니다! (Record ID: $savedId)");
+
+      // 4. 저장 완료 후 현재 카운터만 0으로 초기화 (연결은 유지)
+      resetCountersOnly();
+      notifyListeners();
+
+      return true; // 저장 성공 반환
+    } catch (e) {
+      print("❌ DB 저장 중 에러 발생: $e");
+      return false;
+    }
   }
 }

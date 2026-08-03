@@ -85,14 +85,19 @@ class SquatScreen extends StatelessWidget {
             // 5. 하단 제어 인터페이스 버튼셋
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 코칭 시작 / 진행 중 버튼
-                  Expanded(
+                  // 1줄: 코칭 시작 / 진행 중 버튼 (주요 실행 버튼)
+                  SizedBox(
+                    width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: switchBtnConfig['onPressed'] as VoidCallback?,
                       icon: Icon(switchBtnConfig['icon'] as IconData),
-                      label: Text(switchBtnConfig['label'] as String),
+                      label: Text(
+                        switchBtnConfig['label'] as String,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: switchBtnConfig['color'] as Color,
                         foregroundColor: Colors.white,
@@ -101,26 +106,67 @@ class SquatScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(height: 12),
 
-                  // 통계 데이터 초기화 버튼
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        squatProvider.resetCountersOnly();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("🔄 스쿼트 횟수 및 자세 통계가 초기화되었습니다.")),
-                        );
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: const Text("통계 초기화"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  // 2줄: 운동 저장 & 초기화 버튼 셋
+                  Row(
+                    children: [
+                      // 💾 운동 종료 & 저장 버튼
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () async {
+                            bool isSaved = await squatProvider.saveCurrentSessionRecord();
+
+                            if (context.mounted) {
+                              if (isSaved) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("📊 운동 기록이 내부에 성공적으로 저장되었습니다!"),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("⚠️ 저장할 스쿼트 기록이 없습니다 (0회)."),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.save_alt),
+                          label: const Text("운동 저장"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+
+                      // 🔄 통계 데이터 초기화 버튼
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            squatProvider.resetCountersOnly();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("🔄 스쿼트 횟수 및 자세 통계가 초기화되었습니다.")),
+                            );
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text("통계 초기화"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.redAccent,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
