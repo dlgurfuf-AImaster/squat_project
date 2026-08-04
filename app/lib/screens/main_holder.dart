@@ -1,3 +1,4 @@
+import 'package:app/screens/record_history_screen.dart';
 import 'package:app/screens/squat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:app/screens/arduino_status_screen.dart';
@@ -16,7 +17,7 @@ class _MainHolderState extends State<MainHolder> {
   final List<Widget> _pages = [
     const ArduinoStatusScreen(),
     const SquatScreen(), // 메인 스쿼트 화면
-    const Center(child: Text("기록 화면 준비 중")), // 임시 기록 화면
+    const RecordHistoryScreen(), // 임시 기록 화면
   ];
 
   void _onItemTapped(int index) {
