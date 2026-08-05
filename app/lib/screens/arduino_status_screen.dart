@@ -8,167 +8,209 @@ class ArduinoStatusScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 글로벌 블루투스 연결 상태 관찰
     final bluetoothProvider = context.watch<BluetoothProvider>();
     final String connectionStatus = bluetoothProvider.connectionStatus;
     final bool isConnecting = connectionStatus == 'CONNECTING';
+    final bool isConnected = connectionStatus == 'CONNECTED';
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('아두이노 연결 관리'),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 상태 시각화 카드
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Row(
-                  children: [
-                    Icon(
-                      connectionStatus == 'CONNECTED'
-                          ? Icons.bluetooth_connected
-                          : Icons.bluetooth_disabled,
-                      size: 40,
-                      color: _getStatusColor(connectionStatus),
-                    ),
-                    const SizedBox(width: 20),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // 1. 허리 센서 카드
+              _buildDeviceCard(
+                title: '허리 센서 (BT05_WAIST)',
+                deviceName: 'BT05_WAIST',
+                isConnected: isConnected,
+              ),
+              const SizedBox(height: 15),
+
+              // 2. 허벅지 센서 카드
+              _buildDeviceCard(
+                title: '허벅지 센서 (BT05_THIGH)',
+                deviceName: 'BT05_THIGH',
+                isConnected: isConnected,
+              ),
+              const SizedBox(height: 20),
+
+              // 3. 중앙 안내 영역 (Expanded 레이아웃 안정화)
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          _getStatusText(connectionStatus),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: _getStatusColor(connectionStatus),
+                        if (isConnecting) ...[
+                          const CircularProgressIndicator(),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'BT05_WAIST 및 BT05_THIGH 센서를\n찾고 연결하는 중입니다...',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 15, color: Colors.black87),
                           ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          connectionStatus == 'CONNECTED'
-                              ? '기기명: BT05 (연결됨)'
-                              : '연결된 센서 기기가 없습니다.',
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
+                        ] else ...[
+                          Icon(
+                            isConnected ? Icons.check_circle_outline : Icons.bluetooth_searching,
+                            size: 60,
+                            color: isConnected ? Colors.green : Colors.grey,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            isConnected
+                                ? '두 센서가 모두 연결되었습니다!\n운동 탭에서 스쿼트를 시작하세요.'
+                                : '아래 버튼을 눌러 센서 연결을 시작하세요.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(fontSize: 16, color: Colors.black87, height: 1.4),
+                          ),
+                        ],
                       ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 40),
 
-            // 중앙 안내 문구 및 인디케이터 영역
-            Expanded(
-              child: Center(
-                child: isConnecting
-                    ? const Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(),
-                    SizedBox(height: 20),
-                    Text('주변의 스쿼트 센서(BT05)를 찾는 중입니다...'),
-                  ],
-                )
-                    : Text(
-                  connectionStatus == 'CONNECTED'
-                      ? '기기가 정상 연동되었습니다.\n이제 운동 탭으로 이동해 스쿼트를 시작하세요!'
-                      : '아래 버튼을 눌러 아두이노 장치와 연결해 주세요.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16, color: Colors.black54),
-                ),
-              ),
-            ),
+              const SizedBox(height: 15),
 
-            // 하단 상태별 제어 버튼 분기
-            if (connectionStatus == 'DISCONNECTED') ...[
-              ElevatedButton.icon(
-                onPressed: () => _startScanAndConnect(context),
-                icon: const Icon(Icons.bluetooth),
-                label: const Text('아두이노 장치 연결하기'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, inherit: true),
-                ),
-              ),
-            ] else if (connectionStatus == 'CONNECTED') ...[
-              OutlinedButton.icon(
-                onPressed: () => _disconnectDevice(context),
-                icon: const Icon(Icons.close),
-                label: const Text('연결 해제하기'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  side: const BorderSide(color: Colors.red),
-                  foregroundColor: Colors.red,
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, inherit: true),
-                ),
-              ),
-            ] else ...[
-              ElevatedButton.icon(
-                onPressed: null,
-                icon: const Icon(Icons.refresh),
-                label: const Text('연결을 시도하는 중입니다...'),
-                style: ElevatedButton.styleFrom(
-                  disabledBackgroundColor: Colors.grey[300],
-                  disabledForegroundColor: Colors.grey[600],
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, inherit: true),
-                ),
+              // 4. 하단 동작 버튼 (TextStyle 충돌 원인 제거)
+              _buildActionButton(
+                context: context,
+                isConnecting: isConnecting,
+                isConnected: isConnected,
               ),
             ],
-            const SizedBox(height: 20),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 상태별 하단 버튼 생성 (TextStyle 애니메이션 에러 방지)
+  Widget _buildActionButton({
+    required BuildContext context,
+    required bool isConnecting,
+    required bool isConnected,
+  }) {
+    if (isConnecting) {
+      return ElevatedButton.icon(
+        onPressed: null, // 비활성화 상태
+        icon: const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        label: const Text(
+          '센서 연결 시도 중...',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+        ),
+      );
+    }
+
+    if (isConnected) {
+      return OutlinedButton.icon(
+        onPressed: () => _disconnectDevice(context),
+        icon: const Icon(Icons.power_settings_new),
+        label: const Text(
+          '모든 연결 해제하기',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          side: const BorderSide(color: Colors.red),
+          foregroundColor: Colors.red,
+        ),
+      );
+    }
+
+    return ElevatedButton.icon(
+      onPressed: () => _startScanAndConnect(context),
+      icon: const Icon(Icons.bluetooth_searching),
+      label: const Text(
+        '센서 모듈 연결하기',
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+      style: ElevatedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(vertical: 15),
+      ),
+    );
+  }
+
+  Widget _buildDeviceCard({
+    required String title,
+    required String deviceName,
+    required bool isConnected,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Icon(
+              isConnected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+              size: 32,
+              color: isConnected ? Colors.green : Colors.grey,
+            ),
+            const SizedBox(width: 16),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  isConnected ? '연결됨 (통신 중)' : '미연결',
+                  style: TextStyle(
+                    color: isConnected ? Colors.green[700] : Colors.grey[600],
+                    fontWeight: isConnected ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  // 장치 연결 수행
   void _startScanAndConnect(BuildContext context) async {
     final bluetoothProvider = context.read<BluetoothProvider>();
     try {
       await bluetoothProvider.startBluetoothWorkout(context);
     } catch (error) {
-      if (!context.mounted) return; // 비동기 작업 후 컨텍스트 유효성 체크
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('연결 실패: $error')),
+        SnackBar(
+          content: Text('연결 실패: $error'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
 
-  // 장치 연결 해제 수행
   void _disconnectDevice(BuildContext context) async {
     final bluetoothProvider = context.read<BluetoothProvider>();
     final squatProvider = context.read<SquatProvider>();
 
     await bluetoothProvider.disconnectArduino(squatProvider);
 
-    if (!context.mounted) return; // 비동기 작업 후 컨텍스트 유효성 체크
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('아두이노 연결이 해제되었습니다.')),
+      const SnackBar(content: Text('모든 아두이노 연결이 해제되었습니다.')),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'CONNECTED': return Colors.green;
-      case 'CONNECTING': return Colors.orange;
-      default: return Colors.red;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'CONNECTED': return '아두이노 연결됨';
-      case 'CONNECTING': return '연결 시도 중...';
-      default: return '연결 끊어짐';
-    }
   }
 }

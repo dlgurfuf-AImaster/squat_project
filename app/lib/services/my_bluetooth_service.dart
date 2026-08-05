@@ -3,156 +3,196 @@ import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class MyBluetoothService {
-  BluetoothDevice? targetDevice; // 기기 객체 저장 변수
-  BluetoothCharacteristic? rxCharacteristic; // 데이터가 흐르는 통로
+  BluetoothDevice? waistDevice;
+  BluetoothDevice? thighDevice;
 
-  String _dataBuffer = "";
-  StreamSubscription<List<int>>? _characterStreamSubscription; // 흐르는 데이터 유무 판별
+  BluetoothCharacteristic? waistRxChar;
+  BluetoothCharacteristic? thighRxChar;
 
-  /// 최대 데이터 버퍼 용량 제한 (메모리 오버플로우 방지 장치: 약 4KB)
-  static const int _maxBufferLength = 4096;
+  StreamSubscription<List<int>>? _waistStreamSub;
+  StreamSubscription<List<int>>? _thighStreamSub;
 
-  /// 아두이노 블루투스 기기 스캔 및 최종 물리 소켓 연결
-  Future<void> connectToArduino(String deviceName, Function(List<double> w, List<double> t) onDataReceived) async {
-    final Completer<void> connectionCompleter = Completer<void>(); // 비동기 결과 리턴할 completer
+  String _waistBuffer = "";
+  String _thighBuffer = "";
 
-    print("🔎 주변 블루투스 기기 스캔 시작...");
-    FlutterBluePlus.startScan(timeout: const Duration(seconds: 7)); // 7초 동안 기기 찾기
+  List<double>? _latestWaistVec;
+  List<double>? _latestThighVec;
 
-    // scanSubscription가 기기를 찾아서 ScanResult에 담아줌
+  static const int _maxBufferLength = 4096; // 최대 데이터 버퍼 용량 제한
+
+  /// 허리(BT05_WAIST) 및 허벅지(BT05_THIGH) 기기 동시 스캔 및 연결
+  Future<void> connectToDualArduino(
+      Function(List<double> w, List<double> t) onDataReceived) async {
+    final Completer<void> connectionCompleter = Completer<void>();
+
+    print("🔎 센서 모듈(BT05_WAIST, BT05_THIGH) 동시 스캔 시작...");
+    FlutterBluePlus.startScan(timeout: const Duration(seconds: 8));
+
     StreamSubscription<List<ScanResult>>? scanSubscription;
 
     scanSubscription = FlutterBluePlus.scanResults.listen((results) async {
       for (ScanResult r in results) {
-        final String pName = r.device.platformName; // 기기 이름
-        final String rId = r.device.remoteId.str; // 기기 맥 주소 값
+        final String pName = r.device.platformName;
 
-        // 기기 매칭 검증 (맞지 않는 기기는 빠르게 스킵)
-        if (pName != deviceName && rId != deviceName) continue;
+        if (pName == "BT05_WAIST" && waistDevice == null) {
+          print("🎯 허리 센서 발견: $pName");
+          waistDevice = r.device;
+        } else if (pName == "BT05_THIGH" && thighDevice == null) {
+          print("🎯 허벅지 센서 발견: $pName");
+          thighDevice = r.device;
+        }
 
-        print("🎯 기기 발견: $pName [$rId]");
-        targetDevice = r.device;
+        // 두 기기를 모두 찾은 경우 스캔 중단 및 물리 연결 시작
+        if (waistDevice != null && thighDevice != null) {
+          await FlutterBluePlus.stopScan();
+          await scanSubscription?.cancel();
+          scanSubscription = null;
 
-        // 기기를 찾은 즉시 스캔 리소스 자원 전체 해제
-        await FlutterBluePlus.stopScan();
-        await scanSubscription?.cancel();
-        scanSubscription = null;
+          try {
+            print("⚡ 두 센서 보드와 물리 연결 및 통로 개통 중...");
+            await Future.wait([
+              _connectAndSetupChar(waistDevice!, isWaist: true, onDataReceived: onDataReceived),
+              _connectAndSetupChar(thighDevice!, isWaist: false, onDataReceived: onDataReceived),
+            ]);
 
-        try {
-          print("⚡ 아두이노에 물리적 연결 시도 중...");
-          await targetDevice!.connect();
-
-          print("📂 서비스 및 캐릭터리스틱 탐색 중...");
-          List<BluetoothService> services = await targetDevice!.discoverServices(); // 아두이노 서비스
-
-          for (var service in services) {
-            for (var c in service.characteristics) {
-              // Notify 속성이 없는 특성은 패스 (Early Return)
-              if (!c.properties.notify) continue;
-
-              rxCharacteristic = c; // 채널을 찾으면 수신 창구로 지정 후 송신 시작
-              await rxCharacteristic!.setNotifyValue(true); // 구독으로 정보를 받을 것
-              _dataBuffer = "";
-
-              // [생명주기 최적화] 기존에 고립되어 잔존하던 스트림 완벽 폐기 (끊고 연결할 때를 위하여)
-              if (_characterStreamSubscription != null) {
-                await _characterStreamSubscription!.cancel();
-                _characterStreamSubscription = null;
-              }
-
-              // 실시간 하드웨어 데이터 파이프라인 신규 개통
-              _characterStreamSubscription = rxCharacteristic!.lastValueStream.listen((value) {
-                // 방어 코드: 버퍼가 비정상적으로 커지면 강제 초기화
-                if (_dataBuffer.length > _maxBufferLength) {
-                  _dataBuffer = "";
-                }
-
-                _dataBuffer += utf8.decode(value);
-                // 1차 가공 후 _parseAndSend로 보냄
-                while (_dataBuffer.contains('\n')) {
-                  int newlineIndex = _dataBuffer.indexOf('\n');
-                  String completePacket = _dataBuffer.substring(0, newlineIndex);
-                  _dataBuffer = _dataBuffer.substring(newlineIndex + 1);
-                  _parseAndSend(completePacket, onDataReceived);
-                }
-              });
-
-              print("🟢 [연결 완전 성공] 블루투스 소켓 및 데이터 스트림 개통 완료!");
-              connectionCompleter.complete(); // 비동기 처리 성공적 완료 보고
-              return;
-            }
+            print("🟢 [연결 성공] 허리 및 허벅지 블루투스 세션 개통 완료!");
+            connectionCompleter.complete();
+            return;
+          } catch (e) {
+            connectionCompleter.completeError("기기 연결 실패: $e");
           }
-        } catch (e) {
-          print("❌ 연결 도중 에러 발생: $e");
-          connectionCompleter.completeError("기기 연결 실패: $e"); // 비동기 처리 오류 보고
         }
       }
     });
 
-    // 7초 타임아웃 예외 안전장치 (백그라운드 실행)
-    Future.delayed(const Duration(seconds: 7), () async {
+    // 타임아웃 예외 처리
+    Future.delayed(const Duration(seconds: 8), () async {
       if (!connectionCompleter.isCompleted) {
         await FlutterBluePlus.stopScan();
         await scanSubscription?.cancel();
-        connectionCompleter.completeError("주변에 '$deviceName' 기기를 찾을 수 없습니다.");
+
+        List<String> missing = [];
+        if (waistDevice == null) missing.add("BT05_WAIST");
+        if (thighDevice == null) missing.add("BT05_THIGH");
+
+        connectionCompleter.completeError("주변에서 다음 기기를 찾을 수 없습니다: ${missing.join(', ')}");
       }
     });
 
-    return connectionCompleter.future; // 비동기 처리 중 (아직 기다려)
+    return connectionCompleter.future; // 비동기 처리 중
   }
 
-  /// 데이터 패킷을 분해 및 가공하여 콜백으로 라우팅 (비즈니스 서브 로직)
-  void _parseAndSend(String raw, Function(List<double> w, List<double> t) callback) {
-    try {
-      String cleanRaw = raw.trim();
-      if (cleanRaw.isEmpty || !cleanRaw.contains('\$')) return;
+  /// 단일 디바이스 연결 및 Rx 특성 구독 설정
+  Future<void> _connectAndSetupChar(BluetoothDevice device,
+      {required bool isWaist, required Function(List<double> w, List<double> t) onDataReceived}) async {
+    await device.connect();
+    List<BluetoothService> services = await device.discoverServices();
 
-      int startSignIndex = cleanRaw.indexOf('\$');
-      String dataPart = cleanRaw.substring(startSignIndex + 1);
+    for (var service in services) {
+      for (var c in service.characteristics) {
+        if (!c.properties.notify) continue;
 
-      List<String> sensors = dataPart.split('|');
-      if (sensors.length != 2) return;
+        if (isWaist) {
+          waistRxChar = c;
+          await waistRxChar!.setNotifyValue(true);
+          _waistBuffer = "";
+          await _waistStreamSub?.cancel();
 
-      List<String> waistRaw = sensors[0].split(',');
-      List<String> thighRaw = sensors[1].split(',');
+          _waistStreamSub = waistRxChar!.lastValueStream.listen((value) {
+            if (_waistBuffer.length > _maxBufferLength) _waistBuffer = "";
+            _waistBuffer += utf8.decode(value);
+            _processBuffer(isWaist: true, onDataReceived: onDataReceived);
+          });
+        } else {
+          thighRxChar = c;
+          await thighRxChar!.setNotifyValue(true);
+          _thighBuffer = "";
+          await _thighStreamSub?.cancel();
 
-      if (waistRaw.length == 3 && thighRaw.length == 3) {
-        List<double> waistVec = waistRaw.map((e) => double.parse(e)).toList();
-        List<double> thighVec = thighRaw.map((e) => double.parse(e)).toList();
-
-        callback(waistVec, thighVec);
+          _thighStreamSub = thighRxChar!.lastValueStream.listen((value) {
+            if (_thighBuffer.length > _maxBufferLength) _thighBuffer = "";
+            _thighBuffer += utf8.decode(value);
+            _processBuffer(isWaist: false, onDataReceived: onDataReceived);
+          });
+        }
+        return;
       }
-    } catch (e) {
-      print("⚠️ 패킷 조립 및 파싱 스킵: $e");
     }
   }
 
-  /// 아두이노 물리 소켓 연결 해제 및 리소스 완전 릴리즈
-  Future<void> disconnectFromArduino() async {
+  /// 버퍼 단위 개행 문자 자르기 및 벡터 병합
+  void _processBuffer({required bool isWaist, required Function(List<double> w, List<double> t) onDataReceived}) {
+    String buffer = isWaist ? _waistBuffer : _thighBuffer;
+
+    while (buffer.contains('\n')) {
+      int newlineIndex = buffer.indexOf('\n');
+      String completePacket = buffer.substring(0, newlineIndex);
+      buffer = buffer.substring(newlineIndex + 1);
+
+      _parsePacket(completePacket, isWaist: isWaist);
+    }
+
+    if (isWaist) {
+      _waistBuffer = buffer;
+    } else {
+      _thighBuffer = buffer;
+    }
+
+    // 두 센서의 최신 가속도 벡터가 모두 수신되었을 때 통합 콜백 호출
+    if (_latestWaistVec != null && _latestThighVec != null) {
+      onDataReceived(_latestWaistVec!, _latestThighVec!);
+    }
+  }
+
+  /// "$W|x,y,z" 및 "$T|x,y,z" 패킷 파싱
+  void _parsePacket(String raw, {required bool isWaist}) {
     try {
-      if (_characterStreamSubscription != null) {
-        await _characterStreamSubscription!.cancel();
-        _characterStreamSubscription = null;
-      }
+      String cleanRaw = raw.trim();
+      String expectedPrefix = isWaist ? "\$W|" : "\$T|";
 
-      if (rxCharacteristic != null) {
-        await rxCharacteristic!.setNotifyValue(false);
-        rxCharacteristic = null;
-      }
+      if (!cleanRaw.startsWith(expectedPrefix)) return;
 
-      if (targetDevice != null) {
-        await targetDevice!.disconnect();
-        targetDevice = null;
+      String dataPart = cleanRaw.substring(expectedPrefix.length);
+      List<String> values = dataPart.split(',');
+
+      if (values.length == 3) {
+        List<double> vec = values.map((e) => double.parse(e)).toList();
+        if (isWaist) {
+          _latestWaistVec = vec;
+        } else {
+          _latestThighVec = vec;
+        }
       }
     } catch (e) {
-      print("연결 해제 중 오류 발생: $e");
+      print("⚠️ 패킷 파싱 스킵 ($raw): $e");
+    }
+  }
+
+  /// 자원 해제
+  Future<void> disconnectFromArduino() async {
+    try {
+      await _waistStreamSub?.cancel();
+      await _thighStreamSub?.cancel();
+
+      if (waistRxChar != null) await waistRxChar!.setNotifyValue(false);
+      if (thighRxChar != null) await thighRxChar!.setNotifyValue(false);
+
+      if (waistDevice != null) await waistDevice!.disconnect();
+      if (thighDevice != null) await thighDevice!.disconnect();
+    } catch (e) {
+      print("연결 해제 처리 중 오류: $e");
     } finally {
-      // 에러 유무와 상관없이 최종 메모리 변수 원점 버퍼 비우기 보장
-      _characterStreamSubscription = null;
-      rxCharacteristic = null;
-      targetDevice = null;
-      _dataBuffer = "";
-      print("아두이노 블루투스 리소스 반환 완료");
+      _waistStreamSub = null;
+      _thighStreamSub = null;
+      waistRxChar = null;
+      thighRxChar = null;
+      waistDevice = null;
+      thighDevice = null;
+      _latestWaistVec = null;
+      _latestThighVec = null;
+      _waistBuffer = "";
+      _thighBuffer = "";
+      print("듀얼 블루투스 리소스 반환 완료");
     }
   }
 }
