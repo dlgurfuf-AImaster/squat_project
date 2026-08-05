@@ -4,8 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'providers/squat_provider.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterBluePlus.setLogLevel(LogLevel.none, color: false); // 블루투스 관련 로그 뜨지 않게
+
   runApp(
     // 앱 전체에서 provider들을 이용할 수 있도록 주입
     MultiProvider(
