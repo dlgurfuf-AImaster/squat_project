@@ -7,12 +7,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
@@ -23,33 +24,41 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
-        throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest request,
+                                    @NonNull HttpServletResponse response,
+                                    @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
-        // Authorization 값을 꺼냄
+        // Authorization 헤더에서 토큰 추출
         String token = resolveToken(request);
-        // 토큰이 존재하며 && 검증 완료된다면
+
+        // 토큰 유효성 검증
         if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
             String username = jwtProvider.getUsername(token);
 
-            // 출입증 객체 생성
+            // Spring Security 표준 UserDetails 객체 생성
+            UserDetails userDetails = User.builder()
+                    .username(username)
+                    .password("") // 토큰 인증 환경이므로 비밀번호 불필요
+                    .roles("USER")
+                    .build();
+
+            // 인증 완료 객체 생성 및 SecurityContext 등록
             UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(username, null, Collections.emptyList());
-            // 인증 완료
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         filterChain.doFilter(request, response);
     }
 
-    // 진짜 토큰 문자열만 골라내는 메소드
+    // Authorization 헤더에서 Bearer 토큰 파싱
     private String resolveToken(HttpServletRequest request) {
-        String bearerToken = request.getHeader("Authentication");
+        String bearerToken = request.getHeader("Authorization"); // 헤더명 수정완료
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
         return null;
     }
 }
-
-
