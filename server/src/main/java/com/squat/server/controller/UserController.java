@@ -12,7 +12,7 @@ import com.squat.server.dto.SignupRequest;
 
 /// 로그인용 유저 컨트롤러
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/v1/user")
 public class UserController {
 
     private final UserService userService;
