@@ -16,6 +16,7 @@ public class SquatWorkout {
     @JoinColumn(name = "user_id", nullable = false) // id 없는 기록은 존재하지 못하도록 함
     private User user;
 
+    private int totalCount; // 총 횟수 (성공 + 모든 오류 횟수 합산)
     private int successCount; // 성공
     private int waistErrorCount; // 허리 과숙임
     private int depthErrorCount; // 얕은 스쿼트
@@ -26,6 +27,8 @@ public class SquatWorkout {
     @PrePersist // INSERT 전에 자동 실행
     protected void onCreate() {
         this.endTime = LocalDateTime.now();
+        // DB 저장 직전 성공 및 오류 횟수를 자동으로 더해 totalCount 세팅
+        this.totalCount = this.successCount + this.waistErrorCount + this.depthErrorCount + this.goodMorningCount;
     }
 
     public Long getId() {
@@ -42,6 +45,14 @@ public class SquatWorkout {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public int getTotalCount() {
+        return totalCount;
+    }
+
+    public void setTotalCount(int totalCount) {
+        this.totalCount = totalCount;
     }
 
     public int getSuccessCount() {
