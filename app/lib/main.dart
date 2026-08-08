@@ -1,5 +1,4 @@
 import 'package:app/providers/bluetooth_provider.dart';
-import 'package:app/screens/main_holder.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
@@ -33,7 +32,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
       ),
-      home: const MainHolder(), //TODO 임시로 로그인 페이지 무시하고 일단 들어감
+      home: const LoginScreen(),
     );
   }
 }

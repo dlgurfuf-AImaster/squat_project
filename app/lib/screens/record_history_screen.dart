@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/squat_record.dart';
+import '../services/api_service.dart';
 import '../services/database_helper.dart';
 
 class RecordHistoryScreen extends StatefulWidget {
@@ -80,9 +81,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             itemCount: records.length,
             itemBuilder: (context, index) {
               final record = records[index];
-              final totalErrors = record.waistErrorCount +
-                  record.depthErrorCount +
-                  record.goodMorningCount;
 
               return Card(
                 elevation: 3,
@@ -95,7 +93,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 1. 날짜 및 삭제 버튼
+                      // 1. 날짜, 서버 업로드 버튼, 삭제 버튼
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -112,19 +110,43 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                               ),
                             ],
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
-                            onPressed: () async {
-                              if (record.id != null) {
-                                await DatabaseHelper.instance.deleteRecord(record.id!);
-                                _refreshRecords(); // 목록 갱신
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text("🗑️ 해당 기록이 삭제되었습니다.")),
-                                  );
-                                }
-                              }
-                            },
+                          Row(
+                            children: [
+                              // ☁️ 서버 전송 버튼
+                              IconButton(
+                                icon: const Icon(Icons.cloud_upload_outlined, color: Colors.indigo, size: 22),
+                                tooltip: "서버에 기록 저장",
+                                onPressed: () async {
+                                  bool isSuccess = await ApiService().sendSquatRecord(record);
+                                  if (context.mounted) {
+                                    if (isSuccess) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("☁️ 서버에 운동 기록이 성공적으로 저장되었습니다!")),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("❌ 서버 전송에 실패했습니다. 다시 시도해주세요.")),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                              // 기존 삭제 버튼
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
+                                onPressed: () async {
+                                  if (record.id != null) {
+                                    await DatabaseHelper.instance.deleteRecord(record.id!);
+                                    _refreshRecords(); // 목록 갱신
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text("🗑️ 해당 기록이 삭제되었습니다.")),
+                                      );
+                                    }
+                                  }
+                                },
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -173,9 +195,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1), // 최신 withValues() 문법으로 수정
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)), // 최신 withValues() 문법으로 수정
       ),
       child: Text(
         "$label: $count회",
