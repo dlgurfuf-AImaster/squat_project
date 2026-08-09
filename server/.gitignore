@@ -35,3 +35,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+# 모든 위치의 .env 파일 커밋 방지
+*.env
+!.env.example

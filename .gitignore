@@ -11,6 +11,10 @@
 *.sln
 *.swp
 
+# 모든 위치의 .env 파일 커밋 방지
+*.env
+!.env.example
+
 # Flutter / Dart 파트
 app/.dart_tool/
 app/.flutter-plugins
