@@ -31,6 +31,79 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
   }
 
+  // 🤖 AI 코칭 결과 다이얼로그 팝업
+  void _showAiFeedbackDialog(BuildContext context, Map<String, dynamic> responseData) {
+    final String message = responseData['coachingMessage'] ?? "피드백이 없습니다.";
+    final int successCount = responseData['successCount'] ?? 0;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Text("🤖 AI 트레이너의 코칭", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 성공 횟수 요약 배너
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      "성공 횟수: $successCount회",
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // AI 피드백 메시지 (말풍선 카드)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.shade300),
+                ),
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.5,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("확인", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,25 +185,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                           ),
                           Row(
                             children: [
-                              // ☁️ 서버 전송 버튼
-                              IconButton(
-                                icon: const Icon(Icons.cloud_upload_outlined, color: Colors.indigo, size: 22),
-                                tooltip: "서버에 기록 저장",
-                                onPressed: () async {
-                                  bool isSuccess = await ApiService().sendSquatRecord(record);
-                                  if (context.mounted) {
-                                    if (isSuccess) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("☁️ 서버에 운동 기록이 성공적으로 저장되었습니다!")),
-                                      );
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("❌ 서버 전송에 실패했습니다. 다시 시도해주세요.")),
-                                      );
-                                    }
-                                  }
-                                },
-                              ),
                               // 기존 삭제 버튼
                               IconButton(
                                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
@@ -178,6 +232,74 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                           _buildErrorChip("깊이 부족", record.depthErrorCount, Colors.purple),
                           _buildErrorChip("굿모닝 자세", record.goodMorningCount, Colors.deepOrange),
                         ],
+                      ),
+
+                      // 4. AI 피드백 받기 버튼 (기존 전송 버튼)
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.indigo,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          icon: const Icon(Icons.auto_awesome, size: 18),
+                          label: const Text("AI 코칭 피드백 받기, 서버 전송", style: TextStyle(fontWeight: FontWeight.bold)),
+                          onPressed: () async {
+                            // AI 분석 중 화면 중앙에 로딩 팝업 표시 (바깥 터치로 안 닫힘)
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (BuildContext dialogContext) {
+                                return const Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  elevation: 0,
+                                  child: Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        CircularProgressIndicator(color: Colors.white),
+                                        SizedBox(height: 16),
+                                        Text(
+                                          "🤖 AI가 운동 자세를 분석 중입니다...\n잠시만 기다려주세요",
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+
+                            // 서버 전송 및 AI 피드백 수신
+                            final responseData = await ApiService().sendSquatRecord(record);
+
+                            // 서버 응답이 도착하면 로딩 팝업 닫기
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                            }
+
+                            // 수신 성공 시 결과 다이얼로그 팝업 출력
+                            if (context.mounted) {
+                              if (responseData != null) {
+                                _showAiFeedbackDialog(context, responseData);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("❌ 서버 전송 및 분석에 실패했습니다. (네트워크/타임아웃 에러)")),
+                                );
+                              }
+                            }
+                          },
+                        ),
                       ),
                     ],
                   ),

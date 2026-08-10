@@ -82,13 +82,13 @@ class ApiService {
   }
 
   /// 스쿼트 운동 기록 백엔드 전송 함수
-  Future<bool> sendSquatRecord(SquatRecord record) async {
+  Future<Map<String, dynamic>?> sendSquatRecord(SquatRecord record) async {
     try {
       final token = await getToken();
 
       if (token == null) {
         print("저장된 JWT 토큰이 없습니다.");
-        return false;
+        return null;
       }
 
       final response = await _dio.post(
@@ -103,13 +103,21 @@ class ApiService {
           headers: {
             "Authorization": "Bearer $token", // JWT 토큰 헤더 전달
           },
+
+          receiveTimeout: const Duration(seconds: 30),
+          sendTimeout: const Duration(seconds: 10),
         ),
       );
 
-      return response.statusCode == 200;
+      // 성공 시 서버에서 받아온 DTO Map 객체를 반환
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return response.data as Map<String, dynamic>;
+      }
+
+      return null;
     } catch (e) {
       print("스쿼트 기록 전송 에러: $e");
-      return false;
+      return null;
     }
   }
 }
