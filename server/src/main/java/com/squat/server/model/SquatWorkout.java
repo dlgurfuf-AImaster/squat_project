@@ -22,6 +22,9 @@ public class SquatWorkout {
     private int depthErrorCount; // 얕은 스쿼트
     private int goodMorningCount; // 엉덩이 선행 횟수
 
+    @Column(columnDefinition = "TEXT")
+    private String coachingMessage; // AI 코칭 메세지 (긴 텍스트라 TEXT타입)
+
     private LocalDateTime endTime; // 데이터 저장 시 시간 입력용
 
     @PrePersist // INSERT 전에 자동 실행
@@ -85,6 +88,14 @@ public class SquatWorkout {
 
     public void setGoodMorningCount(int goodMorningCount) {
         this.goodMorningCount = goodMorningCount;
+    }
+
+    public String getCoachingMessage() {
+        return coachingMessage;
+    }
+
+    public void setCoachingMessage(String coachingMessage) {
+        this.coachingMessage = coachingMessage;
     }
 
     public LocalDateTime getEndTime() {
