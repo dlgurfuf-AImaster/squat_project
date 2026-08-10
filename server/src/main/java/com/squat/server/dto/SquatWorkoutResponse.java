@@ -1,5 +1,6 @@
 package com.squat.server.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.squat.server.model.SquatWorkout;
 import java.time.LocalDateTime;
 
@@ -11,13 +12,15 @@ public class SquatWorkoutResponse {
     private int depthErrorCount;
     private int goodMorningCount;
     private String coachingMessage;
-    private LocalDateTime endTime;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime recordTime;
 
     public SquatWorkoutResponse() {
     }
 
     public SquatWorkoutResponse(Long id, int totalCount, int successCount, int waistErrorCount,
-                                int depthErrorCount, int goodMorningCount, String coachingMessage, LocalDateTime endTime) {
+                                int depthErrorCount, int goodMorningCount, String coachingMessage, LocalDateTime recordTime) {
         this.id = id;
         this.totalCount = totalCount;
         this.successCount = successCount;
@@ -25,7 +28,7 @@ public class SquatWorkoutResponse {
         this.depthErrorCount = depthErrorCount;
         this.goodMorningCount = goodMorningCount;
         this.coachingMessage = coachingMessage;
-        this.endTime = endTime;
+        this.recordTime = recordTime;
     }
 
     // 엔티티(SquatWorkout)를 DTO로 변환하는 정적 팩토리 메서드
@@ -38,72 +41,32 @@ public class SquatWorkoutResponse {
                 workout.getDepthErrorCount(),
                 workout.getGoodMorningCount(),
                 workout.getCoachingMessage(),
-                workout.getEndTime()
+                workout.getRecordTime()
         );
     }
 
     // --- Getter & Setter ---
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public int getTotalCount() { return totalCount; }
+    public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
 
-    public int getTotalCount() {
-        return totalCount;
-    }
+    public int getSuccessCount() { return successCount; }
+    public void setSuccessCount(int successCount) { this.successCount = successCount; }
 
-    public void setTotalCount(int totalCount) {
-        this.totalCount = totalCount;
-    }
+    public int getWaistErrorCount() { return waistErrorCount; }
+    public void setWaistErrorCount(int waistErrorCount) { this.waistErrorCount = waistErrorCount; }
 
-    public int getSuccessCount() {
-        return successCount;
-    }
+    public int getDepthErrorCount() { return depthErrorCount; }
+    public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public void setSuccessCount(int successCount) {
-        this.successCount = successCount;
-    }
+    public int getGoodMorningCount() { return goodMorningCount; }
+    public void setGoodMorningCount(int goodMorningCount) { this.goodMorningCount = goodMorningCount; }
 
-    public int getWaistErrorCount() {
-        return waistErrorCount;
-    }
+    public String getCoachingMessage() { return coachingMessage; }
+    public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }
 
-    public void setWaistErrorCount(int waistErrorCount) {
-        this.waistErrorCount = waistErrorCount;
-    }
-
-    public int getDepthErrorCount() {
-        return depthErrorCount;
-    }
-
-    public void setDepthErrorCount(int depthErrorCount) {
-        this.depthErrorCount = depthErrorCount;
-    }
-
-    public int getGoodMorningCount() {
-        return goodMorningCount;
-    }
-
-    public void setGoodMorningCount(int goodMorningCount) {
-        this.goodMorningCount = goodMorningCount;
-    }
-
-    public String getCoachingMessage() {
-        return coachingMessage;
-    }
-
-    public void setCoachingMessage(String coachingMessage) {
-        this.coachingMessage = coachingMessage;
-    }
-
-    public LocalDateTime getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(LocalDateTime endTime) {
-        this.endTime = endTime;
-    }
+    public LocalDateTime getRecordTime() { return recordTime; }
+    public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
 }

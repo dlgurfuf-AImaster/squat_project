@@ -45,8 +45,9 @@ public class SquatWorkoutService {
         workout.setDepthErrorCount(request.getDepthErrorCount());
         workout.setGoodMorningCount(request.getGoodMorningCount());
         workout.setCoachingMessage(coachingMessage); // 💡 AI 코칭 메시지 세팅
+        workout.setRecordTime(request.getRecordTime());
 
-        // 3. DB 저장 (@PrePersist로 totalCount, endTime 자동 설정됨)
+        // 3. DB 저장
         return squatWorkoutRepository.save(workout);
     }
 }

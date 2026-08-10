@@ -98,6 +98,7 @@ class ApiService {
           "waistErrorCount": record.waistErrorCount,
           "depthErrorCount": record.depthErrorCount,
           "goodMorningCount": record.goodMorningCount,
+          "recordTime": record.date.toIso8601String().split('.')[0],
         },
         options: Options(
           headers: {

@@ -25,84 +25,40 @@ public class SquatWorkout {
     @Column(columnDefinition = "TEXT")
     private String coachingMessage; // AI 코칭 메세지 (긴 텍스트라 TEXT타입)
 
-    private LocalDateTime endTime; // 데이터 저장 시 시간 입력용
+    private LocalDateTime recordTime; // 앱에서 전송한 운동 시간
 
     @PrePersist // INSERT 전에 자동 실행
     protected void onCreate() {
-        this.endTime = LocalDateTime.now();
         // DB 저장 직전 성공 및 오류 횟수를 자동으로 더해 totalCount 세팅
         this.totalCount = this.successCount + this.waistErrorCount + this.depthErrorCount + this.goodMorningCount;
     }
 
-    public Long getId() {
-        return id;
-    }
+    // --- Getter & Setter ---
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
 
-    public User getUser() {
-        return user;
-    }
+    public int getTotalCount() { return totalCount; }
+    public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
 
-    public void setUser(User user) {
-        this.user = user;
-    }
+    public int getSuccessCount() { return successCount; }
+    public void setSuccessCount(int successCount) { this.successCount = successCount; }
 
-    public int getTotalCount() {
-        return totalCount;
-    }
+    public int getWaistErrorCount() { return waistErrorCount; }
+    public void setWaistErrorCount(int waistErrorCount) { this.waistErrorCount = waistErrorCount; }
 
-    public void setTotalCount(int totalCount) {
-        this.totalCount = totalCount;
-    }
+    public int getDepthErrorCount() { return depthErrorCount; }
+    public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public int getSuccessCount() {
-        return successCount;
-    }
+    public int getGoodMorningCount() { return goodMorningCount; }
+    public void setGoodMorningCount(int goodMorningCount) { this.goodMorningCount = goodMorningCount; }
 
-    public void setSuccessCount(int successCount) {
-        this.successCount = successCount;
-    }
+    public String getCoachingMessage() { return coachingMessage; }
+    public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }
 
-    public int getWaistErrorCount() {
-        return waistErrorCount;
-    }
-
-    public void setWaistErrorCount(int waistErrorCount) {
-        this.waistErrorCount = waistErrorCount;
-    }
-
-    public int getDepthErrorCount() {
-        return depthErrorCount;
-    }
-
-    public void setDepthErrorCount(int depthErrorCount) {
-        this.depthErrorCount = depthErrorCount;
-    }
-
-    public int getGoodMorningCount() {
-        return goodMorningCount;
-    }
-
-    public void setGoodMorningCount(int goodMorningCount) {
-        this.goodMorningCount = goodMorningCount;
-    }
-
-    public String getCoachingMessage() {
-        return coachingMessage;
-    }
-
-    public void setCoachingMessage(String coachingMessage) {
-        this.coachingMessage = coachingMessage;
-    }
-
-    public LocalDateTime getEndTime() {
-        return endTime;
-    }
-
-    public void setEndTime(LocalDateTime endTime) {
-        this.endTime = endTime;
-    }
+    // [수정] recordTime Getter & Setter
+    public LocalDateTime getRecordTime() { return recordTime; }
+    public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
 }
