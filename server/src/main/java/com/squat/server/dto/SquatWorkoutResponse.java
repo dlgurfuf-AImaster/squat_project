@@ -11,7 +11,6 @@ public class SquatWorkoutResponse {
     private int waistErrorCount;
     private int depthErrorCount;
     private int goodMorningCount;
-    private String coachingMessage;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime recordTime;
@@ -20,14 +19,13 @@ public class SquatWorkoutResponse {
     }
 
     public SquatWorkoutResponse(Long id, int totalCount, int successCount, int waistErrorCount,
-                                int depthErrorCount, int goodMorningCount, String coachingMessage, LocalDateTime recordTime) {
+                                int depthErrorCount, int goodMorningCount, LocalDateTime recordTime) {
         this.id = id;
         this.totalCount = totalCount;
         this.successCount = successCount;
         this.waistErrorCount = waistErrorCount;
         this.depthErrorCount = depthErrorCount;
         this.goodMorningCount = goodMorningCount;
-        this.coachingMessage = coachingMessage;
         this.recordTime = recordTime;
     }
 
@@ -40,7 +38,6 @@ public class SquatWorkoutResponse {
                 workout.getWaistErrorCount(),
                 workout.getDepthErrorCount(),
                 workout.getGoodMorningCount(),
-                workout.getCoachingMessage(),
                 workout.getRecordTime()
         );
     }
@@ -63,9 +60,6 @@ public class SquatWorkoutResponse {
 
     public int getGoodMorningCount() { return goodMorningCount; }
     public void setGoodMorningCount(int goodMorningCount) { this.goodMorningCount = goodMorningCount; }
-
-    public String getCoachingMessage() { return coachingMessage; }
-    public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }
 
     public LocalDateTime getRecordTime() { return recordTime; }
     public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
