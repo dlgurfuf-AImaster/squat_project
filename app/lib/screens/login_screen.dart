@@ -124,7 +124,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 15),
 
-            // [임시] 서버 없이 바로 스쿼트 화면(혹은 MainHolder)으로 진입
+            // TODO [임시] 서버 없이 바로 스쿼트 화면(혹은 MainHolder)으로 진입
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pushReplacement(
