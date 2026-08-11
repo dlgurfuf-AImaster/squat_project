@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../dtos/aggregate_coaching_request.dart';
@@ -16,7 +17,7 @@ class ApiService {
   final Dio _dio = Dio();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  final String _baseUrl = "http://192.168.219.102:9000/api/v1";
+  final String _baseUrl = dotenv.get('BASE_URL');
 
   ApiService._internal() {
     _dio.options.baseUrl = _baseUrl;
