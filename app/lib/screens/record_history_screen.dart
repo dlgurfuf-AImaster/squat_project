@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/squat_record.dart';
 import '../services/api_service.dart';
 import '../services/database_helper.dart';
+import '../dtos/squat_workout_request.dart';
+import '../dtos/coaching_response.dart';
 
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
@@ -32,9 +34,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   }
 
   // 🤖 AI 코칭 결과 다이얼로그 팝업
-  void _showAiFeedbackDialog(BuildContext context, Map<String, dynamic> responseData) {
-    final String message = responseData['coachingMessage'] ?? "피드백이 없습니다.";
-    final int successCount = responseData['successCount'] ?? 0;
+  void _showAiFeedbackDialog(BuildContext context, CoachingResponse coaching) {
+    final String message = coaching.coachingMessage;
+    final int successCount = coaching.totalSuccessCount; // 💡 [수정] DTO 필드 사용
 
     showDialog(
       context: context,
@@ -234,7 +236,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                         ],
                       ),
 
-                      // 4. AI 피드백 받기 버튼 (기존 전송 버튼)
+                      // 4. AI 피드백 받기 버튼
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
@@ -248,9 +250,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
                           icon: const Icon(Icons.auto_awesome, size: 18),
-                          label: const Text("AI 코칭 피드백 받기, 서버 전송", style: TextStyle(fontWeight: FontWeight.bold)),
+                          label: const Text("AI 코칭 피드백 받기", style: TextStyle(fontWeight: FontWeight.bold)),
                           onPressed: () async {
-                            // AI 분석 중 화면 중앙에 로딩 팝업 표시 (바깥 터치로 안 닫힘)
+                            // AI 분석 중 화면 중앙에 로딩 팝업 표시
                             showDialog(
                               context: context,
                               barrierDismissible: false,
@@ -280,8 +282,17 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                               },
                             );
 
-                            // 서버 전송 및 AI 피드백 수신
-                            final responseData = await ApiService().sendSquatRecord(record);
+                            // 1단계: DTO 생성 후 서버에 운동 기록 전송
+                            final workoutResponse = await ApiService().sendSquatRecord(
+                              SquatWorkoutRequest.fromRecord(record),
+                            );
+
+                            CoachingResponse? coachingResponse;
+
+                            // 2단계: 저장 성공 시 생성된 PK ID로 AI 코칭 요청
+                            if (workoutResponse != null) {
+                              coachingResponse = await ApiService().getSingleCoaching(workoutResponse.id);
+                            }
 
                             // 서버 응답이 도착하면 로딩 팝업 닫기
                             if (context.mounted) {
@@ -290,8 +301,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
 
                             // 수신 성공 시 결과 다이얼로그 팝업 출력
                             if (context.mounted) {
-                              if (responseData != null) {
-                                _showAiFeedbackDialog(context, responseData);
+                              if (coachingResponse != null) {
+                                _showAiFeedbackDialog(context, coachingResponse);
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text("❌ 서버 전송 및 분석에 실패했습니다. (네트워크/타임아웃 에러)")),
@@ -317,9 +328,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1), // 최신 withValues() 문법으로 수정
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.5)), // 최신 withValues() 문법으로 수정
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         "$label: $count회",

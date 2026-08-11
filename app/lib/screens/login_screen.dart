@@ -3,6 +3,8 @@ import 'package:app/screens/squat_screen.dart';
 import 'package:flutter/material.dart';
 import '/services/api_service.dart';
 import 'main_holder.dart';
+import '../dtos/login_request.dart';
+import '../dtos/login_response.dart';
 
 /// 로그인 페이지
 class LoginScreen extends StatefulWidget {
@@ -38,19 +40,24 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
     ).showSnackBar(const SnackBar(content: Text("로그인 중...")));
 
-    // ApiService를 통해 서버로 로그인 검증 요청
-    bool isSuccess = await ApiService().loginUser(
-      _idController.text,
-      _passwordController.text,
+    // LoginRequest DTO 생성 및 ApiService 호출 방식 변경
+    final LoginResponse? response = await ApiService().loginUser(
+      LoginRequest(
+        username: _idController.text,
+        password: _passwordController.text,
+      ),
     );
 
-    if (isSuccess) {
+    // LoginResponse 객체 검증
+    if (response != null && response.token.isNotEmpty) {
+      if (!mounted) return;
       // 로그인 성공 시 메인 화면으로 이동하며 로그인 화면은 스택에서 제거
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainHolder()), // MainHolder
       );
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("로그인 실패: 아이디 또는 비밀번호를 확인하세요.")),
       );
