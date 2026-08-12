@@ -1,14 +1,17 @@
 import 'package:app/providers/bluetooth_provider.dart';
+import 'package:app/providers/coaching_provider.dart';
 import 'package:app/screens/main_holder.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'providers/squat_provider.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   FlutterBluePlus.setLogLevel(LogLevel.none, color: false); // 블루투스 관련 로그 뜨지 않게
+  await dotenv.load(fileName: ".env"); // .env 파일 읽도록
 
   runApp(
     // 앱 전체에서 provider들을 이용할 수 있도록 주입
@@ -16,6 +19,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => SquatProvider()),
         ChangeNotifierProvider(create: (_) => BluetoothProvider()),
+        ChangeNotifierProvider(create: (_) => CoachingProvider()),
       ],
       child: const MyApp(),
     ),

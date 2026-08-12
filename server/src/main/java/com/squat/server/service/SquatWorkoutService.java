@@ -13,41 +13,30 @@ public class SquatWorkoutService {
 
     private final SquatWorkoutRepository squatWorkoutRepository;
     private final UserRepository userRepository;
-    private final GeminiService geminiService; // 💡 GeminiService 주입 추가
 
+    // 💡 GeminiService 주입 제거
     public SquatWorkoutService(SquatWorkoutRepository squatWorkoutRepository,
-                               UserRepository userRepository,
-                               GeminiService geminiService) {
+                               UserRepository userRepository) {
         this.squatWorkoutRepository = squatWorkoutRepository;
         this.userRepository = userRepository;
-        this.geminiService = geminiService;
     }
 
     @Transactional
     public SquatWorkout saveWorkout(String username, SquatWorkoutRequest request) {
-        // JWT 인증 정보로 전달받은 username으로 유저 조회
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다: " + username));
 
-        // 1. Gemini AI를 호출하여 스쿼트 코칭 메시지 생성
-        String coachingMessage = geminiService.generateCoachingMessage(
-                request.getSuccessCount(),
-                request.getWaistErrorCount(),
-                request.getDepthErrorCount(),
-                request.getGoodMorningCount()
-        );
-
-        // 2. SquatWorkout 엔티티 생성 및 데이터 세팅
+        // SquatWorkout 엔티티 생성 및 pure 데이터 세팅 (Gemini 호출 제거)
         SquatWorkout workout = new SquatWorkout();
         workout.setUser(user);
         workout.setSuccessCount(request.getSuccessCount());
         workout.setWaistErrorCount(request.getWaistErrorCount());
         workout.setDepthErrorCount(request.getDepthErrorCount());
         workout.setGoodMorningCount(request.getGoodMorningCount());
-        workout.setCoachingMessage(coachingMessage); // 💡 AI 코칭 메시지 세팅
         workout.setRecordTime(request.getRecordTime());
+        // coachingMessage는 저장 시점에 생성하지 않고 null로 둠
+        // (이후 사용자가 AI 코칭을 요청할 때 SquatCoachingService에서 생성/반환)
 
-        // 3. DB 저장
         return squatWorkoutRepository.save(workout);
     }
 }

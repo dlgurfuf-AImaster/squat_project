@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '/services/api_service.dart';
+// 💡 [추가] DTO import
+import '../dtos/signup_request.dart';
 
 /// 회원가입 페이지
 class SignupScreen extends StatefulWidget {
@@ -13,7 +15,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController =
-      TextEditingController();
+  TextEditingController();
   final TextEditingController _nameController = TextEditingController();
 
   @override
@@ -42,11 +44,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
     _showSnackBar("회원가입 요청 중...");
 
-    // ApiService를 통해 서버로 데이터 전송
+    // 💡 [수정] SignupRequest DTO 생성 및 전송
     bool isSuccess = await ApiService().registerUser(
-      _nameController.text,
-      _idController.text,
-      _passwordController.text,
+      SignupRequest(
+        name: _nameController.text,
+        username: _idController.text,
+        password: _passwordController.text,
+      ),
     );
 
     if (isSuccess) {
@@ -63,8 +67,6 @@ class _SignupScreenState extends State<SignupScreen> {
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
   }
-
-
 
   @override
   Widget build(BuildContext context) {
