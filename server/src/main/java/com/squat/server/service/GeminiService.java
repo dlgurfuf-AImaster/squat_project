@@ -37,6 +37,7 @@ public class GeminiService {
         int totalAttempts = successCount + waistErrorCount + depthErrorCount + goodMorningCount;
         double accuracy = totalAttempts > 0 ? ((double) successCount / totalAttempts) * 100 : 0;
 
+        // TODO 장기 기록 AI 답변이 너무 긺, 장황함. 더 컴팩트하게 줄일 것. 프롬프트 변경 필요
         String prompt = String.format(
                 "너는 피트니스 데이터 분석 전문 AI 트레이너야. " +
                         "회원의 누적 스쿼트 데이터(총 %d세트) 집계 결과야:\n" +
