@@ -36,6 +36,18 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
   }
 
+  // 미전송(isSynced == false) 항목만 한 번에 자동 선택해 주는 헬퍼 함수
+  void _selectUnsyncedRecords(List<SquatRecord> records) {
+    setState(() {
+      _selectedRecordIds.clear();
+      for (final r in records) {
+        if (!r.isSynced && r.id != null) {
+          _selectedRecordIds.add(r.id!);
+        }
+      }
+    });
+  }
+
   // ☁️ 선택된 로컬 기록들을 서버로 다중 전송하는 함수
   Future<void> _sendSelectedRecordsToServer(List<SquatRecord> allRecords) async {
     final selectedRecords = allRecords
@@ -81,6 +93,10 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
       );
       if (response != null) {
         successCount++;
+        // 서버 전송 성공 시 해당 로컬 DB 기록의 is_synced 상태를 1(true)로 업데이트
+        if (record.id != null) {
+          await DatabaseHelper.instance.updateSyncStatus(record.id!, true);
+        }
       } else {
         failCount++;
       }
@@ -91,9 +107,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     }
 
     if (context.mounted) {
-      setState(() {
-        _selectedRecordIds.clear();
-      });
+      // DB 백업 상태가 업데이트되었으므로 리스트를 새로고침하여 최신 UI 반영
+      _refreshRecords();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -150,28 +165,48 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             );
           }
 
+          // 아직 서버에 업로드되지 않은 기록 개수 계산
+          final unsyncedCount = records.where((r) => !r.isSynced).length;
+
           return Column(
             children: [
-              // 상단 컨트롤 바: 서버 백업 전송 버튼만 남김 (AI 분석 버튼 제거)
+              // 상단 컨트롤 바
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    icon: const Icon(Icons.cloud_upload, size: 18),
-                    label: Text("선택(${_selectedRecordIds.length})개 서버 백업 전송"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                child: Row( // 미전송 자동선택 버튼 배치를 위해 Row 구조로 변경
+                  children: [
+                    // 미전송 항목 한 번에 선택 버튼
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.playlist_add_check, size: 16),
+                      label: Text("미전송($unsyncedCount)"),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      onPressed: unsyncedCount == 0 ? null : () => _selectUnsyncedRecords(records),
                     ),
-                    onPressed: _selectedRecordIds.isEmpty
-                        ? null
-                        : () => _sendSelectedRecordsToServer(records),
-                  ),
+                    const SizedBox(width: 8),
+
+                    // 서버 백업 전송 버튼
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.cloud_upload, size: 18),
+                        label: Text("선택(${_selectedRecordIds.length})개 서버 백업 전송"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: _selectedRecordIds.isEmpty
+                            ? null
+                            : () => _sendSelectedRecordsToServer(records),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -194,7 +229,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 1. 선택 체크박스, 날짜, 삭제 버튼
+                            // 1. 선택 체크박스, 날짜, 백업 상태 태그, 삭제 버튼
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -220,6 +255,39 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+
+                                    // 서버 백업 상태 태그 (완료 / 미전송)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: record.isSynced ? Colors.green.shade50 : Colors.grey.shade100,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: record.isSynced ? Colors.green : Colors.grey,
+                                          width: 0.8,
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            record.isSynced ? Icons.cloud_done : Icons.cloud_off,
+                                            size: 12,
+                                            color: record.isSynced ? Colors.green : Colors.grey,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            record.isSynced ? "백업됨" : "미전송",
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: record.isSynced ? Colors.green.shade800 : Colors.grey.shade700,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],

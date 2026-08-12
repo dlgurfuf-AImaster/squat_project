@@ -23,8 +23,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // DB 버전을 1에서 2로 업그레이드
       onCreate: _createDB,
+      onUpgrade: _onUpgrade, // 버전 업그레이드 마이그레이션 콜백 등록
     );
   }
 
@@ -37,9 +38,19 @@ class DatabaseHelper {
         successCount INTEGER NOT NULL,
         waistErrorCount INTEGER NOT NULL,
         depthErrorCount INTEGER NOT NULL,
-        goodMorningCount INTEGER NOT NULL
+        goodMorningCount INTEGER NOT NULL,
+        is_synced INTEGER DEFAULT 0
       )
     ''');
+  }
+
+  // 기존 사용자를 위한 DB 마이그레이션 함수 (v1 -> v2)
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE squat_records ADD COLUMN is_synced INTEGER DEFAULT 0',
+      );
+    }
   }
 
   // 📥 1. 스쿼트 운동 기록 1건 저장
@@ -56,7 +67,18 @@ class DatabaseHelper {
     return result.map((json) => SquatRecord.fromMap(json)).toList();
   }
 
-  // 🗑️ 3. 특정 기록 삭제 (옵션)
+  // 🔄 3. 백업 성공 시 동기화 상태 업데이트 메서드
+  Future<int> updateSyncStatus(int id, bool isSynced) async {
+    final db = await instance.database;
+    return await db.update(
+      'squat_records',
+      {'is_synced': isSynced ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  // 🗑️ 4. 특정 기록 삭제 (옵션)
   Future<int> deleteRecord(int id) async {
     final db = await instance.database;
     return await db.delete(
