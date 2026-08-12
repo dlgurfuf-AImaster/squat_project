@@ -15,12 +15,12 @@ class MainHolder extends StatefulWidget {
 }
 
 class _MainHolderState extends State<MainHolder> {
-
+  // Index 매칭: 0(연결), 1(운동), 2(로컬 기록), 3(AI 코칭)
   final List<Widget> _pages = const [
-    ArduinoStatusScreen(), // 아두이노 블루투스 연결 화면
-    SquatScreen(), // 메인 스쿼트 화면
-    RecordHistoryScreen(), // 임시 기록 화면
-    CoachingScreen(), // AI 코칭 전용 화면
+    ArduinoStatusScreen(), // Index 0: 아두이노 블루투스 연결 화면
+    SquatScreen(),         // Index 1: 메인 스쿼트 화면
+    RecordHistoryScreen(), // Index 2: 로컬 기록 및 서버 전송 화면
+    CoachingScreen(),      // Index 3: AI 코칭 전용 화면
   ];
 
   @override
@@ -37,6 +37,12 @@ class _MainHolderState extends State<MainHolder> {
         type: BottomNavigationBarType.fixed,
         onTap: (index) {
           coachingProvider.setTabIndex(index);
+
+          // IndexedStack 특성상 탭 이동 시 initState가 재호출되지 않으므로,
+          // AI 코칭 탭(Index 3) 클릭 시 서버 DB 최신 기록을 가져오도록 호출
+          if (index == 3) {
+            coachingProvider.fetchServerRecords();
+          }
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.bluetooth), label: '연결 상태'),

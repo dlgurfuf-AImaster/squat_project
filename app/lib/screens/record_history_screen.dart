@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../models/squat_record.dart';
 import '../services/api_service.dart';
 import '../services/database_helper.dart';
 import '../dtos/squat_workout_request.dart';
-import '../dtos/aggregate_coaching_request.dart';
-import '../providers/coaching_provider.dart';
 
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
@@ -108,102 +105,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     }
   }
 
-  // 🤖 단일 운동 기록 AI 코칭 요청 처리 함수 (비동기 로딩 + 탭 이동)
-  Future<void> _handleSingleAiCoachingRequest(
-      BuildContext context,
-      CoachingProvider coachingProvider,
-      int workoutId,
-      ) async {
-    // 1. 화면 클릭을 막는 반투명 로딩 팝업 표시
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => const Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: Colors.white),
-              SizedBox(height: 16),
-              Text(
-                "🤖 선택한 단일 기록을 분석 중입니다...\n잠시만 기다려주세요",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    // 2. 단일 코칭 API 호출 (/squat/coaching/single/{workoutId})
-    await coachingProvider.requestSingleCoaching(workoutId);
-
-    // 3. 분석 완료 후 로딩 팝업 닫기
-    if (context.mounted) {
-      Navigator.pop(context);
-    }
-
-    // 4. 완료 후 AI 코칭 탭(Index 3)으로 이동
-    if (context.mounted) {
-      coachingProvider.setTabIndex(3);
-    }
-  }
-
-  // 🤖 집계(종합/다중) AI 코칭 요청 처리 함수
-  Future<void> _handleAggregateAiCoachingRequest(
-      BuildContext context,
-      CoachingProvider coachingProvider,
-      AggregateCoachingRequest request,
-      ) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => const Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: Colors.white),
-              SizedBox(height: 16),
-              Text(
-                "🤖 AI가 스쿼트 데이터를 종합 분석 중입니다...\n잠시만 기다려주세요",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    await coachingProvider.requestAggregateCoaching(request);
-
-    if (context.mounted) {
-      Navigator.pop(context);
-    }
-
-    if (context.mounted) {
-      coachingProvider.setTabIndex(3);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final coachingProvider = Provider.of<CoachingProvider>(context, listen: false);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("🏋️ 스쿼트 운동 기록"),
@@ -249,79 +152,26 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
 
           return Column(
             children: [
-              // 상단 컨트롤 바 (다중 서버 전송 & 종합 AI 분석)
+              // 상단 컨트롤 바: 서버 백업 전송 버튼만 남김 (AI 분석 버튼 제거)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Column(
-                  children: [
-                    // 1열: 선택 항목 서버 전송 버튼
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.cloud_upload, size: 18),
-                        label: Text("선택(${_selectedRecordIds.length})개 서버 전송"),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onPressed: _selectedRecordIds.isEmpty
-                            ? null
-                            : () => _sendSelectedRecordsToServer(records),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.cloud_upload, size: 18),
+                    label: Text("선택(${_selectedRecordIds.length})개 서버 백업 전송"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
                       ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    const SizedBox(height: 8),
-
-                    // 2열: 최근 30일 AI 분석 & 선택 항목 AI 분석 (종합 분석)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.date_range, size: 16),
-                            label: const Text("최근 30일 AI 분석"),
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: () {
-                              _handleAggregateAiCoachingRequest(
-                                context,
-                                coachingProvider,
-                                AggregateCoachingRequest.recent30Days(),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            icon: const Icon(Icons.auto_awesome, size: 16),
-                            label: Text("선택(${_selectedRecordIds.length})개 AI 분석"),
-                            style: OutlinedButton.styleFrom(
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: _selectedRecordIds.isEmpty
-                                ? null
-                                : () {
-                              _handleAggregateAiCoachingRequest(
-                                context,
-                                coachingProvider,
-                                AggregateCoachingRequest.byIds(
-                                  _selectedRecordIds.toList(),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                    onPressed: _selectedRecordIds.isEmpty
+                        ? null
+                        : () => _sendSelectedRecordsToServer(records),
+                  ),
                 ),
               ),
 
@@ -344,7 +194,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 1. 선택 체크박스, 날짜, 단일 AI 코칭 버튼, 삭제 버튼
+                            // 1. 선택 체크박스, 날짜, 삭제 버튼
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -374,52 +224,26 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                                     ),
                                   ],
                                 ),
-                                Row(
-                                  children: [
-                                    // 💡 [추가] 개별 카드 단일 AI 코칭 버튼
-                                    OutlinedButton.icon(
-                                      icon: const Icon(Icons.psychology, size: 14),
-                                      label: const Text("AI 코칭", style: TextStyle(fontSize: 12)),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.indigo,
-                                        side: const BorderSide(color: Colors.indigo),
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      onPressed: record.id == null
-                                          ? null
-                                          : () {
-                                        _handleSingleAiCoachingRequest(
-                                          context,
-                                          coachingProvider,
-                                          record.id!,
+                                // 개별 카드 내 삭제 버튼만 유지
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete_outline,
+                                    color: Colors.redAccent,
+                                    size: 20,
+                                  ),
+                                  onPressed: () async {
+                                    if (record.id != null) {
+                                      await DatabaseHelper.instance.deleteRecord(record.id!);
+                                      _refreshRecords();
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text("🗑️ 해당 기록이 삭제되었습니다."),
+                                          ),
                                         );
-                                      },
-                                    ),
-                                    const SizedBox(width: 4),
-                                    // 삭제 버튼
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.delete_outline,
-                                        color: Colors.redAccent,
-                                        size: 20,
-                                      ),
-                                      onPressed: () async {
-                                        if (record.id != null) {
-                                          await DatabaseHelper.instance.deleteRecord(record.id!);
-                                          _refreshRecords();
-                                          if (context.mounted) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              const SnackBar(
-                                                content: Text("🗑️ 해당 기록이 삭제되었습니다."),
-                                              ),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                  ],
+                                      }
+                                    }
+                                  },
                                 ),
                               ],
                             ),
