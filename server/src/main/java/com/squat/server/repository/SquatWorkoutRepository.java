@@ -15,4 +15,7 @@ public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long
 
     // 특정 사용자 및 날짜 범위로 조회
     List<SquatWorkout> findByUserAndRecordTimeBetween(User user, LocalDateTime start, LocalDateTime end);
+
+    // ID 내림차순(최신순) 조회 메서드
+    List<SquatWorkout> findByUserOrderByIdDesc(User user);
 }

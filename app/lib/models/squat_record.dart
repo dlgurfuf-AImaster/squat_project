@@ -1,4 +1,4 @@
-import '../models/squat_model.dart'; // 기존 SquatData 참조
+import '../models/squat_model.dart';
 
 /// 내부에 영구 저장(DB)되는 스쿼트 한 세트의 최종 결과 기록 모델
 class SquatRecord {
@@ -9,6 +9,8 @@ class SquatRecord {
   final int depthErrorCount;   // 깊이 부족 오류 횟수
   final int goodMorningCount;  // 굿모닝 자세 오류 횟수
 
+  final bool isSynced; // 서버 백업 동기화 여부 필드
+
   SquatRecord({
     this.id,
     required this.date,
@@ -16,6 +18,7 @@ class SquatRecord {
     required this.waistErrorCount,
     required this.depthErrorCount,
     required this.goodMorningCount,
+    this.isSynced = false,
   });
 
   // 🌟 [핵심 1] 실시간 상태(SquatData)를 받아 저장용 객체로 즉시 변환하는 생성자
@@ -38,6 +41,7 @@ class SquatRecord {
       'waistErrorCount': waistErrorCount,
       'depthErrorCount': depthErrorCount,
       'goodMorningCount': goodMorningCount,
+      'is_synced': isSynced ? 1 : 0, // SQLite INTEGER 저장용 (1: true, 0: false)
     };
   }
 
@@ -50,6 +54,7 @@ class SquatRecord {
       waistErrorCount: map['waistErrorCount'],
       depthErrorCount: map['depthErrorCount'],
       goodMorningCount: map['goodMorningCount'],
+      isSynced: (map['is_synced'] ?? 0) == 1, // DB에 컬럼이 기존에 없었더라도 null safe 처리
     );
   }
 }

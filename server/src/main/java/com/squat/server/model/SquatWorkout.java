@@ -5,7 +5,13 @@ import jakarta.persistence.*;
 
 /// 스쿼트 정보
 @Entity
-@Table(name = "squat_workout")
+// 사용자별 최신 기록(id DESC) 조회를 위한 복합 인덱스(Index) 설정 추가
+@Table(
+        name = "squat_workout",
+        indexes = {
+                @Index(name = "idx_user_id_id_desc", columnList = "user_id, id DESC")
+        }
+)
 public class SquatWorkout {
     // PK
     @Id
@@ -58,7 +64,6 @@ public class SquatWorkout {
     public String getCoachingMessage() { return coachingMessage; }
     public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }
 
-    // [수정] recordTime Getter & Setter
     public LocalDateTime getRecordTime() { return recordTime; }
     public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
 }

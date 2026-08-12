@@ -12,6 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/squat")
 public class SquatWorkoutController {
@@ -33,6 +35,15 @@ public class SquatWorkoutController {
     ) {
         SquatWorkout savedWorkout = squatWorkoutService.saveWorkout(userDetails.getUsername(), request);
         return ResponseEntity.ok(SquatWorkoutResponse.from(savedWorkout));
+    }
+
+    // 1-1. 로그인한 사용자의 서버 저장 운동 기록 목록 전체 조회
+    @GetMapping("/records")
+    public ResponseEntity<List<SquatWorkoutResponse>> getUserRecords(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        List<SquatWorkoutResponse> records = squatWorkoutService.getRecordsByUsername(userDetails.getUsername());
+        return ResponseEntity.ok(records);
     }
 
     // 2. 단일 운동 기록 ID 기반 AI 코칭 요청

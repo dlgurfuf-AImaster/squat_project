@@ -175,7 +175,6 @@ class ApiService {
           headers: {
             "Authorization": "Bearer $token",
           },
-          // 집계 기록이 AI 답변이 30초를 넘긴다면 60초로 늘릴 것
           receiveTimeout: const Duration(seconds: 30),
         ),
       );
@@ -191,5 +190,37 @@ class ApiService {
       print("종합 코칭 요청 에러: $e");
       return null;
     }
+  }
+
+  /// 6. 서버 DB에 저장된 사용자의 스쿼트 기록 목록 조회
+  Future<List<SquatWorkoutResponse>?> getSquatRecords() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        print("저장된 JWT 토큰이 없습니다.");
+        return null;
+      }
+
+      final response = await _dio.get(
+        "/squat/records",
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          receiveTimeout: const Duration(seconds: 10),
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data != null) {
+        final List<dynamic> rawList = response.data;
+        // 타입 안정성을 위해 명시적으로 Map<String, dynamic> 캐스팅 추가
+        return rawList
+            .map((json) => SquatWorkoutResponse.fromJson(json as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      print("❌ 서버 기록 조회 실패: $e");
+    }
+    return null;
   }
 }
