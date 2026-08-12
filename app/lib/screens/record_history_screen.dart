@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../models/squat_record.dart';
 import '../services/api_service.dart';
 import '../services/database_helper.dart';
 import '../dtos/squat_workout_request.dart';
-import '../dtos/coaching_response.dart';
+import '../dtos/aggregate_coaching_request.dart';
+import '../providers/coaching_provider.dart';
 
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
@@ -15,6 +17,9 @@ class RecordHistoryScreen extends StatefulWidget {
 class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   late Future<List<SquatRecord>> _recordsFuture;
 
+  // 선택된 로컬 기록 ID 저장 집합
+  final Set<int> _selectedRecordIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +29,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   // DB에서 기록 다시 불러오기
   void _refreshRecords() {
     setState(() {
+      _selectedRecordIds.clear();
       _recordsFuture = DatabaseHelper.instance.getAllRecords();
     });
   }
@@ -33,81 +39,171 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return "${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
   }
 
-  // 🤖 AI 코칭 결과 다이얼로그 팝업
-  void _showAiFeedbackDialog(BuildContext context, CoachingResponse coaching) {
-    final String message = coaching.coachingMessage;
-    final int successCount = coaching.totalSuccessCount; // 💡 [수정] DTO 필드 사용
+  // ☁️ 선택된 로컬 기록들을 서버로 다중 전송하는 함수
+  Future<void> _sendSelectedRecordsToServer(List<SquatRecord> allRecords) async {
+    final selectedRecords = allRecords
+        .where((r) => r.id != null && _selectedRecordIds.contains(r.id))
+        .toList();
 
+    if (selectedRecords.isEmpty) return;
+
+    // 로딩 팝업 표시
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Text("🤖 AI 트레이너의 코칭", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-          ],
-        ),
-        content: SingleChildScrollView(
+      barrierDismissible: false,
+      builder: (dialogContext) => const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 성공 횟수 요약 배너
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                    const SizedBox(width: 8),
-                    Text(
-                      "성공 횟수: $successCount회",
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // AI 피드백 메시지 (말풍선 카드)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.amber.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.shade300),
-                ),
-                child: Text(
-                  message,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                "☁️ 선택한 기록을 서버로 전송 중입니다...",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("확인", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-        ],
       ),
     );
+
+    int successCount = 0;
+    int failCount = 0;
+
+    for (final record in selectedRecords) {
+      final response = await ApiService().sendSquatRecord(
+        SquatWorkoutRequest.fromRecord(record),
+      );
+      if (response != null) {
+        successCount++;
+      } else {
+        failCount++;
+      }
+    }
+
+    if (context.mounted) {
+      Navigator.pop(context); // 로딩 팝업 닫기
+    }
+
+    if (context.mounted) {
+      setState(() {
+        _selectedRecordIds.clear();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "☁️ 서버 전송 완료 (성공: ${successCount}건 / 실패: ${failCount}건)",
+          ),
+        ),
+      );
+    }
+  }
+
+  // 🤖 단일 운동 기록 AI 코칭 요청 처리 함수 (비동기 로딩 + 탭 이동)
+  Future<void> _handleSingleAiCoachingRequest(
+      BuildContext context,
+      CoachingProvider coachingProvider,
+      int workoutId,
+      ) async {
+    // 1. 화면 클릭을 막는 반투명 로딩 팝업 표시
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                "🤖 선택한 단일 기록을 분석 중입니다...\n잠시만 기다려주세요",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // 2. 단일 코칭 API 호출 (/squat/coaching/single/{workoutId})
+    await coachingProvider.requestSingleCoaching(workoutId);
+
+    // 3. 분석 완료 후 로딩 팝업 닫기
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+
+    // 4. 완료 후 AI 코칭 탭(Index 3)으로 이동
+    if (context.mounted) {
+      coachingProvider.setTabIndex(3);
+    }
+  }
+
+  // 🤖 집계(종합/다중) AI 코칭 요청 처리 함수
+  Future<void> _handleAggregateAiCoachingRequest(
+      BuildContext context,
+      CoachingProvider coachingProvider,
+      AggregateCoachingRequest request,
+      ) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => const Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(color: Colors.white),
+              SizedBox(height: 16),
+              Text(
+                "🤖 AI가 스쿼트 데이터를 종합 분석 중입니다...\n잠시만 기다려주세요",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    await coachingProvider.requestAggregateCoaching(request);
+
+    if (context.mounted) {
+      Navigator.pop(context);
+    }
+
+    if (context.mounted) {
+      coachingProvider.setTabIndex(3);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final coachingProvider = Provider.of<CoachingProvider>(context, listen: false);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("🏋️ 스쿼트 운동 기록"),
@@ -151,179 +247,225 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: records.length,
-            itemBuilder: (context, index) {
-              final record = records[index];
+          return Column(
+            children: [
+              // 상단 컨트롤 바 (다중 서버 전송 & 종합 AI 분석)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Column(
+                  children: [
+                    // 1열: 선택 항목 서버 전송 버튼
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.cloud_upload, size: 18),
+                        label: Text("선택(${_selectedRecordIds.length})개 서버 전송"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        onPressed: _selectedRecordIds.isEmpty
+                            ? null
+                            : () => _sendSelectedRecordsToServer(records),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
 
-              return Card(
-                elevation: 3,
-                margin: const EdgeInsets.only(bottom: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 1. 날짜, 서버 업로드 버튼, 삭제 버튼
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.calendar_today, size: 18, color: Colors.indigo),
-                              const SizedBox(width: 8),
-                              Text(
-                                _formatDate(record.date),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
+                    // 2열: 최근 30일 AI 분석 & 선택 항목 AI 분석 (종합 분석)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.date_range, size: 16),
+                            label: const Text("최근 30일 AI 분석"),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: () {
+                              _handleAggregateAiCoachingRequest(
+                                context,
+                                coachingProvider,
+                                AggregateCoachingRequest.recent30Days(),
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            icon: const Icon(Icons.auto_awesome, size: 16),
+                            label: Text("선택(${_selectedRecordIds.length})개 AI 분석"),
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onPressed: _selectedRecordIds.isEmpty
+                                ? null
+                                : () {
+                              _handleAggregateAiCoachingRequest(
+                                context,
+                                coachingProvider,
+                                AggregateCoachingRequest.byIds(
+                                  _selectedRecordIds.toList(),
                                 ),
-                              ),
-                            ],
+                              );
+                            },
                           ),
-                          Row(
-                            children: [
-                              // 기존 삭제 버튼
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 22),
-                                onPressed: () async {
-                                  if (record.id != null) {
-                                    await DatabaseHelper.instance.deleteRecord(record.id!);
-                                    _refreshRecords(); // 목록 갱신
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("🗑️ 해당 기록이 삭제되었습니다.")),
-                                      );
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const Divider(height: 20),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
 
-                      // 2. 운동 주요 성과 (성공 횟수)
-                      Row(
-                        children: [
-                          const Icon(Icons.check_circle, color: Colors.green, size: 28),
-                          const SizedBox(width: 8),
-                          Text(
-                            "성공 횟수: ${record.successCount}회",
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
+              // 기록 리스트뷰
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: records.length,
+                  itemBuilder: (context, index) {
+                    final record = records[index];
 
-                      // 3. 자세 오류 분석 태그
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: [
-                          _buildErrorChip("허리 숙임", record.waistErrorCount, Colors.orange),
-                          _buildErrorChip("깊이 부족", record.depthErrorCount, Colors.purple),
-                          _buildErrorChip("굿모닝 자세", record.goodMorningCount, Colors.deepOrange),
-                        ],
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-
-                      // 4. AI 피드백 받기 버튼
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          icon: const Icon(Icons.auto_awesome, size: 18),
-                          label: const Text("AI 코칭 피드백 받기", style: TextStyle(fontWeight: FontWeight.bold)),
-                          onPressed: () async {
-                            // AI 분석 중 화면 중앙에 로딩 팝업 표시
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (BuildContext dialogContext) {
-                                return const Dialog(
-                                  backgroundColor: Colors.transparent,
-                                  elevation: 0,
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        CircularProgressIndicator(color: Colors.white),
-                                        SizedBox(height: 16),
-                                        Text(
-                                          "🤖 AI가 운동 자세를 분석 중입니다...\n잠시만 기다려주세요",
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 1. 선택 체크박스, 날짜, 단일 AI 코칭 버튼, 삭제 버튼
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    if (record.id != null)
+                                      Checkbox(
+                                        value: _selectedRecordIds.contains(record.id),
+                                        onChanged: (bool? checked) {
+                                          setState(() {
+                                            if (checked == true) {
+                                              _selectedRecordIds.add(record.id!);
+                                            } else {
+                                              _selectedRecordIds.remove(record.id!);
+                                            }
+                                          });
+                                        },
+                                      ),
+                                    const Icon(Icons.calendar_today, size: 16, color: Colors.indigo),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _formatDate(record.date),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                     ),
+                                  ],
+                                ),
+                                Row(
+                                  children: [
+                                    // 💡 [추가] 개별 카드 단일 AI 코칭 버튼
+                                    OutlinedButton.icon(
+                                      icon: const Icon(Icons.psychology, size: 14),
+                                      label: const Text("AI 코칭", style: TextStyle(fontSize: 12)),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: Colors.indigo,
+                                        side: const BorderSide(color: Colors.indigo),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        minimumSize: Size.zero,
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      ),
+                                      onPressed: record.id == null
+                                          ? null
+                                          : () {
+                                        _handleSingleAiCoachingRequest(
+                                          context,
+                                          coachingProvider,
+                                          record.id!,
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(width: 4),
+                                    // 삭제 버튼
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.redAccent,
+                                        size: 20,
+                                      ),
+                                      onPressed: () async {
+                                        if (record.id != null) {
+                                          await DatabaseHelper.instance.deleteRecord(record.id!);
+                                          _refreshRecords();
+                                          if (context.mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(
+                                                content: Text("🗑️ 해당 기록이 삭제되었습니다."),
+                                              ),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 16),
+
+                            // 2. 운동 주요 성과
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle, color: Colors.green, size: 28),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "성공 횟수: ${record.successCount}회",
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green,
                                   ),
-                                );
-                              },
-                            );
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
 
-                            // 1단계: DTO 생성 후 서버에 운동 기록 전송
-                            final workoutResponse = await ApiService().sendSquatRecord(
-                              SquatWorkoutRequest.fromRecord(record),
-                            );
-
-                            CoachingResponse? coachingResponse;
-
-                            // 2단계: 저장 성공 시 생성된 PK ID로 AI 코칭 요청
-                            if (workoutResponse != null) {
-                              coachingResponse = await ApiService().getSingleCoaching(workoutResponse.id);
-                            }
-
-                            // 서버 응답이 도착하면 로딩 팝업 닫기
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                            }
-
-                            // 수신 성공 시 결과 다이얼로그 팝업 출력
-                            if (context.mounted) {
-                              if (coachingResponse != null) {
-                                _showAiFeedbackDialog(context, coachingResponse);
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("❌ 서버 전송 및 분석에 실패했습니다. (네트워크/타임아웃 에러)")),
-                                );
-                              }
-                            }
-                          },
+                            // 3. 자세 오류 태그
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
+                                _buildErrorChip("허리 숙임", record.waistErrorCount, Colors.orange),
+                                _buildErrorChip("깊이 부족", record.depthErrorCount, Colors.purple),
+                                _buildErrorChip("굿모닝 자세", record.goodMorningCount, Colors.deepOrange),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
-              );
-            },
+              ),
+            ],
           );
         },
       ),
     );
   }
 
-  // 자세 오류 정보를 보여주는 칩(Chip) 위젯
   Widget _buildErrorChip(String label, int count, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
