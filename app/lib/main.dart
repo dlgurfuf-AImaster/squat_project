@@ -1,4 +1,5 @@
 import 'package:app/providers/bluetooth_provider.dart';
+import 'package:app/providers/coaching_provider.dart';
 import 'package:app/screens/main_holder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -18,6 +19,7 @@ void main() async {
       providers: [
         ChangeNotifierProvider(create: (_) => SquatProvider()),
         ChangeNotifierProvider(create: (_) => BluetoothProvider()),
+        ChangeNotifierProvider(create: (_) => CoachingProvider()),
       ],
       child: const MyApp(),
     ),

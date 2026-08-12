@@ -127,7 +127,7 @@ class ApiService {
         return null;
       }
 
-      final response = await _dio.get(
+      final response = await _dio.post(
         "/squat/coaching/single/$workoutId",
         options: Options(
           headers: {
@@ -175,6 +175,7 @@ class ApiService {
           headers: {
             "Authorization": "Bearer $token",
           },
+          // 집계 기록이 AI 답변이 30초를 넘긴다면 60초로 늘릴 것
           receiveTimeout: const Duration(seconds: 30),
         ),
       );
