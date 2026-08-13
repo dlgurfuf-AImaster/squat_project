@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long> {
 
@@ -20,4 +21,7 @@ public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long
 
     // 사용자 및 UUID 기준 데이터 삭제
     void deleteByUserAndUuid(User user, String uuid);
+
+    // 사용자 및 UUID 기준 단일 운동 기록 조회
+    Optional<SquatWorkout> findByUserAndUuid(User user, String uuid);
 }
