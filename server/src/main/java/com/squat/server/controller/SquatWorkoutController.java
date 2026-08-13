@@ -47,13 +47,19 @@ public class SquatWorkoutController {
         return ResponseEntity.ok(records);
     }
 
-    // 2. 단일 운동 기록 ID 기반 AI 코칭 요청
-    @PostMapping("/coaching/single/{workoutId}")
+    // 2. 단일 운동 기록 UUID 기반 AI 코칭 요청
+    @PostMapping("/coaching/single/{uuid}")
     public ResponseEntity<CoachingResponse> getSingleCoaching(
             @AuthenticationPrincipal UserDetails userDetails,
-            @PathVariable Long workoutId
+            @PathVariable String uuid
     ) {
-        CoachingResponse response = squatCoachingService.getSingleCoaching(userDetails.getUsername(), workoutId);
+        CoachingResponse response = squatCoachingService.getSingleCoaching(userDetails.getUsername(), uuid);
+
+        // AI 생성 실패 시 HTTP 503 (또는 500) 응답 반환
+        if (response == null) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+
         return ResponseEntity.ok(response);
     }
 
