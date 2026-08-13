@@ -86,8 +86,11 @@ class _CoachingScreenState extends State<CoachingScreen> {
                                 ? null
                                 : () async {
                               if (_selectedServerIds.length == 1) {
-                                // 1개 선택 시 단일 분석
-                                await provider.requestSingleCoaching(_selectedServerIds.first);
+                                // 1개 선택 시: 선택된 ID에 해당하는 객체를 찾아서 uuid 추출 후 전달
+                                final selectedRecord = serverRecords.firstWhere(
+                                      (r) => r.id == _selectedServerIds.first,
+                                );
+                                await provider.requestSingleCoaching(selectedRecord.uuid);
                               } else {
                                 // 다중 선택 시 집계 분석
                                 await provider.requestAggregateCoaching(
