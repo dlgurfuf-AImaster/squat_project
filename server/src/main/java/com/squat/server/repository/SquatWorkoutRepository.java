@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long> {
-    List<SquatWorkout> findByUserOrderByRecordTimeDesc(User user);
 
     // 특정 사용자 및 ID 목록으로 조회
     List<SquatWorkout> findByUserAndIdIn(User user, List<Long> ids);
@@ -18,4 +17,7 @@ public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long
 
     // ID 내림차순(최신순) 조회 메서드
     List<SquatWorkout> findByUserOrderByIdDesc(User user);
+
+    // 사용자 및 UUID 기준 데이터 삭제
+    void deleteByUserAndUuid(User user, String uuid);
 }
