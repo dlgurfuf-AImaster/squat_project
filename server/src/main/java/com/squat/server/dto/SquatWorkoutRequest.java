@@ -6,6 +6,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 
 public class SquatWorkoutRequest {
+    private String uuid;
+
     private int successCount;
     private int waistErrorCount;
     private int depthErrorCount;
@@ -18,6 +20,9 @@ public class SquatWorkoutRequest {
     public SquatWorkoutRequest() {}
 
     // Getter & Setter
+    public String getUuid() { return uuid; }
+    public void setUuid(String uuid) { this.uuid = uuid; }
+
     public int getSuccessCount() { return successCount; }
     public void setSuccessCount(int successCount) { this.successCount = successCount; }
 

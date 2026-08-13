@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../models/squat_record.dart';
@@ -34,6 +36,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE squat_records (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        uuid TEXT NOT NULL UNIQUE,
         date TEXT NOT NULL,
         successCount INTEGER NOT NULL,
         waistErrorCount INTEGER NOT NULL,
@@ -44,11 +47,11 @@ class DatabaseHelper {
     ''');
   }
 
-  // 기존 사용자를 위한 DB 마이그레이션 함수 (v1 -> v2)
+  // 기존 사용자를 위한 DB 마이그레이션 함수 (v1 -> v2 -> v3)
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
+    if (oldVersion < 3) {
       await db.execute(
-        'ALTER TABLE squat_records ADD COLUMN is_synced INTEGER DEFAULT 0',
+        'ALTER TABLE squat_records ADD COLUMN uuid TEXT',
       );
     }
   }
@@ -86,5 +89,32 @@ class DatabaseHelper {
       where: 'id = ?',
       whereArgs: [id],
     );
+  }
+
+  /// TODO 🧪 [테스트용] 로컬 DB에 더미 스쿼트 데이터 30개 생성 (is_synced = 0) (삭제할 것)
+  Future<void> insertDummyRecords() async {
+    final random = Random();
+    final now = DateTime.now();
+
+    for (int i = 0; i < 30; i++) {
+      // 최근 30일 이내 무작위 날짜 및 시간 생성
+      final daysAgo = random.nextInt(30);
+      final hoursAgo = random.nextInt(24);
+      final minutesAgo = random.nextInt(60);
+      final recordDate = now.subtract(
+        Duration(days: daysAgo, hours: hoursAgo, minutes: minutesAgo),
+      );
+
+      final record = SquatRecord(
+        date: recordDate,
+        successCount: random.nextInt(15) + 5,   // 5 ~ 19회 성공
+        waistErrorCount: random.nextInt(5),     // 0 ~ 4회 오류
+        depthErrorCount: random.nextInt(5),     // 0 ~ 4회 오류
+        goodMorningCount: random.nextInt(4),   // 0 ~ 3회 오류
+        isSynced: false,                        // 💡 미전송(0) 상태로 설정
+      );
+
+      await insertRecord(record);
+    }
   }
 }

@@ -24,6 +24,7 @@ public class SquatWorkoutService {
         this.userRepository = userRepository;
     }
 
+    // 스쿼트 기록 저장 메소드
     @Transactional
     public SquatWorkout saveWorkout(String username, SquatWorkoutRequest request) {
         User user = userRepository.findByUsername(username)
@@ -31,14 +32,13 @@ public class SquatWorkoutService {
 
         // SquatWorkout 엔티티 생성 및 pure 데이터 세팅
         SquatWorkout workout = new SquatWorkout();
+        workout.setUuid(request.getUuid());
         workout.setUser(user);
         workout.setSuccessCount(request.getSuccessCount());
         workout.setWaistErrorCount(request.getWaistErrorCount());
         workout.setDepthErrorCount(request.getDepthErrorCount());
         workout.setGoodMorningCount(request.getGoodMorningCount());
         workout.setRecordTime(request.getRecordTime());
-        // coachingMessage는 저장 시점에 생성하지 않고 null로 둠
-        // (이후 사용자가 AI 코칭을 요청할 때 SquatCoachingService에서 생성/반환)
 
         return squatWorkoutRepository.save(workout);
     }
@@ -53,5 +53,14 @@ public class SquatWorkoutService {
                 .stream()
                 .map(SquatWorkoutResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    // 서버 기록 삭제 메소드 (UUID 기준 삭제)
+    @Transactional
+    public void deleteRecordByUuid(String username, String uuid) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다: " + username));
+
+        squatWorkoutRepository.deleteByUserAndUuid(user, uuid);
     }
 }
