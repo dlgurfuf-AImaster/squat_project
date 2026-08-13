@@ -55,7 +55,7 @@ public class GeminiService {
         return callGeminiApi(prompt);
     }
 
-    // 💡 공통 Gemini API 호출 메서드
+    // 💡 공통 Gemini API 호출 메서드 (재시도 로직 적용)
     private String callGeminiApi(String prompt) {
         String urlString = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=" + apiKey;
 
@@ -65,32 +65,50 @@ public class GeminiService {
                 )
         );
 
-        try {
-            String responseBody = restClient.post()
-                    .uri(URI.create(urlString))
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(requestBody)
-                    .retrieve()
-                    .body(String.class);
+        int maxRetries = 3;
+        int retryDelayMs = 1500;
 
-            if (responseBody != null) {
-                JsonNode response = objectMapper.readTree(responseBody);
-                if (response.has("candidates")) {
-                    JsonNode candidates = response.get("candidates");
-                    if (candidates.isArray() && !candidates.isEmpty()) {
-                        return candidates.get(0)
-                                .get("content")
-                                .get("parts")
-                                .get(0)
-                                .get("text")
-                                .asText();
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                String responseBody = restClient.post()
+                        .uri(URI.create(urlString))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(requestBody)
+                        .retrieve()
+                        .body(String.class);
+
+                if (responseBody != null) {
+                    JsonNode response = objectMapper.readTree(responseBody);
+                    if (response.has("candidates")) {
+                        JsonNode candidates = response.get("candidates");
+                        if (candidates.isArray() && !candidates.isEmpty()) {
+                            return candidates.get(0)
+                                    .get("content")
+                                    .get("parts")
+                                    .get(0)
+                                    .get("text")
+                                    .asText();
+                        }
                     }
                 }
+            } catch (Exception e) {
+                System.err.println("Gemini API 호출 시도 (" + attempt + "/" + maxRetries + ") 실패: " + e.getMessage());
+
+                // 마지막 시도 실패 시 null 반환
+                if (attempt == maxRetries) {
+                    System.err.println("Gemini API 최종 호출 실패. null을 반환합니다.");
+                    return null;
+                }
+
+                try {
+                    Thread.sleep(retryDelayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
-            return "운동 기록 분석이 완료되었습니다! 계속해서 좋은 자세를 유지해 보세요 👍";
-        } catch (Exception e) {
-            System.err.println("Gemini API 호출 오류: " + e.getMessage());
-            return "스쿼트 기록이 성공적으로 분석되었습니다! 다음 운동도 화이팅해 보세요 💪";
         }
+
+        return null; // 예외 발생 및 재시도 실패 시 null 반환
     }
 }

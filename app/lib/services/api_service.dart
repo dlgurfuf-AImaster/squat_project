@@ -117,8 +117,8 @@ class ApiService {
     }
   }
 
-  /// 4. 단일 운동 기록 ID 기반 AI 코칭 요청
-  Future<CoachingResponse?> getSingleCoaching(int workoutId) async {
+  /// 4. 단일 운동 기록 UUID 기반 AI 코칭 요청
+  Future<CoachingResponse?> getSingleCoaching(String uuid) async {
     try {
       final token = await getToken();
 
@@ -128,7 +128,7 @@ class ApiService {
       }
 
       final response = await _dio.post(
-        "/squat/coaching/single/$workoutId",
+        "/squat/coaching/single/$uuid",
         options: Options(
           headers: {
             "Authorization": "Bearer $token",
