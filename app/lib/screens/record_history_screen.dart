@@ -126,6 +126,20 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
       appBar: AppBar(
         title: const Text("🏋️ 스쿼트 운동 기록"),
         actions: [
+          // TODO 💡 [임시 개발용] 더미 데이터 30개 생성 버튼 (삭제할 것)
+          IconButton(
+            icon: const Icon(Icons.add_chart, color: Colors.amber),
+            tooltip: "더미 데이터 30개 생성",
+            onPressed: () async {
+              await DatabaseHelper.instance.insertDummyRecords();
+              _refreshRecords(); // 리스트 즉시 새로고침
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("🧪 더미 데이터 30개가 생성되었습니다!")),
+                );
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _refreshRecords,
@@ -173,7 +187,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
               // 상단 컨트롤 바
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row( // 미전송 자동선택 버튼 배치를 위해 Row 구조로 변경
+                child: Row(
                   children: [
                     // 미전송 항목 한 번에 선택 버튼
                     OutlinedButton.icon(
@@ -292,7 +306,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                                     ),
                                   ],
                                 ),
-                                // 개별 카드 내 삭제 버튼만 유지
+
+                                // 개별 카드 내 삭제 버튼
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete_outline,
@@ -300,16 +315,56 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                                     size: 20,
                                   ),
                                   onPressed: () async {
-                                    if (record.id != null) {
-                                      await DatabaseHelper.instance.deleteRecord(record.id!);
-                                      _refreshRecords();
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text("🗑️ 해당 기록이 삭제되었습니다."),
+                                    if (record.id == null) return;
+
+                                    // 삭제 확인 대화상자
+                                    final confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) => AlertDialog(
+                                        title: const Text("기록 삭제"),
+                                        content: Text(
+                                          record.isSynced
+                                              ? "서버에 백업된 기록입니다. 서버 DB와 로컬 기록이 모두 삭제됩니다."
+                                              : "이 기록을 로컬 DB에서 삭제하시겠습니까?",
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, false),
+                                            child: const Text("취소"),
                                           ),
-                                        );
+                                          TextButton(
+                                            onPressed: () => Navigator.pop(context, true),
+                                            child: const Text("삭제", style: TextStyle(color: Colors.red)),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+
+                                    if (confirm != true) return;
+
+                                    // 삭제 처리 로직 내 수정
+                                    if (record.isSynced) {
+                                      final serverDeleted = await ApiService().deleteSquatRecordByUuid(record.uuid);
+                                      if (!serverDeleted) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text("❌ 서버 기록 삭제에 실패했습니다.")),
+                                          );
+                                        }
+                                        return;
                                       }
+                                    }
+
+                                    // 2. 로컬 SQLite DB 삭제 진행 (로컬 ID 사용)
+                                    await DatabaseHelper.instance.deleteRecord(record.id!);
+                                    _refreshRecords();
+
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("🗑️ 해당 기록이 삭제되었습니다."),
+                                        ),
+                                      );
                                     }
                                   },
                                 ),
