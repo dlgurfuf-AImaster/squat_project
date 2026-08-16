@@ -10,8 +10,8 @@ import java.util.Optional;
 
 public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long> {
 
-    // 특정 사용자 및 ID 목록으로 조회
-    List<SquatWorkout> findByUserAndIdIn(User user, List<Long> ids);
+    // 특정 사용자 및 UUID 목록으로 조회
+    List<SquatWorkout> findByUserAndUuidIn(User user, List<String> uuids);
 
     // 특정 사용자 및 날짜 범위로 조회
     List<SquatWorkout> findByUserAndRecordTimeBetween(User user, LocalDateTime start, LocalDateTime end);
