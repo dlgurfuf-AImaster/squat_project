@@ -117,8 +117,8 @@ class ApiService {
     }
   }
 
-  /// 4. 단일 운동 기록 ID 기반 AI 코칭 요청
-  Future<CoachingResponse?> getSingleCoaching(int workoutId) async {
+  /// 4. 단일 운동 기록 UUID 기반 AI 코칭 요청
+  Future<CoachingResponse?> getSingleCoaching(String uuid) async {
     try {
       final token = await getToken();
 
@@ -128,7 +128,7 @@ class ApiService {
       }
 
       final response = await _dio.post(
-        "/squat/coaching/single/$workoutId",
+        "/squat/coaching/single/$uuid",
         options: Options(
           headers: {
             "Authorization": "Bearer $token",
@@ -222,5 +222,27 @@ class ApiService {
       print("❌ 서버 기록 조회 실패: $e");
     }
     return null;
+  }
+
+  /// 7. 서버 DB에 저장된 특정 스쿼트 기록 삭제 (UUID 기준)
+  Future<bool> deleteSquatRecordByUuid(String uuid) async {
+    try {
+      final token = await getToken();
+      if (token == null) return false;
+
+      final response = await _dio.delete(
+        "/squat/records/$uuid", // 💡 URL 경로에 UUID 전달
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+        ),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 204;
+    } catch (e) {
+      print("❌ 서버 기록 삭제 에러: $e");
+      return false;
+    }
   }
 }

@@ -47,15 +47,15 @@ class CoachingProvider with ChangeNotifier {
   }
 
   // 단일 기록 AI 코칭 요청
-  Future<bool> requestSingleCoaching(int workoutId) async {
+  Future<bool> requestSingleCoaching(String uuid) async {
     _setLoading(true);
 
     try {
-      final response = await _apiService.getSingleCoaching(workoutId);
+      final response = await _apiService.getSingleCoaching(uuid);
 
       if (response != null) {
         _latestCoaching = response;
-        _errorMessage = null; // 💡 성공 시 이전 에러 메시지 초기화
+        _errorMessage = null;
         _setLoading(false);
         return true;
       } else {
@@ -64,7 +64,6 @@ class CoachingProvider with ChangeNotifier {
         return false;
       }
     } catch (e) {
-      // 💡 네트워크 단절 등 통신 예외 처리
       _errorMessage = "코칭 요청 중 오류가 발생했습니다: $e";
       _setLoading(false);
       return false;

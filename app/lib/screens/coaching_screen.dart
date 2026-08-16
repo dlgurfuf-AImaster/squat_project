@@ -11,8 +11,8 @@ class CoachingScreen extends StatefulWidget {
 }
 
 class _CoachingScreenState extends State<CoachingScreen> {
-  // 선택된 서버 기록 ID 목록
-  final Set<int> _selectedServerIds = {};
+  // 선택된 서버 기록 UUID(String) 목록
+  final Set<String> _selectedServerUuids = {};
 
   @override
   void initState() {
@@ -34,7 +34,7 @@ class _CoachingScreenState extends State<CoachingScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              setState(() => _selectedServerIds.clear());
+              setState(() => _selectedServerUuids.clear());
               Provider.of<CoachingProvider>(context, listen: false).fetchServerRecords();
             },
           ),
@@ -76,22 +76,22 @@ class _CoachingScreenState extends State<CoachingScreen> {
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             icon: const Icon(Icons.auto_awesome),
-                            label: Text("선택한 (${_selectedServerIds.length})개 데이터 AI 분석 요청"),
+                            label: Text("선택한 (${_selectedServerUuids.length})개 데이터 AI 분석 요청"),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.indigo,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                            onPressed: _selectedServerIds.isEmpty
+                            onPressed: _selectedServerUuids.isEmpty
                                 ? null
                                 : () async {
-                              if (_selectedServerIds.length == 1) {
-                                // 1개 선택 시 단일 분석
-                                await provider.requestSingleCoaching(_selectedServerIds.first);
+                              if (_selectedServerUuids.length == 1) {
+                                // 1개 선택 시: 선택된 UUID 전달
+                                await provider.requestSingleCoaching(_selectedServerUuids.first);
                               } else {
-                                // 다중 선택 시 집계 분석
+                                // 다중 선택 시: UUID 리스트 집계 요청
                                 await provider.requestAggregateCoaching(
-                                  AggregateCoachingRequest.byIds(_selectedServerIds.toList()),
+                                  AggregateCoachingRequest.byUuids(_selectedServerUuids.toList()),
                                 );
                               }
                             },
@@ -209,7 +209,7 @@ class _CoachingScreenState extends State<CoachingScreen> {
                     itemCount: serverRecords.length,
                     itemBuilder: (context, index) {
                       final record = serverRecords[index];
-                      final isSelected = _selectedServerIds.contains(record.id);
+                      final isSelected = _selectedServerUuids.contains(record.uuid);
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 8),
@@ -230,9 +230,9 @@ class _CoachingScreenState extends State<CoachingScreen> {
                           onChanged: (bool? checked) {
                             setState(() {
                               if (checked == true) {
-                                _selectedServerIds.add(record.id);
+                                _selectedServerUuids.add(record.uuid);
                               } else {
-                                _selectedServerIds.remove(record.id);
+                                _selectedServerUuids.remove(record.uuid);
                               }
                             });
                           },
