@@ -84,9 +84,9 @@ public class SquatCoachingService {
 
         List<SquatWorkout> workouts;
 
-        // 선택지 1: 개별 ID 목록 선택
-        if (request.getWorkoutIds() != null && !request.getWorkoutIds().isEmpty()) {
-            workouts = squatWorkoutRepository.findByUserAndIdIn(user, request.getWorkoutIds());
+        // 선택지 1: 개별 UUID 목록 선택
+        if (request.getWorkoutUuids() != null && !request.getWorkoutUuids().isEmpty()) {
+            workouts = squatWorkoutRepository.findByUserAndUuidIn(user, request.getWorkoutUuids());
         }
         // 선택지 2: 날짜 범위 직접 지정
         else if (request.getStartDate() != null && request.getEndDate() != null) {
