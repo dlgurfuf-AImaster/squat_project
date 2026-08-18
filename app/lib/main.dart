@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'screens/login_screen.dart';
 import 'providers/squat_provider.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../theme/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,11 +34,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'HealthCare App',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.blue,
-      ),
-      home: const LoginScreen(),
+      theme: AppTheme.darkTheme,
+      home: const MainHolder(),
     );
   }
 }
