@@ -6,8 +6,23 @@ import '../providers/bluetooth_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/coaching_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 이미지 사전 로딩 (첫 프레임 어두워짐 방지)
+    precacheImage(
+      const AssetImage('assets/images/running_woman_icon.png'),
+      context,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,18 +52,21 @@ class HomeScreen extends StatelessWidget {
                   color: Color(0xFF64748B),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // 3. 동기부여 메인 배너 (✏️ [수정] 애플 Hello 감성 인디케이터 없는 순수 배경 배너)
-              const MotivationalBanner(),
-              const SizedBox(height: 10),
-
-              // 4. 주간 운동 통계 칩 배지 (3종)
+              // 3. 주간 운동 통계 칩 배지 (3종)
               _buildStatBadges(squatProvider.data.successCount),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // 5. 메인 기능 2x2 그리드 메뉴
-              _buildGridMenu(context, coachingProvider, isBTConnected),
+              // 4. 상단 문구 + 슬림해진 버튼 통합 영역
+              MotivationalBanner(
+                child: _buildGridMenu(context, coachingProvider, isBTConnected),
+              ),
+
+              const SizedBox(height: 10), // 👈 버튼 그리드와 센서 카드 사이 간격
+
+              // ✏️ [신규 적용] 이번 주 스쿼트 달성률 그래픽 카드
+              const IsometricVerticalChart(),
             ],
           ),
         ),
@@ -74,10 +92,10 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           child: Image.asset(
-            'assets/images/running_woman_icon.png', // 👈 추가한 이미지 에셋 경로
+            'assets/images/running_woman_icon.png',
             width: 22,
             height: 22,
-            color: Colors.white, // 검은색 실루엣 이미지를 흰색으로 자동 전환해 줍니다
+            color: Colors.white,
           ),
         ),
         const SizedBox(width: 12),
@@ -153,7 +171,7 @@ class HomeScreen extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12), // 👈 [수정] 가로 간격 축소 (16 -> 12)
             Expanded(
               child: _buildActionCard(
                 title: "AI 코칭",
@@ -169,7 +187,7 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12), // 👈 [수정] 세로 간격 축소 (16 -> 12)
         Row(
           children: [
             Expanded(
@@ -184,7 +202,7 @@ class HomeScreen extends StatelessWidget {
                 },
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12), // 👈 [수정] 가로 간격 축소 (16 -> 12)
             Expanded(
               child: _buildActionCard(
                 title: "블루투스",
@@ -213,18 +231,18 @@ class HomeScreen extends StatelessWidget {
     Color? iconColor,
   }) {
     return AspectRatio(
-      aspectRatio: 1.05,
+      aspectRatio: 1.35, // 👈 [수정] 높이 축소 (기존 1.05 -> 1.35)
       child: Material(
         color: isPrimary ? AppTheme.primarySky : Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20), // 👈 [수정] 둥근 모서리 조정 (24 -> 20)
         elevation: 0,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14), // 👈 [수정] 내부 여백 축소
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(20),
               border: isPrimary
                   ? null
                   : Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
@@ -232,15 +250,15 @@ class HomeScreen extends StatelessWidget {
                   ? [
                 BoxShadow(
                   color: AppTheme.primarySky.withValues(alpha: 0.35),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
                 )
               ]
                   : [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.02),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 )
               ],
             ),
@@ -249,16 +267,16 @@ class HomeScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8), // 👈 [수정] 아이콘 감싸는 패딩 축소 (10 -> 8)
                   decoration: BoxDecoration(
                     color: isPrimary
                         ? Colors.white.withValues(alpha: 0.2)
                         : (iconBgColor ?? const Color(0xFFF1F5F9)),
-                    borderRadius: BorderRadius.circular(14),
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     icon,
-                    size: 26,
+                    size: 22, // 👈 [수정] 아이콘 크기 축소 (26 -> 22)
                     color: isPrimary ? Colors.white : (iconColor ?? const Color(0xFF0F172A)),
                   ),
                 ),
@@ -268,16 +286,16 @@ class HomeScreen extends StatelessWidget {
                     Text(
                       title,
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 15, // 👈 [수정] 제목 폰트 축소 (17 -> 15)
                         fontWeight: FontWeight.bold,
                         color: isPrimary ? Colors.white : const Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     Text(
                       subtitle,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11, // 👈 [수정] 부제목 폰트 축소 (12 -> 11)
                         color: isPrimary
                             ? Colors.white.withValues(alpha: 0.8)
                             : const Color(0xFF94A3B8),
@@ -295,10 +313,15 @@ class HomeScreen extends StatelessWidget {
 }
 
 // =============================================================================
-// ✏️ [리뉴얼] 배경 속으로 거의 스며드는 은은한 한 줄 파란색 문구 배너
+// ✏️ App.tsx 의 커스텀 Cubic-Bezier 수치를 100% 동일하게 반영한 위젯
 // =============================================================================
 class MotivationalBanner extends StatefulWidget {
-  const MotivationalBanner({super.key});
+  final Widget child;
+
+  const MotivationalBanner({
+    super.key,
+    required this.child,
+  });
 
   @override
   State<MotivationalBanner> createState() => _MotivationalBannerState();
@@ -308,32 +331,46 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
   Timer? _timer;
   int _currentIndex = 0;
 
-// ✏️ 슬림 한 줄 배너 전용 동기부여 문구 10종
+  // 🎯 1. 글자가 보이는 상태인지 체크하는 변수 추가
+  bool _isVisible = true;
+
+  static const Curve appCubicCurve = Cubic(0.22, 1.0, 0.36, 1.0);
+
   final List<String> _quotes = [
-    "오늘도 시작해볼까요?",
-    "오늘 흘린 땀은 내일의 자신감",
-    "나를 바꾸는 가장 확실한 시간",
-    "작은 실천이 만드는 기분 좋은 변화",
-    "내일의 나에게 선물하는 오늘의 운동",
-    "지속하는 힘이 곧 당신의 실력입니다",
-    "한 번의 스쿼트로 시작하는 건강한 하루",
-    "오늘도 나와의 약속을 지키는 중",
-    "꾸준함이 모여 완벽함을 만듭니다",
-    "바른 자세가 만드는 건강한 에너지",
-    "포기하지 않는 당신을 응원합니다",
+    "오늘의 한계가\n내일의 시작이다",
+    "스쿼트 하나가\n모든 걸 바꾼다",
+    "땀은\n거짓말하지 않는다",
+    "포기하는 순간\n성장도 멈춘다",
+    "강해지고 싶다면\n지금 시작하라",
   ];
 
   @override
   void initState() {
     super.initState();
+    _startBannerTimer();
+  }
 
-    // ✏️ 8초마다 은은하게 전환
-    _timer = Timer.periodic(const Duration(seconds: 8), (timer) {
-      if (mounted) {
-        setState(() {
-          _currentIndex = (_currentIndex + 1) % _quotes.length;
-        });
-      }
+  // 🎯 2. async / await 구조가 들어간 타이머 함수
+  void _startBannerTimer() {
+    _timer = Timer.periodic(const Duration(milliseconds: 8500), (timer) async {
+      if (!mounted) return;
+
+      // ① 현재 글자 퇴장 시작 (화면에서 감춤)
+      setState(() {
+        _isVisible = false;
+      });
+
+      // 사라진 후 다음 글자가 올라올 때까지 뒤 배경만 보여주는 텀(시간)을 설정합니다.
+      // 1000 = 1초 / 1500 = 1.5초 (원하시는 대로 숫자를 바꾸시면 됩니다)
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      if (!mounted) return;
+
+      // ② 다음 글자로 교체 후 등장
+      setState(() {
+        _currentIndex = (_currentIndex + 1) % _quotes.length;
+        _isVisible = true;
+      });
     });
   }
 
@@ -345,56 +382,357 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: double.infinity,
-        height: 64, // 👈 [수정] 부담없이 안착되는 슬림한 높이
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 22),
-        decoration: BoxDecoration(
-          // ✏️ [변경 1] 메인 배경과 거의 구분이 안 될 정도로 은은한 배경 그라데이션
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFFE0F7FE).withValues(alpha: 0.35), // 아주 살짝만 도는 하늘색 빛
-              AppTheme.lightBackground,                       // 배경색으로 자연스럽게 스며듦
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          top: 0,
+          left: 4,
+          right: 4,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 1300),
+            reverseDuration: const Duration(milliseconds: 700),
+            switchInCurve: appCubicCurve,
+            switchOutCurve: Curves.easeIn,
+
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return AnimatedBuilder(
+                animation: animation,
+                builder: (context, child) {
+                  // React와 완벽히 동일한 고정 -10px 이동
+                  final double translateY = -10.0 * (1.0 - animation.value);
+                  return Transform.translate(
+                    offset: Offset(0.0, translateY),
+                    child: Opacity(
+                      opacity: animation.value,
+                      child: child,
+                    ),
+                  );
+                },
+                child: child,
+              );
+            },
+
+            // 🎯 3. _isVisible 이 false 일 때는 빈 공간(SizedBox)을 보여주어 배경이 트이게 만듭니다.
+            child: _isVisible
+                ? Container(
+              key: ValueKey<int>(_currentIndex),
+              alignment: Alignment.centerLeft,
+              child: ShaderMask(
+                blendMode: BlendMode.srcIn,
+                shaderCallback: (Rect bounds) {
+                  return const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xBB38BDF8),
+                      Color(0x0038BDF8),
+                    ],
+                  ).createShader(bounds);
+                },
+                child: Text(
+                  _quotes[_currentIndex],
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w600,
+                    height: 1.25,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ),
+            )
+                : const SizedBox.shrink(key: ValueKey<String>('empty_space')),
+          ),
+        ),
+
+        // 하단 레이어
+        Padding(
+          padding: const EdgeInsets.only(top: 75.0),
+          child: widget.child,
+        ),
+      ],
+    );
+  }
+}
+
+class IsometricVerticalChart extends StatelessWidget {
+  const IsometricVerticalChart({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final List<String> days = ["월", "화", "수", "목", "금", "토", "일"];
+    final List<int> counts = [45, 60, 0, 85, 50, 0, 0];
+    const int todayIndex = 3; // 목요일 (오늘)
+    const int maxCount = 100;
+
+    // 🩵 통일된 스카이블루 메인 컬러
+    final Color primarySky = const Color(0xFF38BDF8);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. 헤더
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: primarySky.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.bar_chart_rounded, size: 18, color: primarySky),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    "3D 주간 스쿼트 리포트",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  "목표 80회",
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF64748B),
+                  ),
+                ),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          // ✏️ 필요시 경계선도 아주 미세하게만 주고 싶다면 아래 border 주석을 해제할 수 있습니다.
-          // border: Border.all(color: AppTheme.primarySky.withValues(alpha: 0.08), width: 1),
-        ),
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 1800), // 부드러운 1.8초 페이드
-          switchInCurve: Curves.easeInOut,
-          switchOutCurve: Curves.easeInOut,
-          transitionBuilder: (Widget child, Animation<double> animation) {
-            return FadeTransition(opacity: animation, child: child);
-          },
-          child: Container(
-            key: ValueKey<int>(_currentIndex),
-            alignment: Alignment.centerLeft,
-            width: double.infinity,
-            child: _buildBannerText(_quotes[_currentIndex]),
+
+          const SizedBox(height: 10),
+
+          // 2. 📊 스카이블루 3D 수직 원통 차트 (오버플로우 방지 수치 반영)
+          SizedBox(
+            height: 145, // 전체 높이 공간 넉넉히 확보
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(7, (index) {
+                final bool isToday = index == todayIndex;
+                final int count = counts[index];
+                final double heightRatio = (count / maxCount).clamp(0.0, 1.0);
+
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    // 수치 표시 (운동한 날만)
+                    SizedBox(
+                      height: 16,
+                      child: count > 0
+                          ? Text(
+                        "$count",
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: isToday ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                        ),
+                      )
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(height: 4),
+
+                    // 아이소메트릭 수직 원통 (스카이블루)
+                    CustomPaint(
+                      size: const Size(24, 80),
+                      painter: IsometricUprightCylinderPainter(
+                        heightRatio: heightRatio,
+                        isToday: isToday,
+                        hasValue: count > 0,
+                        baseColor: primarySky, // 스카이블루 단일 색상 전달
+                      ),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    // 요일 라벨
+                    Text(
+                      days[index],
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                        color: isToday ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
           ),
-        ),
+        ],
       ),
     );
+  }
+}
+
+// =============================================================================
+// 🧊 아소메트릭 수직 원통 (Isometric Upright Cylinder) 페인터
+// =============================================================================
+class IsometricUprightCylinderPainter extends CustomPainter {
+  final double heightRatio;
+  final bool isToday;
+  final bool hasValue;
+  final Color baseColor;
+
+  IsometricUprightCylinderPainter({
+    required this.heightRatio,
+    required this.isToday,
+    required this.hasValue,
+    required this.baseColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double rx = size.width / 2; // 타원 가로 반지름
+    final double ry = rx * 0.45; // 고각 타원 비율
+
+    final double maxHeight = size.height - (ry * 2) - 6;
+    final double fillHeight = maxHeight * heightRatio;
+
+    final double bottomY = size.height - ry - 3;
+    final double topY = bottomY - fillHeight;
+    final double fullTopY = bottomY - maxHeight;
+
+    // 1. 색상 세팅 (오늘 날짜는 좀 더 선명한 딥 스카이블루)
+    final Color mainColor = !hasValue
+        ? const Color(0xFFE2E8F0)
+        : (isToday ? const Color(0xFF0284C7) : baseColor);
+
+    // HSL 변환으로 입체 명암 자동 계산 (상단 뚜껑은 더 밝게, 오른쪽 측면은 어둡게)
+    final HSLColor hsl = HSLColor.fromColor(mainColor);
+    final Color topCapColor = hsl.withLightness((hsl.lightness + 0.20).clamp(0.0, 1.0)).toColor();
+    final Color sideDarkColor = hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
+
+    // A. 바닥 3D 대각선 그림자
+    if (hasValue) {
+      final Path shadowPath = Path()
+        ..moveTo(0, bottomY)
+        ..lineTo(rx * 1.8, bottomY + ry * 1.5)
+        ..arcToPoint(
+          Offset(size.width + rx * 1.8, bottomY + ry * 1.5),
+          radius: Radius.elliptical(rx, ry),
+        )
+        ..lineTo(size.width, bottomY)
+        ..close();
+
+      canvas.drawPath(
+        shadowPath,
+        Paint()
+          ..color = Colors.black.withValues(alpha: 0.06)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+      );
+    }
+
+    // B. 비어있는 슬롯 트랙 (배경 가이드 원통)
+    final Paint trackPaint = Paint()..color = const Color(0xFFF1F5F9);
+    final Path trackPath = Path()
+      ..moveTo(0, bottomY)
+      ..lineTo(0, fullTopY)
+      ..arcToPoint(
+        Offset(size.width, fullTopY),
+        radius: Radius.elliptical(rx, ry),
+      )
+      ..lineTo(size.width, bottomY)
+      ..arcToPoint(
+        Offset(0, bottomY),
+        radius: Radius.elliptical(rx, ry),
+        clockwise: false,
+      )
+      ..close();
+    canvas.drawPath(trackPath, trackPaint);
+
+    if (!hasValue) return;
+
+    // C. 원통 수직 몸통 (왼쪽 밝음 -> 오른쪽 그늘 입체감)
+    final Paint bodyPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+        colors: [
+          mainColor,
+          mainColor,
+          sideDarkColor,
+        ],
+        stops: const [0.0, 0.55, 1.0],
+      ).createShader(Rect.fromLTWH(0, topY - ry, size.width, fillHeight + (ry * 2)));
+
+    final Path bodyPath = Path()
+      ..moveTo(0, topY)
+      ..lineTo(0, bottomY)
+      ..arcToPoint(
+        Offset(size.width, bottomY),
+        radius: Radius.elliptical(rx, ry),
+        clockwise: false,
+      )
+      ..lineTo(size.width, topY)
+      ..arcToPoint(
+        Offset(0, topY),
+        radius: Radius.elliptical(rx, ry),
+        clockwise: true,
+      )
+      ..close();
+
+    canvas.drawPath(bodyPath, bodyPaint);
+
+    // D. 위에서 내려다보는 타원 뚜껑 (Top Cap)
+    final Paint topCapPaint = Paint()..color = topCapColor;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(rx, topY),
+        width: size.width,
+        height: ry * 2,
+      ),
+      topCapPaint,
+    );
+
+    // 오늘 날짜 원통 상단에 세련된 테두리 하이라이트
+    if (isToday) {
+      final Paint borderPaint = Paint()
+        ..color = Colors.white.withValues(alpha: 0.9)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.2;
+
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(rx, topY),
+          width: size.width,
+          height: ry * 2,
+        ),
+        borderPaint,
+      );
+    }
   }
 
-  /// ✏️ [변경 2] ShaderMask(그라데이션)를 제거하고 단색 파란색 Text로 변경
-  Widget _buildBannerText(String text) {
-    return Text(
-      text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w700,
-        // ✏️ 시선을 너무 끌지 않도록 차분하게 정돈된 파란색
-        color: AppTheme.primarySky.withValues(alpha: 0.85),
-        letterSpacing: -0.3,
-      ),
-    );
-  }
+  @override
+  bool shouldRepaint(covariant IsometricUprightCylinderPainter oldDelegate) => true;
 }
