@@ -55,7 +55,7 @@ class SquatProvider with ChangeNotifier {
     if (_baseWaistVec == null || _baseThighVec == null) {
       _baseWaistVec = currentW;
       _baseThighVec = currentT;
-      _updateState(status: "🎯 영점 세팅 완료! 스쿼트를 시작하세요.");
+      _updateState(status: "영점 세팅 완료!");
       return;
     }
 
@@ -83,7 +83,7 @@ class SquatProvider with ChangeNotifier {
       waistErrorCount: 0,
       depthErrorCount: 0,
       goodMorningCount: 0,
-      status: "📊 운동 기록이 초기화되었습니다. 계속 운동해 주세요!",
+      status: "운동 기록 초기화",
       currentState: "STAND",
     );
     notifyListeners();
