@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../models/squat_model.dart';
 import '../providers/squat_provider.dart';
 import '../providers/bluetooth_provider.dart';
 import '../theme/app_theme.dart';
@@ -37,7 +38,7 @@ class _SquatScreenState extends State<SquatScreen> {
     final bool isBTConnected = connectionStatus == 'CONNECTED';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F7FC),
+      backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
@@ -181,7 +182,7 @@ class _BTStatusChip extends StatelessWidget {
 }
 
 // =============================================================================
-// 📊 2. 실시간 자세 분석 카드
+// 📊 2. 실시간 자세 분석 카드 (하이브리드 피드백 반영)
 // =============================================================================
 class _RealtimePostureCard extends StatelessWidget {
   final dynamic squat;
@@ -192,20 +193,63 @@ class _RealtimePostureCard extends StatelessWidget {
     required this.isBTConnected,
   });
 
-  _StatusInfo _getSquatStatusInfo(String rawStatus) {
-    if (rawStatus.contains("정상")) {
-      return _StatusInfo(label: "✓ 정상 자세", color: const Color(0xFF10B981));
+  /// 시스템 알림 + 각도 기반 실시간 하이브리드 메시지 생성 함수
+  _StatusInfo _getSquatStatusInfo(SquatData squat, bool isReading) {
+    // 1순위: 블루투스 연결 해제 상태
+    if (!isBTConnected) {
+      return _StatusInfo(
+        label: "⚠️ 블루투스 기기를 연결해 주세요",
+        color: const Color(0xFFEF4444),
+      );
     }
-    if (rawStatus.contains("허리 과숙임") || rawStatus.contains("경고")) {
-      return _StatusInfo(label: "⚠ 허리 과숙임", color: const Color(0xFFF59E0B));
+
+    // 2순위: 운동 시작 전 (센서 읽기 안 함)
+    if (!isReading) {
+      return _StatusInfo(
+        label: "운동 시작 버튼을 눌러주세요",
+        color: const Color(0xFF94A3B8),
+      );
     }
-    if (rawStatus.contains("얕은")) {
-      return _StatusInfo(label: "⚠ 얕은 깊이", color: const Color(0xFFF97316));
+
+    // 3순위: Provider/Service 특수 안내 메시지 (영점, 초기화 등)
+    if (squat.status.contains("영점")) {
+      return _StatusInfo(
+        label: squat.status,
+        color: const Color(0xFF3B82F6),
+      );
+    } else if (squat.status.contains("초기화") || squat.status.contains("기록")) {
+      return _StatusInfo(
+        label: squat.status,
+        color: const Color(0xFF6B7280),
+      );
     }
-    if (rawStatus.contains("상체")) {
-      return _StatusInfo(label: "⚠ 상체 선행", color: const Color(0xFFEF4444));
+
+    // 4순위: 실시간 자세 분석 코칭 (각도 수치 기반 즉시 피드백)
+    // ① 허리 숙임 경고 (40도 초과)
+    if (squat.waistAngle > 40.0) {
+      return _StatusInfo(
+        label: "허리 과숙임 경고",
+        color: const Color(0xFFEF4444),
+      );
     }
-    return _StatusInfo(label: "대기 중...", color: const Color(0xFF94A3B8));
+
+    // ② 허벅지 각도에 따른 깊이 가이드
+    if (squat.thighAngle < 15.0) {
+      return _StatusInfo(
+        label: "준비 자세 (천천히 내려가세요)",
+        color: const Color(0xFF94A3B8),
+      );
+    } else if (squat.thighAngle < 85.0) {
+      return _StatusInfo(
+        label: "조금 더 깊게 앉아보세요",
+        color: const Color(0xFFF59E0B),
+      );
+    } else {
+      return _StatusInfo(
+        label: "✓ 정상 스쿼트",
+        color: const Color(0xFF10B981),
+      );
+    }
   }
 
   Color _getWaistColor(int a) {
@@ -222,19 +266,29 @@ class _RealtimePostureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusInfo = _getSquatStatusInfo(squat.status);
+    // SquatProvider에서 isReading 상태값 읽기
+    final isReading = context.watch<SquatProvider>().isReading;
+    final statusInfo = _getSquatStatusInfo(squat, isReading);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 16, 10, 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
+        boxShadow: [
+          // 1. 은은한 primarySky 조명 후광 (연꽃 효과)
           BoxShadow(
-            color: Color.fromRGBO(23, 32, 64, 0.07),
-            blurRadius: 16,
-            offset: Offset(0, 3),
-          )
+            color: AppTheme.primarySky.withValues(alpha: 0.28),
+            blurRadius: 22,
+            spreadRadius: 5,
+            offset: const Offset(0, 8),
+          ),
+          // 2. 카드의 형태를 잡아주는 미세 그림자
+          const BoxShadow(
+            color: Color.fromRGBO(23, 32, 64, 0.04),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
         ],
       ),
       child: Column(
@@ -250,8 +304,6 @@ class _RealtimePostureCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // 💡 [임시 수정] 블루투스 조건문 주석 처리 (나중에 주석 해제하면 복구됨) TODO
-          // if (isBTConnected) ...[
           // 게이지 영역
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,7 +338,7 @@ class _RealtimePostureCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
             decoration: BoxDecoration(
-              color: statusInfo.color.withOpacity(0.08),
+              color: statusInfo.color.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -313,39 +365,6 @@ class _RealtimePostureCard extends StatelessWidget {
               ],
             ),
           ),
-          // ] else ...[
-          //   // 미연결 상태 안내
-          //   Padding(
-          //     padding: const EdgeInsets.symmetric(vertical: 12),
-          //     child: Column(
-          //       children: [
-          //         Container(
-          //           width: 56,
-          //           height: 56,
-          //           decoration: BoxDecoration(
-          //             color: const Color.fromRGBO(239, 68, 68, 0.08),
-          //             borderRadius: BorderRadius.circular(18),
-          //           ),
-          //           child: const Icon(
-          //             Icons.bluetooth,
-          //             color: Color(0xFFEF4444),
-          //             size: 26,
-          //           ),
-          //         ),
-          //         const SizedBox(height: 10),
-          //         Text(
-          //           "센서 미연결 상태입니다\n운동을 시작하려면 기기를 연결해 주세요",
-          //           textAlign: TextAlign.center,
-          //           style: GoogleFonts.dmSans(
-          //             fontSize: 13,
-          //             color: const Color(0xFF94A3B8),
-          //             height: 1.5,
-          //           ),
-          //         ),
-          //       ],
-          //     ),
-          //   ),
-          // ],
         ],
       ),
     );
@@ -470,7 +489,7 @@ class _CountRow extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.09),
+        color: color.withValues(alpha: 0.09),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
@@ -514,7 +533,7 @@ class _CountRow extends StatelessWidget {
 }
 
 // =============================================================================
-// 🔘 4. 하단 액션 버튼 영역
+// 🔘 4. 하단 액션 버튼 영역 (💡 홈 화면 _buildActionCard 디자인 스타일로 업데이트)
 // =============================================================================
 class _ActionButtons extends StatelessWidget {
   final bool isBTConnected;
@@ -534,34 +553,28 @@ class _ActionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 1. 블루투스 연결됨 + 운동 시작 전 상태
     if (isBTConnected && !squatProvider.isReading) {
-      return ElevatedButton(
-        onPressed: () => _handleStartWorkout(context),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primarySky,
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          elevation: 0,
-        ),
-        child: Text(
-          "운동 시작 (센서 읽기)",
-          style: GoogleFonts.anton(
-            fontSize: 16,
-            color: Colors.white,
-            letterSpacing: 0.8,
-          ),
-        ),
+      return _buildHomeStyleCardButton(
+        title: "운동 시작",
+        subtitle: "Start Workout (센서 읽기)",
+        icon: Icons.play_arrow_rounded,
+        isPrimary: true,
+        onTap: () => _handleStartWorkout(context),
       );
     }
 
+    // 2. 운동 중 (센서 읽기 중) 상태
     if (squatProvider.isReading) {
       return Row(
         children: [
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () async {
+            child: _buildHomeStyleCardButton(
+              title: "저장하기",
+              subtitle: "Save Record",
+              icon: Icons.save_alt_rounded,
+              isPrimary: true,
+              onTap: () async {
                 bool isSaved = await squatProvider.saveCurrentSessionRecord();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -576,55 +589,25 @@ class _ActionButtons extends StatelessWidget {
                   );
                 }
               },
-              icon: const Icon(Icons.save_alt, color: Colors.white, size: 19),
-              label: Text(
-                "저장하기",
-                style: GoogleFonts.anton(
-                  fontSize: 15,
-                  color: Colors.white,
-                  letterSpacing: 0.7,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primarySky,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                elevation: 0,
-              ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () {
+            child: _buildHomeStyleCardButton(
+              title: "초기화",
+              subtitle: "Reset Counter",
+              icon: Icons.refresh_rounded,
+              isPrimary: false,
+              customBorderColor: const Color(0xFFFEE2E2),
+              iconBgColor: const Color(0xFFFEF2F2),
+              iconColor: const Color(0xFFEF4444),
+              titleColor: const Color(0xFFEF4444),
+              onTap: () {
                 squatProvider.resetCountersOnly();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("🔄 스쿼트 통계가 초기화되었습니다.")),
                 );
               },
-              icon: const Icon(Icons.refresh, color: Color(0xFFEF4444), size: 19),
-              label: Text(
-                "초기화",
-                style: GoogleFonts.anton(
-                  fontSize: 15,
-                  color: const Color(0xFFEF4444),
-                  letterSpacing: 0.7,
-                ),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  side: const BorderSide(
-                    color: Color.fromRGBO(239, 68, 68, 0.22),
-                    width: 1.5,
-                  ),
-                ),
-                elevation: 0,
-              ),
             ),
           ),
         ],
@@ -632,6 +615,105 @@ class _ActionButtons extends StatelessWidget {
     }
 
     return const SizedBox.shrink();
+  }
+
+  /// 홈 화면의 _buildActionCard 규격을 일치시킨 헬퍼 위젯
+  Widget _buildHomeStyleCardButton({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    bool isPrimary = false,
+    Color? customBorderColor,
+    Color? iconBgColor,
+    Color? iconColor,
+    Color? titleColor,
+  }) {
+    return Material(
+      color: isPrimary ? AppTheme.primarySky : Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      elevation: 0,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: isPrimary
+                ? null
+                : Border.all(
+              color: customBorderColor ?? const Color(0xFFF1F5F9),
+              width: 1.2,
+            ),
+            boxShadow: isPrimary
+                ? [
+              BoxShadow(
+                color: AppTheme.primarySky.withValues(alpha: 0.35),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              )
+            ]
+                : [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              )
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: isPrimary
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : (iconBgColor ?? const Color(0xFFF1F5F9)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: 22,
+                  color: isPrimary
+                      ? Colors.white
+                      : (iconColor ?? const Color(0xFF0F172A)),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: isPrimary
+                            ? Colors.white
+                            : (titleColor ?? const Color(0xFF0F172A)),
+                      ),
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isPrimary
+                            ? Colors.white.withValues(alpha: 0.8)
+                            : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
