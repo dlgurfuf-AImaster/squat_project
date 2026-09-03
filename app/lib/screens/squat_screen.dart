@@ -47,7 +47,7 @@ class _SquatScreenState extends State<SquatScreen> {
             children: [
               // 1. 상단 앱 타이틀 & 블루투스 상태 헤더
               _SquatHeader(isBTConnected: isBTConnected),
-              const SizedBox(height: 14),
+              const SizedBox(height: 20),
 
               // 2. 실시간 자세 분석 카드 (블루투스 주석 상태 유지)
               _RealtimePostureCard(
