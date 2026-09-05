@@ -28,23 +28,6 @@ class _MainHolderState extends State<MainHolder> {
     CoachingScreen(),      // Index 4
   ];
 
-  // 👇 여기에 initState()를 추가해 드렸습니다!
-  @override
-  void initState() {
-    super.initState();
-    // 하단 안드로이드/iOS 시스템 네비게이션 바 영역을 투명화
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        systemNavigationBarColor: Colors.transparent, // 하단 제스처 바 배경을 투명하게 설정
-        systemNavigationBarDividerColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.dark, // 제스처 바 어둡게 설정
-        systemNavigationBarContrastEnforced: false,
-      ),
-    );
-    // 화면 전체를 시스템 영역까지 확장 (Edge-to-Edge)
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  }
-
   /// 탭 이동 처리 메서드
   void _onTabSelected(int index, CoachingProvider coachingProvider) {
     if (coachingProvider.currentTabIndex == index) return;

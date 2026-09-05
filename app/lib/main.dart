@@ -16,14 +16,8 @@ void main() async {
   FlutterBluePlus.setLogLevel(LogLevel.none, color: false); // 블루투스 관련 로그 뜨지 않게
   await dotenv.load(fileName: ".env"); // .env 파일 읽도록
 
-  // ✏️ 앱 시작 시 OS 상단바를 완전 투명 및 검은색 아이콘으로 고정
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-      statusBarBrightness: Brightness.light,
-    ),
-  );
+  // 화면 전체를 시스템 영역까지 확장 (Edge-to-Edge)
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   runApp(
     // 앱 전체에서 provider들을 이용할 수 있도록 주입
@@ -43,10 +37,21 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'HealthCare App',
-      theme: AppTheme.darkTheme,
-      home: const MainHolder(),
+    // AnnotatedRegion으로 MaterialApp 전체를 감싸서 렌더링 시점에도 시스템 UI 스타일을 강제 고정
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.transparent, // 하단 제스처 바 투명화
+        systemNavigationBarDividerColor: Colors.transparent,
+        systemNavigationBarIconBrightness: Brightness.dark, // 제스처 바 어둡게 설정
+        systemNavigationBarContrastEnforced: false,
+        statusBarColor: Colors.transparent, // 상단 상태바 투명화
+        statusBarIconBrightness: Brightness.dark,
+      ),
+      child: MaterialApp(
+        title: 'SquatMate',
+        theme: AppTheme.darkTheme,
+        home: const LoginScreen(),
+      ),
     );
   }
 }
