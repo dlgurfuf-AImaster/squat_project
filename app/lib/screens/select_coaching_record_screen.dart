@@ -13,8 +13,8 @@ class SelectCoachingRecordScreen extends StatefulWidget {
 }
 
 class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen> {
-  // 코칭용으로 선택된 서버 단일 기록 (dynamic / ServerRecord 타입)
-  dynamic _selectedRecord;
+  // 복수 선택을 위한 Set 구조
+  final Set<dynamic> _selectedRecords = {};
 
   // UI 상태 관리 (달력형 / 나열형)
   bool _isCalendarView = true;
@@ -43,6 +43,14 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
   }
 
   void _refreshRecords() {
+    // 1. 선택된 기록 전체 초기화 (되돌리기 기능)
+    if (_selectedRecords.isNotEmpty) {
+      setState(() {
+        _selectedRecords.clear();
+      });
+    }
+
+    // 2. 서버 데이터 다시 불러오기
     Future.microtask(() {
       if (mounted) {
         Provider.of<CoachingProvider>(context, listen: false).fetchServerRecords();
@@ -81,194 +89,28 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
     return data;
   }
 
-  // 선택 완료 및 이전 화면으로 선택한 기록의 UUID(Set<String>) 전달
-  void _confirmSelection(dynamic record) {
-    if (record != null && record.uuid != null) {
-      // CoachingScreen이 요구하는 Set<String> 타입에 맞춰 전달
-      Navigator.pop(context, <String>{record.uuid.toString()});
-    } else {
-      Navigator.pop(context);
-    }
+  // 토글(선택/해제) 메서드
+  void _toggleRecordSelection(dynamic record) {
+    if (record == null || record.uuid == null) return;
+
+    setState(() {
+      final exists = _selectedRecords.any((r) => r.uuid == record.uuid);
+      if (exists) {
+        _selectedRecords.removeWhere((r) => r.uuid == record.uuid); // 선택 해제
+      } else {
+        _selectedRecords.add(record); // 선택 추가
+      }
+    });
   }
 
-  // 상세 운동 기록 바텀시트 팝업 (코칭 선택 전용)
-  void _showDetailReportBottomSheet(
-      BuildContext context, List<dynamic> records, DateTime date) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.lightBackground,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (context, setBottomSheetState) {
-            final dayRecords = records
-                .where((r) => _isSameDay(_getRecordDate(r), date))
-                .toList()
-              ..sort((a, b) => _getRecordDate(b).compareTo(_getRecordDate(a)));
+  // 선택 완료 시 UUID Set 반환
+  void _confirmSelection() {
+    final selectedUuids = _selectedRecords
+        .map((r) => r.uuid?.toString())
+        .whereType<String>()
+        .toSet();
 
-            final totalSuccess = dayRecords.fold<int>(0, (sum, r) => sum + (r.successCount as int));
-            final totalWaist = dayRecords.fold<int>(0, (sum, r) => sum + (r.waistErrorCount as int));
-            final totalDepth = dayRecords.fold<int>(0, (sum, r) => sum + (r.depthErrorCount as int));
-            final totalGoodMorning = dayRecords.fold<int>(0, (sum, r) => sum + (r.goodMorningCount as int));
-            final totalErrors = totalWaist + totalDepth + totalGoodMorning;
-
-            return DraggableScrollableSheet(
-              initialChildSize: 0.75,
-              minChildSize: 0.4,
-              maxChildSize: 0.92,
-              expand: false,
-              builder: (context, scrollController) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // 1. 헤더
-                      Row(
-                        children: [
-                          const Icon(Icons.psychology_rounded, color: AppTheme.primarySky, size: 22),
-                          const SizedBox(width: 8),
-                          Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: "${date.month}/${date.day}",
-                                  style: GoogleFonts.anton(
-                                    fontSize: 18,
-                                    color: const Color(0xFF0F172A),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: " 세트 선택",
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          IconButton(
-                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // 2. 요약 카드
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color.fromRGBO(23, 32, 64, 0.05),
-                              blurRadius: 10,
-                              offset: Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "일일 운동 요약",
-                              style: GoogleFonts.dmSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF64748B),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                _buildSummaryStatBox("성공", "$totalSuccess회", AppTheme.accentGreen),
-                                const SizedBox(width: 6),
-                                _buildSummaryStatBox("세트", "${dayRecords.length}세트", AppTheme.primarySky),
-                                const SizedBox(width: 6),
-                                _buildSummaryStatBox("자세 오차", "$totalErrors회", Colors.orange),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                      const SizedBox(height: 12),
-
-                      // 3. 세트별 상세 기록 리스트
-                      Expanded(
-                        child: dayRecords.isEmpty
-                            ? Center(
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 32),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF8FAFC),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: const Center(
-                              child: Text(
-                                "선택한 날짜에 저장된 스쿼트 기록이 없습니다.",
-                                style: TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                            : ListView.builder(
-                          controller: scrollController,
-                          itemCount: dayRecords.length,
-                          itemBuilder: (context, index) {
-                            final record = dayRecords[index];
-                            final isSelected = _selectedRecord?.uuid == record.uuid;
-                            return _buildSelectableRecordCard(
-                              record,
-                              isSelected: isSelected,
-                              showFullDate: false,
-                              onSelect: () {
-                                setState(() {
-                                  _selectedRecord = record;
-                                });
-                                Navigator.pop(context);
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-    );
+    Navigator.pop(context, selectedUuids);
   }
 
   @override
@@ -334,12 +176,12 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                           ? _buildCircleCalendarView(records, recordEvents)
                           : _buildListView(records),
                     ),
-                    if (_selectedRecord != null) const SizedBox(height: 80),
+                    if (_selectedRecords.isNotEmpty) const SizedBox(height: 80),
                   ],
                 ),
 
                 // 하단 확정 플로팅 바
-                if (_selectedRecord != null)
+                if (_selectedRecords.isNotEmpty)
                   Positioned(
                     left: 24,
                     right: 24,
@@ -381,7 +223,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
             ],
           ),
           child: const Center(
-            child: Icon(Icons.psychology_rounded, size: 22, color: Colors.white),
+            child: Icon(Icons.history_rounded, size: 22, color: Colors.white),
           ),
         ),
         const SizedBox(width: 12),
@@ -434,7 +276,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
     );
   }
 
-  /// 3-A. 달력형 뷰 (하단 디테일 스크롤 리스트 직접 노출)
+  /// 3-A. 달력 & 상세 기록 뷰
   Widget _buildCircleCalendarView(
       List<dynamic> records,
       Map<DateTime, List<dynamic>> eventMap,
@@ -445,241 +287,74 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
         .toList()
       ..sort((a, b) => _getRecordDate(b).compareTo(_getRecordDate(a)));
 
-    // 일일 통계 집계
-    final totalSuccess = selectedDayRecords.fold<int>(0, (sum, r) => sum + (r.successCount as int? ?? 0));
-    final totalWaist = selectedDayRecords.fold<int>(0, (sum, r) => sum + (r.waistErrorCount as int? ?? 0));
-    final totalDepth = selectedDayRecords.fold<int>(0, (sum, r) => sum + (r.depthErrorCount as int? ?? 0));
-    final totalGoodMorning = selectedDayRecords.fold<int>(0, (sum, r) => sum + (r.goodMorningCount as int? ?? 0));
-    final totalErrors = totalWaist + totalDepth + totalGoodMorning;
-
     return Padding(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
       child: Column(
         children: [
           // 1. 컴팩트 달력 영역
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: AppTheme.primarySky.withValues(alpha: 0.28),
-                  blurRadius: 22,
-                  spreadRadius: 5,
-                  offset: const Offset(0, 8),
-                ),
-                const BoxShadow(
-                  color: Color.fromRGBO(23, 32, 64, 0.04),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildMonthHeader(),
-                const SizedBox(height: 12),
-                _buildWeekDayHeader(),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 220,
-                  child: PageView.builder(
-                    controller: _pageController,
-                    onPageChanged: (pageIndex) {
-                      setState(() {
-                        final year = 2000 + (pageIndex ~/ 12);
-                        final month = (pageIndex % 12) + 1;
-                        _focusedDay = DateTime(year, month, 1);
-                      });
-                    },
-                    itemBuilder: (context, pageIndex) {
-                      final monthDate = DateTime(
-                        2000 + (pageIndex ~/ 12),
-                        (pageIndex % 12) + 1,
-                        1,
-                      );
-                      return _buildCircleGrid(eventMap, monthDate);
-                    },
-                  ),
-                ),
-              ],
+          _buildMonthHeader(),
+          const SizedBox(height: 12),
+          _buildWeekDayHeader(),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 220,
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: (pageIndex) {
+                setState(() {
+                  final year = 2000 + (pageIndex ~/ 12);
+                  final month = (pageIndex % 12) + 1;
+                  _focusedDay = DateTime(year, month, 1);
+                });
+              },
+              itemBuilder: (context, pageIndex) {
+                final monthDate = DateTime(
+                  2000 + (pageIndex ~/ 12),
+                  (pageIndex % 12) + 1,
+                  1,
+                );
+                return _buildCircleGrid(eventMap, monthDate);
+              },
             ),
           ),
-          const SizedBox(height: 14),
 
-          // 2. 디테일 기록 카드 & 스크롤 리스트 영역
+          // 2. 구분선 (달력과 상세 기록 구분)
+          const SizedBox(height: 12),
+          const Divider(height: 1, thickness: 1.2, color: Color(0xFFCBD5E1)),
+          const SizedBox(height: 16),
+
+          // 3. 디테일 개별 기록 스크롤 리스트 영역
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color.fromRGBO(23, 32, 64, 0.04),
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
-                  ),
-                ],
+            child: selectedDayRecords.isEmpty
+                ? const Center(
+              child: Text(
+                "선택한 날짜에 저장된 스쿼트 기록이 없습니다.",
+                style: TextStyle(
+                  color: Color(0xFF94A3B8),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 상단 날짜 및 총 세트 수 헤더
-                  Row(
-                    children: [
-                      const Icon(Icons.fitness_center_rounded, color: AppTheme.primarySky, size: 20),
-                      const SizedBox(width: 8),
-                      Text.rich(
-                        TextSpan(
-                          children: [
-                            TextSpan(
-                              text: "${_selectedDay.month}/${_selectedDay.day}",
-                              style: GoogleFonts.anton(
-                                fontSize: 18,
-                                color: const Color(0xFF0F172A),
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            TextSpan(
-                              text: " 세트 상세 기록",
-                              style: GoogleFonts.dmSans(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF0F172A),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-                      if (selectedDayRecords.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primarySky.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            "총 ${selectedDayRecords.length}세트",
-                            style: GoogleFonts.dmSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primarySky,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+            )
+                : ListView.builder(
+              padding: const EdgeInsets.only(bottom: 24),
+              itemCount: selectedDayRecords.length,
+              itemBuilder: (context, index) {
+                final record = selectedDayRecords[index];
 
-                  // 운동 기록이 있을 경우 일일 요약 통계 뱃지 바 표시
-                  if (selectedDayRecords.isNotEmpty) ...[
-                    Row(
-                      children: [
-                        _buildSummaryStatBox("성공", "$totalSuccess회", AppTheme.accentGreen),
-                        const SizedBox(width: 6),
-                        _buildSummaryStatBox("세트", "${selectedDayRecords.length}세트", AppTheme.primarySky),
-                        const SizedBox(width: 6),
-                        _buildSummaryStatBox("자세 오차", "$totalErrors회", Colors.orange),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                    const SizedBox(height: 12),
-                  ],
+                // 복수 선택 포함 여부 확인
+                final isSelected = _selectedRecords.any((r) => r.uuid == record.uuid);
 
-                  // 세트별 스크롤 가능 리스트
-                  Expanded(
-                    child: selectedDayRecords.isEmpty
-                        ? const Center(
-                      child: Text(
-                        "선택한 날짜에 저장된 스쿼트 기록이 없습니다.",
-                        style: TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    )
-                        : ListView.builder(
-                      padding: EdgeInsets.zero,
-                      itemCount: selectedDayRecords.length,
-                      itemBuilder: (context, index) {
-                        final record = selectedDayRecords[index];
-                        final isSelected = _selectedRecord?.uuid == record.uuid;
-                        return _buildSelectableRecordCard(
-                          record,
-                          isSelected: isSelected,
-                          showFullDate: false,
-                          onSelect: () {
-                            setState(() {
-                              _selectedRecord = record;
-                            });
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+                return _buildSelectableRecordCard(
+                  record,
+                  isSelected: isSelected,
+                  showFullDate: false,
+                  onSelect: () => _toggleRecordSelection(record),
+                );
+              },
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDetailReportButton(
-      List<dynamic> allRecords,
-      List<dynamic> selectedDayRecords,
-      ) {
-    final bool hasRecords = selectedDayRecords.isNotEmpty;
-
-    return Tooltip(
-      message: "세트 목록 보기",
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        decoration: BoxDecoration(
-          color: hasRecords ? const Color(0xFFF8FAFC) : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: hasRecords ? AppTheme.primarySky : const Color(0xFFE2E8F0),
-            width: 1.2,
-          ),
-          boxShadow: hasRecords
-              ? [
-            BoxShadow(
-              color: AppTheme.primarySky.withValues(alpha: 0.12),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
-            ),
-          ]
-              : [],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          child: InkWell(
-            onTap: hasRecords
-                ? () => _showDetailReportBottomSheet(context, allRecords, _selectedDay)
-                : null,
-            borderRadius: BorderRadius.circular(14),
-            splashColor: AppTheme.primarySky.withValues(alpha: 0.15),
-            highlightColor: AppTheme.primarySky.withValues(alpha: 0.08),
-            child: Center(
-              child: Icon(
-                Icons.add_rounded,
-                size: 24,
-                color: hasRecords ? AppTheme.primarySky : const Color(0xFF94A3B8),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -704,7 +379,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.primarySky.withValues(alpha: 0.1),
+              color: AppTheme.primarySky.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Row(
@@ -754,7 +429,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
 
   Color _getCircleBgColor(int setCount, bool isSelected, bool isToday) {
     if (setCount == 0) {
-      return isToday ? AppTheme.primarySky.withValues(alpha: 0.15) : Colors.white;
+      return isToday ? AppTheme.primarySky.withValues(alpha: 0.15) : AppTheme.lightBackground;
     }
     if (setCount == 1) return const Color(0xFFEFF6FF);
     if (setCount == 2) return const Color(0xFFBFDBFE);
@@ -869,117 +544,94 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
     }).toList();
 
     return Padding(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 20.0),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primarySky.withValues(alpha: 0.28),
-              blurRadius: 22,
-              spreadRadius: 5,
-              offset: const Offset(0, 8),
-            ),
-            const BoxShadow(
-              color: Color.fromRGBO(23, 32, 64, 0.04),
-              blurRadius: 10,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.history_rounded,
-                      color: AppTheme.primarySky,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: "${_selectedMonth.month}",
-                            style: GoogleFonts.anton(
-                              fontSize: 20,
-                              color: const Color(0xFF0F172A),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          TextSpan(
-                            text: "월 서버 운동 기록",
-                            style: GoogleFonts.dmSans(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                InkWell(
-                  onTap: () => setState(() => _isCalendarView = true),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primarySky.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.history_rounded,
+                    color: AppTheme.primarySky,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text.rich(
+                    TextSpan(
                       children: [
-                        Icon(Icons.calendar_month_rounded, size: 16, color: AppTheme.primarySky),
-                        SizedBox(width: 6),
-                        Text(
-                          "달력형 보기",
-                          style: TextStyle(
-                            fontSize: 12,
+                        TextSpan(
+                          text: "${_selectedMonth.month}",
+                          style: GoogleFonts.anton(
+                            fontSize: 20,
+                            color: const Color(0xFF0F172A),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        TextSpan(
+                          text: "월 서버 운동 기록",
+                          style: GoogleFonts.dmSans(
+                            fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.primarySky,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _buildControlBar(),
-            const SizedBox(height: 16),
-            Expanded(
-              child: monthlyRecords.isEmpty
-                  ? _buildEmptyView()
-                  : ListView.builder(
-                itemCount: monthlyRecords.length,
-                itemBuilder: (context, index) {
-                  final record = monthlyRecords[index];
-                  final isSelected = _selectedRecord?.uuid == record.uuid;
-                  return _buildSelectableRecordCard(
-                    record,
-                    isSelected: isSelected,
-                    showFullDate: true,
-                    onSelect: () {
-                      setState(() {
-                        _selectedRecord = record;
-                      });
-                    },
-                  );
-                },
+                ],
               ),
+              InkWell(
+                onTap: () => setState(() => _isCalendarView = true),
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primarySky.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.calendar_month_rounded, size: 16, color: AppTheme.primarySky),
+                      SizedBox(width: 6),
+                      Text(
+                        "달력형 보기",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primarySky,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _buildControlBar(),
+          const SizedBox(height: 16),
+          Expanded(
+            child: monthlyRecords.isEmpty
+                ? _buildEmptyView()
+                : ListView.builder(
+              padding: const EdgeInsets.only(bottom: 24),
+              itemCount: monthlyRecords.length,
+              itemBuilder: (context, index) {
+                final record = monthlyRecords[index];
+                final isSelected = _selectedRecords.any((r) => r.uuid == record.uuid);
+                return _buildSelectableRecordCard(
+                  record,
+                  isSelected: isSelected,
+                  showFullDate: true,
+                  onSelect: () => _toggleRecordSelection(record),
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1154,157 +806,6 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
     );
   }
 
-  Widget _buildDaySummaryCard(
-      List<dynamic> allRecords,
-      List<dynamic> selectedDayRecords,
-      ) {
-    final totalSuccess = selectedDayRecords.fold<int>(0, (sum, r) => sum + (r.successCount as int));
-    final totalErrors = selectedDayRecords.fold<int>(
-      0,
-          (sum, r) =>
-      sum +
-          (r.waistErrorCount as int) +
-          (r.depthErrorCount as int) +
-          (r.goodMorningCount as int),
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(23, 32, 64, 0.05),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.fitness_center_rounded, color: AppTheme.primarySky, size: 20),
-              const SizedBox(width: 8),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: "${_selectedDay.month}/${_selectedDay.day}",
-                      style: GoogleFonts.anton(
-                        fontSize: 16,
-                        color: const Color(0xFF0F172A),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    TextSpan(
-                      text: " 운동 요약",
-                      style: GoogleFonts.dmSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (selectedDayRecords.isEmpty)
-            Container(
-              height: 38,
-              alignment: Alignment.center,
-              child: const Text(
-                "해당 일자에 운동 기록이 없습니다.",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF94A3B8),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else
-            Row(
-              children: [
-                _buildStatItem("$totalSuccess회", AppTheme.accentGreen),
-                const SizedBox(width: 4),
-                _buildStatItem("${selectedDayRecords.length}세트", AppTheme.primarySky),
-                const SizedBox(width: 4),
-                _buildStatItem("$totalErrors회", Colors.orange),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatItem(String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.09),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Center(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              maxLines: 1,
-              style: GoogleFonts.anton(
-                fontSize: 15,
-                color: color,
-                letterSpacing: 0.4,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSummaryStatBox(String title, String value, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.09),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.dmSans(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF64748B),
-              ),
-            ),
-            const SizedBox(height: 2),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                value,
-                maxLines: 1,
-                style: GoogleFonts.anton(
-                  fontSize: 16,
-                  color: color,
-                  letterSpacing: 0.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildMorphingMonthPicker() {
     final List<int> months = List.generate(12, (i) => i + 1);
 
@@ -1444,12 +945,13 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
 
   /// 4. 하단 선택 확정 플로팅 버튼
   Widget _buildBottomConfirmButton() {
-    final record = _selectedRecord!;
-    final recordDate = _getRecordDate(record);
-    final totalCount = (record.successCount as int? ?? 0) +
-        (record.waistErrorCount as int? ?? 0) +
-        (record.depthErrorCount as int? ?? 0) +
-        (record.goodMorningCount as int? ?? 0);
+    int totalReps = 0;
+    for (final record in _selectedRecords) {
+      totalReps += (record.successCount as int? ?? 0) +
+          (record.waistErrorCount as int? ?? 0) +
+          (record.depthErrorCount as int? ?? 0) +
+          (record.goodMorningCount as int? ?? 0);
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1472,7 +974,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _formatFullDate(recordDate),
+                  "${_selectedRecords.length}개 세트 선택됨",
                   style: GoogleFonts.dmSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1481,7 +983,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "총 $totalCount회 수행 기록 선택됨",
+                  "총 $totalReps회 수행 기록",
                   style: GoogleFonts.dmSans(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -1492,7 +994,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
             ),
           ),
           ElevatedButton(
-            onPressed: () => _confirmSelection(record),
+            onPressed: _confirmSelection,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primarySky,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),

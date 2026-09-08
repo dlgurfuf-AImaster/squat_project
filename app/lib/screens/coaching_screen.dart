@@ -304,6 +304,24 @@ class _CoachingScreenState extends State<CoachingScreen> {
   Widget _buildResultCard(dynamic coaching) {
     final isSingle = coaching.coachingType == 'SINGLE';
 
+    // 💡 1. JSON 파싱 대신 줄바꿈(\n) 기준으로 첫 줄과 나머지 분리
+    final String rawMessage = (coaching.coachingMessage ?? '').trim();
+
+    String summary = '';
+    String details = '';
+
+    if (rawMessage.isNotEmpty) {
+      final List<String> lines = rawMessage.split('\n');
+
+      // 첫 번째 줄: 핵심 요약 (마크다운 ** 제거하여 깔끔하게 표시)
+      summary = lines.first.replaceAll('**', '').trim();
+
+      // 두 번째 줄 이후: 불릿 포인트 상세 내용
+      if (lines.length > 1) {
+        details = lines.sublist(1).join('\n').replaceAll('**', '').trim();
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -371,8 +389,10 @@ class _CoachingScreenState extends State<CoachingScreen> {
             ],
           ),
           const SizedBox(height: 12),
+
+          // 💡 2. 첫 줄 요약 및 상세 불릿 포인트 피드백 출력
           Container(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: const Color(0xFFF3E8FF),
               borderRadius: BorderRadius.circular(16),
@@ -383,14 +403,34 @@ class _CoachingScreenState extends State<CoachingScreen> {
                 const Icon(Icons.smart_toy, color: Color(0xFF7C3AED), size: 22),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: Text(
-                    coaching.coachingMessage,
-                    style: const TextStyle(
-                      color: Color(0xFF4C1D95),
-                      fontSize: 13,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 첫 줄 요약 (굵은 글씨)
+                      if (summary.isNotEmpty) ...[
+                        Text(
+                          summary,
+                          style: const TextStyle(
+                            color: Color(0xFF5B21B6),
+                            fontSize: 14,
+                            height: 1.4,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (details.isNotEmpty) const SizedBox(height: 8),
+                      ],
+                      // 상세 불릿 포인트 피드백
+                      if (details.isNotEmpty)
+                        Text(
+                          details,
+                          style: const TextStyle(
+                            color: Color(0xFF4C1D95),
+                            fontSize: 13,
+                            height: 1.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ],
