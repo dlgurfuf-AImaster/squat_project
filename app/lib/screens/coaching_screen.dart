@@ -91,119 +91,152 @@ class _CoachingScreenState extends State<CoachingScreen> {
 
                 const SizedBox(height: 16),
 
-                // 3. 하단 액션 버튼 영역 (Column 배치)
-                Column(
+                // 3. 하단 액션 버튼 영역 (Row 가로 배치)
+                Row(
                   children: [
-                    // AI 분석 요청 버튼
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: (_selectedServerUuids.isEmpty || isLoading)
-                            ? null
-                            : () async {
-                          if (_selectedServerUuids.length == 1) {
-                            await provider.requestSingleCoaching(_selectedServerUuids.first);
-                          } else {
-                            await provider.requestAggregateCoaching(
-                              AggregateCoachingRequest.byUuids(_selectedServerUuids.toList()),
+                    // [왼쪽] 기록 보기 및 선택 버튼
+                    Expanded(
+                      child: SizedBox(
+                        height: 52,
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            final selected = await Navigator.push<Set<String>>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SelectCoachingRecordScreen(),
+                              ),
                             );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                          elevation: _selectedServerUuids.isNotEmpty ? 4 : 0,
-                          shadowColor: AppTheme.primarySky.withValues(alpha: 0.4),
-                        ),
-                        child: Ink(
-                          decoration: BoxDecoration(
-                            gradient: _selectedServerUuids.isNotEmpty && !isLoading
-                                ? const LinearGradient(colors: [Color(0xFF38BDF8), Color(0xFF0284C7)])
-                                : null,
-                            color: _selectedServerUuids.isNotEmpty && !isLoading
-                                ? null
-                                : const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(18),
+                            if (selected != null) {
+                              setState(() {
+                                _selectedServerUuids.clear();
+                                _selectedServerUuids.addAll(selected);
+                              });
+                            }
+                          },
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE0F2FE),
+                            side: BorderSide.none,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
                           ),
-                          child: Container(
-                            alignment: Alignment.center,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.auto_awesome,
-                                  color: _selectedServerUuids.isNotEmpty && !isLoading
-                                      ? Colors.white
-                                      : const Color(0xFF94A3B8),
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _selectedServerUuids.isNotEmpty
-                                      ? "선택한 (${_selectedServerUuids.length})개 데이터 AI 분석 요청"
-                                      : "기록을 선택해 주세요",
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.history_rounded, size: 18, color: Color(0xFF0284C7)),
+                              SizedBox(width: 6),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  "기록 보기 및 선택",
                                   style: TextStyle(
-                                    fontSize: 15,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: _selectedServerUuids.isNotEmpty && !isLoading
-                                        ? Colors.white
-                                        : const Color(0xFF94A3B8),
+                                    color: Color(0xFF0284C7),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(width: 10),
 
-                    // 기록 보기 버튼 (AI 분석 요청 버튼 하단 배치)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          final selected = await Navigator.push<Set<String>>(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SelectCoachingRecordScreen(),
+                    // [오른쪽] AI 분석 요청 버튼 (선택 시 테두리에만 그라데이션 빛 효과 적용)
+                    Expanded(
+                      child: Builder(
+                        builder: (context) {
+                          final isEnabled = _selectedServerUuids.isNotEmpty && !isLoading;
+
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            height: 52,
+                            decoration: BoxDecoration(
+                              // 선택 시 outer gradient로 테두리 빛 효과 생성
+                              gradient: isEnabled
+                                  ? const LinearGradient(
+                                colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                              )
+                                  : null,
+                              color: isEnabled ? null : const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: isEnabled
+                                  ? [
+                                BoxShadow(
+                                  color: const Color(0xFF0284C7).withValues(alpha: 0.35),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ]
+                                  : [],
                             ),
-                          );
-                          if (selected != null) {
-                            setState(() {
-                              _selectedServerUuids.clear();
-                              _selectedServerUuids.addAll(selected);
-                            });
-                          }
-                        },
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: const Color(0xFFE0F2FE),
-                          side: BorderSide.none,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                          elevation: 0,
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.history_rounded, size: 20, color: Color(0xFF0284C7)),
-                            SizedBox(width: 8),
-                            Text(
-                              "기록 보기 및 선택",
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF0284C7),
+                            // 테두리 두께 (1.8px) 만큼 padding 적용
+                            padding: EdgeInsets.all(isEnabled ? 1.8 : 0),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                color: isEnabled ? Colors.white : const Color(0xFFE2E8F0),
+                                borderRadius: BorderRadius.circular(isEnabled ? 16.2 : 18),
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: isEnabled
+                                      ? () async {
+                                    if (_selectedServerUuids.length == 1) {
+                                      await provider.requestSingleCoaching(_selectedServerUuids.first);
+                                    } else {
+                                      await provider.requestAggregateCoaching(
+                                        AggregateCoachingRequest.byUuids(_selectedServerUuids.toList()),
+                                      );
+                                    }
+                                  }
+                                      : null,
+                                  borderRadius: BorderRadius.circular(isEnabled ? 16.2 : 18),
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.auto_awesome,
+                                          color: isEnabled
+                                              ? const Color(0xFF0284C7)
+                                              : const Color(0xFF94A3B8),
+                                          size: 18,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          child: Text(
+                                            _selectedServerUuids.isNotEmpty
+                                                ? "AI 분석 요청 (${_selectedServerUuids.length})"
+                                                : "AI 분석 요청",
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: isEnabled
+                                                  ? const Color(0xFF0284C7)
+                                                  : const Color(0xFF94A3B8),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
                     ),
                   ],
-                ),
-              ],
+                ),              ],
             );
           },
         ),
@@ -269,8 +302,9 @@ class _CoachingScreenState extends State<CoachingScreen> {
           const Text("AI 분석 결과", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B))),
           const SizedBox(height: 4),
           Text(
-            selectedCount > 0 ? "$selectedCount개 선택됨 · 아래 버튼으로 분석을 요청하세요" : "하단 [기록 보기 및 선택]에서 기록 선택 후 AI 분석을 시작하세요",
+            selectedCount > 0 ? "$selectedCount개 선택됨 · [AI 분석 요청]을 누르세요" : "하단 [기록 보기 및 선택]에서 기록 선택 후 AI 분석을 시작하세요",
             style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -300,144 +334,220 @@ class _CoachingScreenState extends State<CoachingScreen> {
     );
   }
 
-  /// AI 코칭 결과 카드
+  /// AI 코칭 결과 카드 (2x2 메트릭 우선 배치 -> 하단 AI 코멘트 개별 카드)
   Widget _buildResultCard(dynamic coaching) {
     final isSingle = coaching.coachingType == 'SINGLE';
 
-    // 💡 1. JSON 파싱 대신 줄바꿈(\n) 기준으로 첫 줄과 나머지 분리
     final String rawMessage = (coaching.coachingMessage ?? '').trim();
-
     String summary = '';
-    String details = '';
+    List<String> detailList = [];
 
+    // 1. 파싱 로직 (슬로건 분리 및 불릿 단위 분할)
     if (rawMessage.isNotEmpty) {
       final List<String> lines = rawMessage.split('\n');
-
-      // 첫 번째 줄: 핵심 요약 (마크다운 ** 제거하여 깔끔하게 표시)
+      // 첫 번째 줄: 슬로건 (강조 기호 제거)
       summary = lines.first.replaceAll('**', '').trim();
 
-      // 두 번째 줄 이후: 불릿 포인트 상세 내용
+      // 두 번째 줄부터: 불릿 기호만 지우고 ** 강조 기호는 유지
       if (lines.length > 1) {
-        details = lines.sublist(1).join('\n').replaceAll('**', '').trim();
+        detailList = lines
+            .sublist(1)
+            .map((line) => line.trim())
+            .where((line) => line.isNotEmpty)
+            .map((line) {
+          return line
+              .replaceAll(RegExp(r'^\s*[\-\•\*\d\.]+\s*'), '')
+              .trim();
+        })
+            .where((line) => line.isNotEmpty)
+            .toList();
       }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0284C7).withValues(alpha: 0.08),
-            blurRadius: 20,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  isSingle ? '단일 세트 분석 결과' : '종합/누적 분석 결과',
-                  style: const TextStyle(
-                    color: Color(0xFF0284C7),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '${coaching.totalSessions}개 세트 분석됨',
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            childAspectRatio: 2.2,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            children: [
-              _buildMetricTile('정상', coaching.totalSuccessCount, const Color(0xFF10B981)),
-              _buildMetricTile('허리과숙임', coaching.totalWaistErrorCount, const Color(0xFFF59E0B)),
-              _buildMetricTile('얕은깊이', coaching.totalDepthErrorCount, const Color(0xFFF97316)),
-              _buildMetricTile('상체선행', coaching.totalGoodMorningCount, const Color(0xFFEF4444)),
-            ],
-          ),
-          const SizedBox(height: 12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. 카드 밖 상단 슬로건 배너
+        if (summary.isNotEmpty)
+          AiCoachingSloganBanner(slogan: summary),
 
-          // 💡 2. 첫 줄 요약 및 상세 불릿 포인트 피드백 출력
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3E8FF),
-              borderRadius: BorderRadius.circular(16),
+        // 2. [상단] 메트릭 카드 (상단 뱃지 Row + 2×2 메트릭 그리드)
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0284C7).withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 4),
+              ),
+            ],
+            border: Border.all(
+              color: const Color(0xFFE2E8F0),
+              width: 1.2,
             ),
-            child: Row(
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.smart_toy, color: Color(0xFF7C3AED), size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 첫 줄 요약 (굵은 글씨)
-                      if (summary.isNotEmpty) ...[
-                        Text(
-                          summary,
-                          style: const TextStyle(
-                            color: Color(0xFF5B21B6),
-                            fontSize: 14,
-                            height: 1.4,
-                            fontWeight: FontWeight.bold,
+                // 1) Badges Row (단일/통합 분석 & 세트 분석됨)
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isSingle
+                            ? const Color(0xFF0284C7).withValues(alpha: 0.1)
+                            : const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 13,
+                            color: isSingle ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
                           ),
-                        ),
-                        if (details.isNotEmpty) const SizedBox(height: 8),
-                      ],
-                      // 상세 불릿 포인트 피드백
-                      if (details.isNotEmpty)
-                        Text(
-                          details,
-                          style: const TextStyle(
-                            color: Color(0xFF4C1D95),
-                            fontSize: 13,
-                            height: 1.5,
-                            fontWeight: FontWeight.w500,
+                          const SizedBox(width: 4),
+                          Text(
+                            isSingle ? '단일 세트 분석' : '통합 분석',
+                            style: GoogleFonts.dmSans(
+                              color: isSingle ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                            ),
                           ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '${coaching.totalSessions}세트 분석됨',
+                        style: GoogleFonts.dmSans(
+                          color: const Color(0xFF475569),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
                         ),
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 14),
+
+                // 2) 2×2 metric grid
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.45,
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  children: [
+                    _buildMetricTile('정상 스쿼트', coaching.totalSuccessCount, const Color(0xFF10B981), Icons.check_circle_outline_rounded),
+                    _buildMetricTile('허리 과숙임', coaching.totalWaistErrorCount, const Color(0xFFF59E0B), Icons.error_outline_rounded),
+                    _buildMetricTile('얕은 깊이', coaching.totalDepthErrorCount, const Color(0xFF8B5CF6), Icons.arrow_downward_rounded),
+                    _buildMetricTile('상체 선행', coaching.totalGoodMorningCount, const Color(0xFFEF4444), Icons.trending_up_rounded),
+                  ],
                 ),
               ],
             ),
           ),
+        ),
+
+        // 3. [하단] 개별 분리된 AI 코멘트 카드 (RichText 강조 효과 적용)
+        if (detailList.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          ...detailList.map((detailText) {
+            return Container(
+              width: double.infinity,
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppTheme.primarySky,
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primarySky.withValues(alpha: 0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 3),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _buildRichText(
+                      detailText,
+                      baseStyle: TextStyle(
+                        fontFamily: 'Pretendard',
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 14.5,
+                        height: 1.45,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
-      ),
+      ],
+    );
+  }
+
+  /// **단어** 형태의 마크다운 강조를 TextSpan(FontWeight.bold)으로 변환해주는 위젯
+  Widget _buildRichText(String text, {required TextStyle baseStyle}) {
+    final List<TextSpan> spans = [];
+    final List<String> parts = text.split('**');
+
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].isEmpty) continue;
+
+      if (i % 2 == 1) {
+        spans.add(
+          TextSpan(
+            text: parts[i],
+            style: baseStyle.copyWith(
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
+        );
+      } else {
+        spans.add(
+          TextSpan(
+            text: parts[i],
+            style: baseStyle,
+          ),
+        );
+      }
+    }
+
+    return Text.rich(
+      TextSpan(children: spans),
     );
   }
 
@@ -465,35 +575,147 @@ class _CoachingScreenState extends State<CoachingScreen> {
     );
   }
 
-  Widget _buildMetricTile(String label, int count, Color color) {
+  /// 개별 메트릭 타일 컴포넌트
+  Widget _buildMetricTile(String label, int count, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: color.withValues(alpha: 0.10),
+          width: 1.2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.dmSans(
-              fontSize: 11,
-              color: const Color(0xFF64748B),
-              fontWeight: FontWeight.w600,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.095),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  icon,
+                  size: 15,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 10,
+                    color: const Color(0xFF64748B),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 2),
-          Text(
-            "$count회",
-            style: GoogleFonts.anton(
-              fontSize: 18,
-              color: color,
-              letterSpacing: 0.3,
-            ),
+          const SizedBox(height: 7),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                "$count",
+                style: GoogleFonts.anton(
+                  fontSize: 28,
+                  color: color,
+                  height: 1.0,
+                  letterSpacing: 0.56,
+                ),
+              ),
+              const SizedBox(width: 2),
+              Text(
+                "회",
+                style: GoogleFonts.dmSans(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// AI 코칭 슬로건 배너
+// =============================================================================
+class AiCoachingSloganBanner extends StatelessWidget {
+  final String slogan;
+
+  const AiCoachingSloganBanner({
+    super.key,
+    required this.slogan,
+  });
+
+  static const Curve appCubicCurve = Cubic(0.22, 1.0, 0.36, 1.0);
+
+  @override
+  Widget build(BuildContext context) {
+    if (slogan.isEmpty) return const SizedBox.shrink();
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 1000),
+      switchInCurve: appCubicCurve,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            final double translateY = -10.0 * (1.0 - animation.value);
+            return Transform.translate(
+              offset: Offset(0.0, translateY),
+              child: Opacity(
+                opacity: animation.value,
+                child: child,
+              ),
+            );
+          },
+          child: child,
+        );
+      },
+      child: Container(
+        key: ValueKey<String>(slogan),
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 16.0),
+        alignment: Alignment.centerLeft,
+        child: ShaderMask(
+          blendMode: BlendMode.srcIn,
+          shaderCallback: (Rect bounds) {
+            return LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppTheme.primarySky.withValues(alpha: 0.75),
+                AppTheme.primarySky.withValues(alpha: 0.0),
+              ],
+            ).createShader(bounds);
+          },
+          child: Text(
+            slogan,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.w600,
+              height: 1.25,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
       ),
     );
   }
