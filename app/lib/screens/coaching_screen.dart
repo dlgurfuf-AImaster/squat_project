@@ -228,35 +228,12 @@ class _CoachingScreenState extends State<CoachingScreen> {
     );
   }
 
+  // ===========================================================================
+  // AI 스쿼트 분석 파트
+  // ===========================================================================
   Widget _buildPlaceholderCard(int selectedCount) {
     return AiCoachingSloganBanner(
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(22),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          children: [
-            const Icon(Icons.auto_awesome, color: Color(0xFF7C3AED), size: 32),
-            const SizedBox(height: 8),
-            const Text(
-              "AI 분석 결과",
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              selectedCount > 0
-                  ? "$selectedCount개 선택됨 · [AI 분석 요청]을 누르세요"
-                  : "하단 [기록 보기 및 선택]에서 기록 선택 후 AI 분석을 시작하세요",
-              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
+      child: AIHeroPlaceholder(selectedCount: selectedCount),
     );
   }
 
@@ -405,7 +382,7 @@ class _CoachingScreenState extends State<CoachingScreen> {
 }
 
 // =============================================================================
-// 버그 수정 및 타이밍·모션 최적화가 적용된 StaggeredResultContentView
+// StaggeredResultContentView
 // =============================================================================
 class StaggeredResultContentView extends StatefulWidget {
   final CoachingResponse coaching;
@@ -480,9 +457,6 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ---------------------------------------------------------------
-              // 2단계: AI 분석 메인 카드 (0.36 ~ 0.58)
-              // ---------------------------------------------------------------
               DirectionalSlideFade(
                 controller: _controller,
                 beginInterval: 0.36,
@@ -579,9 +553,6 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                 ),
               ),
 
-              // ---------------------------------------------------------------
-              // 3단계: 세부 리포트 카드 (0.42부터 촤라락 등장)
-              // ---------------------------------------------------------------
               if (detailList.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 ...List.generate(detailList.length, (index) {
@@ -643,9 +614,6 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
 
         const SizedBox(height: 16),
 
-        // ---------------------------------------------------------------------
-        // 4단계: 하단 버튼 (마지막 안착 0.80 ~ 0.95)
-        // ---------------------------------------------------------------------
         DirectionalSlideFade(
           controller: _controller,
           beginInterval: 0.80,
@@ -765,7 +733,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
 }
 
 // =============================================================================
-// 커브 유연성이 확장된 DirectionalSlideFade
+// DirectionalSlideFade
 // =============================================================================
 enum SlideDirection { topToBottom, bottomToTop }
 
@@ -820,7 +788,7 @@ class DirectionalSlideFade extends StatelessWidget {
 }
 
 // =============================================================================
-// 원본 슬로건 배너 위젯 (첫 화면 슬로건 트랜지션 효과와 100% 동일하게 통일)
+// AiCoachingSloganBanner
 // =============================================================================
 class AiCoachingSloganBanner extends StatefulWidget {
   final String? slogan;
@@ -839,7 +807,6 @@ class AiCoachingSloganBanner extends StatefulWidget {
 }
 
 class _AiCoachingSloganBannerState extends State<AiCoachingSloganBanner> {
-  // 첫 화면 슬로건 변경 시 사용하는 커브
   static const Curve appCubicCurve = Cubic(0.22, 1.0, 0.36, 1.0);
 
   static const List<String> _defaultQuotes = [
@@ -934,7 +901,6 @@ class _AiCoachingSloganBannerState extends State<AiCoachingSloganBanner> {
       ),
     );
 
-    // AI 결과 등장 시: 첫 화면 슬로건 교체 효과(appCubicCurve, -10px 이동)와 정확히 똑같이 등장
     if (widget.animationController != null) {
       final sloganAnimation = CurvedAnimation(
         parent: widget.animationController!,
@@ -1003,7 +969,7 @@ class _AiCoachingSloganBannerState extends State<AiCoachingSloganBanner> {
 }
 
 // =============================================================================
-// 화면 전체를 사용하는 몰입형 AI 분석 풀스크린 로딩 위젯
+// AiAnalysisFullScreenLoading
 // =============================================================================
 class AiAnalysisFullScreenLoading extends StatefulWidget {
   const AiAnalysisFullScreenLoading({super.key});
@@ -1200,5 +1166,385 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
         ),
       ),
     );
+  }
+}
+
+// =============================================================================
+// AIHeroPlaceholder
+// =============================================================================
+class AIHeroPlaceholder extends StatefulWidget {
+  final int selectedCount;
+
+  const AIHeroPlaceholder({
+    super.key,
+    required this.selectedCount,
+  });
+
+  @override
+  State<AIHeroPlaceholder> createState() => _AIHeroPlaceholderState();
+}
+
+class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _glowController;
+  late Animation<double> _glowAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _glowController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1800),
+    )..repeat(reverse: true);
+
+    _glowAnimation = Tween<double>(begin: 0.85, end: 1.15).animate(
+      CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _glowController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isSelected = widget.selectedCount > 0;
+
+    final List<Map<String, dynamic>> steps = [
+      {
+        'label': '기록 선택',
+        'icon': Icons.ads_click_rounded,
+        'bg': const Color(0xFF7C3AED).withValues(alpha: 0.08),
+        'border': const Color(0xFF7C3AED).withValues(alpha: 0.20),
+        'iconColor': const Color(0xFF7C3AED),
+      },
+      {
+        'label': 'AI 분석',
+        'icon': Icons.auto_awesome_rounded,
+        'bg': const Color(0xFF0284C7).withValues(alpha: 0.08),
+        'border': const Color(0xFF0284C7).withValues(alpha: 0.20),
+        'iconColor': const Color(0xFF0284C7),
+      },
+      {
+        'label': '결과 확인',
+        'icon': Icons.assessment_rounded,
+        'bg': const Color(0xFF10B981).withValues(alpha: 0.08),
+        'border': const Color(0xFF10B981).withValues(alpha: 0.20),
+        'iconColor': const Color(0xFF10B981),
+      },
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0284C7).withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // 1. Hero Visual (글로우 애니메이션 + 점선 원)
+          SizedBox(
+            height: 110,
+            width: 110,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CustomPaint(
+                  size: const Size(110, 110),
+                  painter: _DashedCirclePainter(
+                    color: const Color(0xFF7C3AED).withValues(alpha: 0.25),
+                  ),
+                ),
+                AnimatedBuilder(
+                  animation: _glowAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _glowAnimation.value,
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.35 * _glowAnimation.value),
+                              blurRadius: 16 * _glowAnimation.value,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 30,
+                  color: Colors.white,
+                ),
+                Positioned(
+                  top: 2,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      size: 14,
+                      color: Color(0xFF10B981),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 2,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.bar_chart_rounded,
+                      size: 14,
+                      color: Color(0xFF0284C7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          // 2. Title & Subtitle
+          Text(
+            "AI 스쿼트 분석",
+            style: GoogleFonts.anton(
+              fontSize: 20,
+              letterSpacing: 0.6,
+              color: const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "POWERED BY GEMINI AI",
+            style: GoogleFonts.dmSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF7C3AED),
+              letterSpacing: 1.2,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 3. 3-Step Flow Strip
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: List.generate(steps.length * 2 - 1, (index) {
+              if (index.isEven) {
+                final stepIndex = index ~/ 2;
+                final step = steps[stepIndex];
+                return Expanded(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: step['bg'] as Color,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: step['border'] as Color, width: 1.2),
+                        ),
+                        child: Icon(
+                          step['icon'] as IconData,
+                          size: 16,
+                          color: step['iconColor'] as Color,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        step['label'] as String,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 14,
+                      height: 1.5,
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
+                    ),
+                    CustomPaint(
+                      size: const Size(4, 7),
+                      painter: _ArrowHeadPainter(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 4. Live Selected Status Indicator
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF0284C7).withValues(alpha: 0.08)
+                  : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFF0284C7).withValues(alpha: 0.20)
+                    : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    isSelected
+                        ? "${widget.selectedCount}개 선택됨 · 준비 완료"
+                        : "기록을 선택해 분석을 시작해보세요",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Custom Painters
+// =============================================================================
+class _DashedCirclePainter extends CustomPainter {
+  final Color color;
+
+  _DashedCirclePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+
+    const dashCount = 20;
+    const dashArc = (2 * 3.141592653589793) / dashCount;
+
+    for (int i = 0; i < dashCount; i++) {
+      if (i % 2 == 0) {
+        canvas.drawArc(
+          Rect.fromCircle(center: center, radius: radius),
+          i * dashArc,
+          dashArc * 0.6,
+          false,
+          paint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
+    return oldDelegate.color != color;
+  }
+}
+
+class _ArrowHeadPainter extends CustomPainter {
+  final Color color;
+
+  _ArrowHeadPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, size.height / 2)
+      ..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ArrowHeadPainter oldDelegate) {
+    return oldDelegate.color != color;
   }
 }
