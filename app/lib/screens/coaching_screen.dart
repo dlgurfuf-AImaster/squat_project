@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:app/screens/select_coaching_record_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1194,7 +1195,7 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
     super.initState();
     _glowController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 1300),
     )..repeat(reverse: true);
 
     _glowAnimation = Tween<double>(begin: 0.85, end: 1.15).animate(
@@ -1215,22 +1216,22 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
     final List<Map<String, dynamic>> steps = [
       {
         'label': '기록 선택',
-        'icon': Icons.ads_click_rounded,
-        'bg': const Color(0xFF7C3AED).withValues(alpha: 0.08),
-        'border': const Color(0xFF7C3AED).withValues(alpha: 0.20),
-        'iconColor': const Color(0xFF7C3AED),
-      },
-      {
-        'label': 'AI 분석',
-        'icon': Icons.auto_awesome_rounded,
-        'bg': const Color(0xFF0284C7).withValues(alpha: 0.08),
+        'icon': Icons.check_circle_outline_rounded,
+        'bg': const Color(0xFFEFF6FF), // 연한 스카이블루
         'border': const Color(0xFF0284C7).withValues(alpha: 0.20),
         'iconColor': const Color(0xFF0284C7),
       },
       {
+        'label': 'AI 분석',
+        'icon': Icons.auto_awesome_rounded,
+        'bg': const Color(0xFFF3E8FF), // 연한 퍼플
+        'border': const Color(0xFF7C3AED).withValues(alpha: 0.20),
+        'iconColor': const Color(0xFF7C3AED),
+      },
+      {
         'label': '결과 확인',
-        'icon': Icons.assessment_rounded,
-        'bg': const Color(0xFF10B981).withValues(alpha: 0.08),
+        'icon': Icons.bar_chart_rounded,
+        'bg': const Color(0xFFECFDF5), // 연한 그린
         'border': const Color(0xFF10B981).withValues(alpha: 0.20),
         'iconColor': const Color(0xFF10B981),
       },
@@ -1238,240 +1239,354 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      clipBehavior: Clip.antiAlias, // 구석 빛 오버레이가 테두리 밖으로 넘치지 않게 자름
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        // 1번: 바탕 4단계 155도 선형 그라데이션
+        gradient: const LinearGradient(
+          begin: Alignment(-0.4, -0.9),
+          end: Alignment(0.4, 0.9),
+          colors: [
+            Color(0xFFF5F0FF),
+            Color(0xFFEDE9FE),
+            Color(0xFFFAFAFF),
+            Color(0xFFEFF6FF),
+          ],
+          stops: [0.0, 0.28, 0.60, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: const Color(0xFF7C3AED).withValues(alpha: 0.08), // rgba(124,58,237,0.08)
+          width: 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0284C7).withValues(alpha: 0.05),
-            blurRadius: 20,
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.10), // rgba(124,58,237,0.10)
+            blurRadius: 28,
             offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Column(
+      child: Stack(
         children: [
-          // 1. Hero Visual (글로우 애니메이션 + 점선 원)
-          SizedBox(
-            height: 110,
-            width: 110,
-            child: Stack(
-              alignment: Alignment.center,
+          // 3번-A: 우상단 스카이블루 은은한 빛
+          Positioned(
+            top: -24,
+            right: -20,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+              child: Container(
+                width: 110,
+                height: 110,
+                decoration: const BoxDecoration(
+                  color: Color(0x170EA5E9),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+
+          // 3번-B: 좌하단 퍼플 은은한 빛
+          Positioned(
+            bottom: -16,
+            left: -10,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+              child: Container(
+                width: 90,
+                height: 90,
+                decoration: const BoxDecoration(
+                  color: Color(0x127C3AED),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ),
+
+          // 메인 UI 콘텐츠 (기존 Column 구조 유지)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            child: Column(
               children: [
-                CustomPaint(
-                  size: const Size(110, 110),
-                  painter: _DashedCirclePainter(
-                    color: const Color(0xFF7C3AED).withValues(alpha: 0.25),
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: _glowAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _glowAnimation.value,
-                      child: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFA855F7), Color(0xFF7C3AED)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF7C3AED).withValues(alpha: 0.35 * _glowAnimation.value),
-                              blurRadius: 16 * _glowAnimation.value,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 30,
-                  color: Colors.white,
-                ),
-                Positioned(
-                  top: 2,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.check_circle_rounded,
-                      size: 14,
-                      color: Color(0xFF10B981),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 2,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.bar_chart_rounded,
-                      size: 14,
-                      color: Color(0xFF0284C7),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // 2. Title & Subtitle
-          Text(
-            "AI 스쿼트 분석",
-            style: GoogleFonts.anton(
-              fontSize: 20,
-              letterSpacing: 0.6,
-              color: const Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "POWERED BY GEMINI AI",
-            style: GoogleFonts.dmSans(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF7C3AED),
-              letterSpacing: 1.2,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // 3. 3-Step Flow Strip
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: List.generate(steps.length * 2 - 1, (index) {
-              if (index.isEven) {
-                final stepIndex = index ~/ 2;
-                final step = steps[stepIndex];
-                return Expanded(
-                  child: Column(
+                // 1. Hero Visual (React 궤도 비주얼 규격 동일 적용)
+                SizedBox(
+                  height: 96,
+                  width: 96,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: step['bg'] as Color,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: step['border'] as Color, width: 1.2),
-                        ),
-                        child: Icon(
-                          step['icon'] as IconData,
-                          size: 16,
-                          color: step['iconColor'] as Color,
+                      // 1. 점선 궤도 링 (Dashed orbit ring)
+                      CustomPaint(
+                        size: const Size(96, 96),
+                        painter: _DashedCirclePainter(
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.22),
+                          strokeWidth: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        step['label'] as String,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF64748B),
+
+                      // 2. React 원본의 뒤편 독립 Radial Gradient 글로우 후광
+                      AnimatedBuilder(
+                        animation: _glowAnimation,
+                        builder: (context, child) {
+                          final double t = _glowAnimation.value;
+                          return Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              // React: rgba(124,58,237, 0.05 ~ 0.15) 펄스
+                              gradient: RadialGradient(
+                                colors: [
+                                  const Color(0xFF7C3AED).withValues(alpha: 0.05 + (0.12 * t)),
+                                  const Color(0xFF7C3AED).withValues(alpha: 0.0),
+                                ],
+                                stops: const [0.0, 0.72],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 3. 중앙 아이콘 서클 + 이중 BoxShadow + Figma 스케일 호흡
+                      AnimatedBuilder(
+                        animation: _glowAnimation,
+                        builder: (context, child) {
+                          final double t = _glowAnimation.value;
+                          return Transform.scale(
+                            scale: 0.95 + (0.08 * t), // 0.95배 ~ 1.03배 미세 스케일 펌핑
+                            child: Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  begin: Alignment(-0.5, -0.8),
+                                  end: Alignment(0.5, 0.8),
+                                  colors: [
+                                    Color(0xFF7C3AED),
+                                    Color(0xFF9D4EDD),
+                                  ],
+                                ),
+                                boxShadow: [
+                                  // React 링 테두리: 0 0 0 4px (0.05) -> 8px (0.10)
+                                  BoxShadow(
+                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.05 + (0.05 * t)),
+                                    spreadRadius: 4 + (4 * t),
+                                    blurRadius: 0,
+                                  ),
+                                  // React 메인 음영: 0 4px 14px (0.18) -> 0 8px 24px (0.34)
+                                  BoxShadow(
+                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.18 + (0.16 * t)),
+                                    blurRadius: 14 + (10 * t),
+                                    offset: Offset(0, 4 + (4 * t)),
+                                  ),
+                                ],
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.auto_awesome_rounded,
+                                  size: 22,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                      // 4. 우상단 위성 (Check Satellite)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFDBEAFE),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x383B82F6),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_rounded,
+                            size: 11,
+                            color: Color(0xFF3B82F6),
+                          ),
+                        ),
+                      ),
+
+                      // 5. 좌하단 위성 (Stats Satellite)
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD1FAE5),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x3810B981),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.bar_chart_rounded,
+                            size: 11,
+                            color: Color(0xFF10B981),
+                          ),
                         ),
                       ),
                     ],
                   ),
-                );
-              }
-
-              return Padding(
-                padding: const EdgeInsets.only(top: 10),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 14,
-                      height: 1.5,
-                      color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
-                    ),
-                    CustomPaint(
-                      size: const Size(4, 7),
-                      painter: _ArrowHeadPainter(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
-                      ),
-                    ),
-                  ],
                 ),
-              );
-            }),
-          ),
 
-          const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-          // 4. Live Selected Status Indicator
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF0284C7).withValues(alpha: 0.08)
-                  : const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF0284C7).withValues(alpha: 0.20)
-                    : const Color(0xFFE2E8F0),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                // 2. Title & Subtitle
+                Text(
+                  "AI 스쿼트 분석",
+                  style: GoogleFonts.anton(
+                    fontSize: 20,
+                    letterSpacing: 0.6,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    isSelected
-                        ? "${widget.selectedCount}개 선택됨 · 준비 완료"
-                        : "기록을 선택해 분석을 시작해보세요",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                const SizedBox(height: 4),
+                Text(
+                  "POWERED BY GEMINI AI",
+                  style: GoogleFonts.dmSans(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF7C3AED),
+                    letterSpacing: 1.2,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 3. 3-Step Flow Strip
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: List.generate(steps.length * 2 - 1, (index) {
+                    if (index.isEven) {
+                      final stepIndex = index ~/ 2;
+                      final step = steps[stepIndex];
+                      return Expanded(
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 34, // 32 -> 34로 확대
+                              height: 34, // 32 -> 34로 확대
+                              decoration: BoxDecoration(
+                                color: step['bg'] as Color,
+                                borderRadius: BorderRadius.circular(11), // 10 -> 11로 수정
+                                border: Border.all(color: step['border'] as Color, width: 1.2),
+                              ),
+                              child: Icon(
+                                step['icon'] as IconData,
+                                size: 16,
+                                color: step['iconColor'] as Color,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              step['label'] as String,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 9, // 10 -> 9로 수정
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF64748B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12), // 박스 크기 확대에 맞춘 중앙 정렬 보정
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 20, // 14 -> 20으로 연장
+                            height: 1.5,
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
+                          ),
+                          CustomPaint(
+                            size: const Size(4, 7),
+                            painter: _ArrowHeadPainter(
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 4. Live Selected Status Indicator
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? const Color(0xFF0284C7).withValues(alpha: 0.08)
+                        : const Color(0xFF7C3AED).withValues(alpha: 0.05), // 미선택 시 연보라 배경
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? const Color(0xFF0284C7).withValues(alpha: 0.20)
+                          : const Color(0xFF7C3AED).withValues(alpha: 0.15), // 미선택 시 보라 테두리
                     ),
-                    overflow: TextOverflow.ellipsis,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
+                          boxShadow: [
+                            BoxShadow(
+                              color: isSelected
+                                  ? const Color(0xFF0284C7).withValues(alpha: 0.25)
+                                  : const Color(0xFF7C3AED).withValues(alpha: 0.25),
+                              spreadRadius: 2, // 점 둘레 은은한 링 효과
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          isSelected
+                              ? "${widget.selectedCount}개 선택됨 · 분석 버튼을 눌러주세요"
+                              : "아래 기록을 선택해 분석을 시작하세요",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -1483,43 +1598,44 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
   }
 }
 
-// =============================================================================
-// Custom Painters
-// =============================================================================
 class _DashedCirclePainter extends CustomPainter {
   final Color color;
+  final double strokeWidth;
 
-  _DashedCirclePainter({required this.color});
+  _DashedCirclePainter({
+    required this.color,
+    this.strokeWidth = 1.5,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = color
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.butt; // 끝을 뭉툭하지 않게 깔끔히 자름
 
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
+    final radius = (size.width - strokeWidth) / 2;
 
-    const dashCount = 20;
-    const dashArc = (2 * 3.141592653589793) / dashCount;
+    // 1. 조각 수를 90개로 늘려 촘촘하게 설정
+    const int totalSegments = 90;
+    const double stepArc = (2 * 3.141592653589793) / totalSegments;
 
-    for (int i = 0; i < dashCount; i++) {
-      if (i % 2 == 0) {
-        canvas.drawArc(
-          Rect.fromCircle(center: center, radius: radius),
-          i * dashArc,
-          dashArc * 0.6,
-          false,
-          paint,
-        );
-      }
+    for (int i = 0; i < totalSegments; i += 2) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        i * stepArc,
+        stepArc * 0.85, // 2. 85%는 선으로 채우고 15%만 미세한 간격(Gap)으로 남김
+        false,
+        paint,
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _DashedCirclePainter oldDelegate) {
-    return oldDelegate.color != color;
+    return oldDelegate.color != color || oldDelegate.strokeWidth != strokeWidth;
   }
 }
 
