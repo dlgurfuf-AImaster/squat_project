@@ -4,9 +4,9 @@ import 'package:app/screens/select_coaching_record_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../providers/coaching_provider.dart';
 import '../dtos/aggregate_coaching_request.dart';
 import '../dtos/coaching_response.dart';
+import '../providers/coaching_provider.dart';
 import '../theme/app_theme.dart';
 
 class CoachingScreen extends StatefulWidget {
@@ -27,6 +27,49 @@ class _CoachingScreenState extends State<CoachingScreen> {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Shared Event Handlers
+  // ---------------------------------------------------------------------------
+  Future<void> _handleSelectHistory() async {
+    final selected = await Navigator.push<Set<String>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const SelectCoachingRecordScreen(),
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _selectedServerUuids.clear();
+        _selectedServerUuids.addAll(selected);
+      });
+    }
+  }
+
+  Future<void> _handleRequestCoaching(CoachingProvider provider) async {
+    final selectedList = _selectedServerUuids.toList();
+    setState(() {
+      _selectedServerUuids.clear();
+    });
+
+    if (selectedList.length == 1) {
+      await provider.requestSingleCoaching(selectedList.first);
+    } else {
+      await provider.requestAggregateCoaching(
+        AggregateCoachingRequest.byUuids(selectedList),
+      );
+    }
+  }
+
+  void _handleReset(CoachingProvider provider) {
+    provider.resetCoaching();
+    setState(() {
+      _selectedServerUuids.clear();
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -47,48 +90,11 @@ class _CoachingScreenState extends State<CoachingScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildHeader(),
-                      InkWell(
-                        onTap: (isFetching || isAiAnalyzing)
-                            ? null
-                            : () {
-                          provider.resetCoaching();
-                          setState(() {
-                            _selectedServerUuids.clear();
-                          });
-                        },
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            children: [
-                              if (isFetching)
-                                const SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Color(0xFF64748B),
-                                  ),
-                                )
-                              else
-                                const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF64748B)),
-                              const SizedBox(width: 4),
-                              Text(
-                                isFetching ? "초기화 중" : "초기화",
-                                style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      const _HeaderView(),
+                      _ResetButton(
+                        isFetching: isFetching,
+                        isDisabled: isFetching || isAiAnalyzing,
+                        onTap: () => _handleReset(provider),
                       ),
                     ],
                   ),
@@ -108,33 +114,8 @@ class _CoachingScreenState extends State<CoachingScreen> {
                       coaching: coaching,
                       selectedUuids: _selectedServerUuids,
                       isFetching: isFetching,
-                      onSelectHistory: () async {
-                        final selected = await Navigator.push<Set<String>>(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SelectCoachingRecordScreen(),
-                          ),
-                        );
-                        if (selected != null) {
-                          setState(() {
-                            _selectedServerUuids.clear();
-                            _selectedServerUuids.addAll(selected);
-                          });
-                        }
-                      },
-                      onRequestCoaching: () async {
-                        final selectedList = _selectedServerUuids.toList();
-                        setState(() {
-                          _selectedServerUuids.clear();
-                        });
-                        if (selectedList.length == 1) {
-                          await provider.requestSingleCoaching(selectedList.first);
-                        } else {
-                          await provider.requestAggregateCoaching(
-                            AggregateCoachingRequest.byUuids(selectedList),
-                          );
-                        }
-                      },
+                      onSelectHistory: _handleSelectHistory,
+                      onRequestCoaching: () => _handleRequestCoaching(provider),
                     )
                         : ListView(
                       key: const ValueKey('normal_screen'),
@@ -147,36 +128,11 @@ class _CoachingScreenState extends State<CoachingScreen> {
 
                         const SizedBox(height: 16),
 
-                        _buildActionButtons(
+                        _ActionButtons(
                           isFetching: isFetching,
                           selectedUuids: _selectedServerUuids,
-                          onSelectHistory: () async {
-                            final selected = await Navigator.push<Set<String>>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SelectCoachingRecordScreen(),
-                              ),
-                            );
-                            if (selected != null) {
-                              setState(() {
-                                _selectedServerUuids.clear();
-                                _selectedServerUuids.addAll(selected);
-                              });
-                            }
-                          },
-                          onRequestCoaching: () async {
-                            final selectedList = _selectedServerUuids.toList();
-                            setState(() {
-                              _selectedServerUuids.clear();
-                            });
-                            if (selectedList.length == 1) {
-                              await provider.requestSingleCoaching(selectedList.first);
-                            } else {
-                              await provider.requestAggregateCoaching(
-                                AggregateCoachingRequest.byUuids(selectedList),
-                              );
-                            }
-                          },
+                          onSelectHistory: _handleSelectHistory,
+                          onRequestCoaching: () => _handleRequestCoaching(provider),
                         ),
                       ],
                     ),
@@ -190,7 +146,51 @@ class _CoachingScreenState extends State<CoachingScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildPlaceholderCard(int selectedCount) {
+    return AiCoachingSloganBanner(
+      child: AIHeroPlaceholder(selectedCount: selectedCount),
+    );
+  }
+
+  Widget _buildErrorCard(String error) {
+    return AiCoachingSloganBanner(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFFCA5A5)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                error,
+                style: const TextStyle(
+                  color: Color(0xFF991B1B),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// Header & Reset Button Widgets
+// =============================================================================
+class _HeaderView extends StatelessWidget {
+  const _HeaderView();
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       children: [
         Container(
@@ -228,34 +228,50 @@ class _CoachingScreenState extends State<CoachingScreen> {
       ],
     );
   }
+}
 
-  // ===========================================================================
-  // AI 스쿼트 분석 파트
-  // ===========================================================================
-  Widget _buildPlaceholderCard(int selectedCount) {
-    return AiCoachingSloganBanner(
-      child: AIHeroPlaceholder(selectedCount: selectedCount),
-    );
-  }
+class _ResetButton extends StatelessWidget {
+  final bool isFetching;
+  final bool isDisabled;
+  final VoidCallback onTap;
 
-  Widget _buildErrorCard(String error) {
-    return AiCoachingSloganBanner(
+  const _ResetButton({
+    required this.isFetching,
+    required this.isDisabled,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: isDisabled ? null : onTap,
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFFFEF2F2),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFFCA5A5)),
+          color: const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Row(
           children: [
-            const Icon(Icons.error_outline, color: Color(0xFFEF4444)),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                error,
-                style: const TextStyle(color: Color(0xFF991B1B), fontWeight: FontWeight.bold, fontSize: 13),
+            if (isFetching)
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFF64748B),
+                ),
+              )
+            else
+              const Icon(Icons.refresh_rounded, size: 14, color: Color(0xFF64748B)),
+            const SizedBox(width: 4),
+            Text(
+              isFetching ? "초기화 중" : "초기화",
+              style: const TextStyle(
+                color: Color(0xFF64748B),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -263,13 +279,26 @@ class _CoachingScreenState extends State<CoachingScreen> {
       ),
     );
   }
+}
 
-  static Widget _buildActionButtons({
-    required bool isFetching,
-    required Set<String> selectedUuids,
-    required VoidCallback onSelectHistory,
-    required VoidCallback onRequestCoaching,
-  }) {
+// =============================================================================
+// Action Buttons Component
+// =============================================================================
+class _ActionButtons extends StatelessWidget {
+  final bool isFetching;
+  final Set<String> selectedUuids;
+  final VoidCallback onSelectHistory;
+  final VoidCallback onRequestCoaching;
+
+  const _ActionButtons({
+    required this.isFetching,
+    required this.selectedUuids,
+    required this.onSelectHistory,
+    required this.onRequestCoaching,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final isEnabled = selectedUuids.isNotEmpty && !isFetching;
 
     return Row(
@@ -429,7 +458,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
   Widget build(BuildContext context) {
     final coaching = widget.coaching;
     final isSingle = coaching.coachingType == 'SINGLE';
-    final String rawMessage = (coaching.coachingMessage ?? '').trim();
+    final String rawMessage = coaching.coachingMessage.trim();
 
     String summary = '';
     List<String> detailList = [];
@@ -468,7 +497,6 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                   width: double.infinity,
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    // 1번: 바탕 4단계 155도 선형 그라데이션
                     gradient: const LinearGradient(
                       begin: Alignment(-0.4, -0.9),
                       end: Alignment(0.4, 0.9),
@@ -482,12 +510,12 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                     ),
                     borderRadius: BorderRadius.circular(28),
                     border: Border.all(
-                      color: const Color(0xFF7C3AED).withValues(alpha: 0.08), // rgba(124,58,237,0.08)
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
                       width: 1.2,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10), // rgba(124,58,237,0.10)
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10),
                         blurRadius: 28,
                         offset: const Offset(0, 6),
                       ),
@@ -555,10 +583,30 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                           crossAxisSpacing: 8,
                           mainAxisSpacing: 8,
                           children: [
-                            _buildMetricTile('정상 스쿼트', coaching.totalSuccessCount, const Color(0xFF10B981), Icons.check_circle_outline_rounded),
-                            _buildMetricTile('허리 과숙임', coaching.totalWaistErrorCount, const Color(0xFFF59E0B), Icons.error_outline_rounded),
-                            _buildMetricTile('얕은 깊이', coaching.totalDepthErrorCount, const Color(0xFF8B5CF6), Icons.arrow_downward_rounded),
-                            _buildMetricTile('상체 선행', coaching.totalGoodMorningCount, const Color(0xFFEF4444), Icons.trending_up_rounded),
+                            _MetricTile(
+                              label: '정상 스쿼트',
+                              count: coaching.totalSuccessCount,
+                              color: const Color(0xFF10B981),
+                              icon: Icons.check_circle_outline_rounded,
+                            ),
+                            _MetricTile(
+                              label: '허리 과숙임',
+                              count: coaching.totalWaistErrorCount,
+                              color: const Color(0xFFF59E0B),
+                              icon: Icons.error_outline_rounded,
+                            ),
+                            _MetricTile(
+                              label: '얕은 깊이',
+                              count: coaching.totalDepthErrorCount,
+                              color: const Color(0xFF8B5CF6),
+                              icon: Icons.arrow_downward_rounded,
+                            ),
+                            _MetricTile(
+                              label: '상체 선행',
+                              count: coaching.totalGoodMorningCount,
+                              color: const Color(0xFFEF4444),
+                              icon: Icons.trending_up_rounded,
+                            ),
                           ],
                         ),
                       ],
@@ -634,7 +682,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
           endInterval: 0.95,
           direction: SlideDirection.bottomToTop,
           offsetDistance: 20.0,
-          child: _CoachingScreenState._buildActionButtons(
+          child: _ActionButtons(
             isFetching: widget.isFetching,
             selectedUuids: widget.selectedUuids,
             onSelectHistory: widget.onSelectHistory,
@@ -674,8 +722,23 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
 
     return Text.rich(TextSpan(children: spans));
   }
+}
 
-  static Widget _buildMetricTile(String label, int count, Color color, IconData icon) {
+class _MetricTile extends StatelessWidget {
+  final String label;
+  final int count;
+  final Color color;
+  final IconData icon;
+
+  const _MetricTile({
+    required this.label,
+    required this.count,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 11, 12, 10),
       decoration: BoxDecoration(
@@ -919,7 +982,8 @@ class _AiCoachingSloganBannerState extends State<AiCoachingSloganBanner> {
       final sloganAnimation = CurvedAnimation(
         parent: widget.animationController!,
         curve: const Interval(
-          0.05, 0.28,
+          0.05,
+          0.28,
           curve: appCubicCurve,
         ),
       );
@@ -1002,7 +1066,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
 
   int _currentStep = 0; // 0: 데이터 수집, 1: 밸런스 측정, 2: 리포트 생성
 
-  final List<String> _stepMessages = [
+  static const List<String> _stepMessages = [
     "스쿼트 데이터를 수집하고 있습니다.",
     "Gemini AI 스쿼트 분석을 시작합니다.",
     "맞춤 피드백 리포트를 생성 중입니다.",
@@ -1013,13 +1077,11 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
   void initState() {
     super.initState();
 
-    // 1. 점선 궤도 360도 무한 회전 애니메이션
     _rotationController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 16),
     )..repeat();
 
-    // 2. 중앙 아이콘 호흡/펄스 애니메이션
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
@@ -1030,28 +1092,22 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
       curve: Curves.easeInOut,
     );
 
-    // 3. 로딩 단계 진행 타이머 시뮬레이션
     _startStepProgress();
   }
 
   void _startStepProgress() async {
-    // 1. [0.0초 ~ 1.8초] 1단계 진행 (데이터 수집)
     await Future.delayed(const Duration(milliseconds: 1800));
     if (mounted) setState(() => _currentStep = 1);
 
-    // 2. [1.8초 ~ 3.6초] 2단계 진행 (밸런스 측정)
     await Future.delayed(const Duration(milliseconds: 1800));
     if (mounted) setState(() => _currentStep = 2);
 
-    // 3. [3.6초 ~ 5.4초] 3단계 진행 (리포트 생성)
     await Future.delayed(const Duration(milliseconds: 1800));
 
-    // 4. 🌟 5.4초 시점에 3단계 완료 체크(_currentStep = 3)를 먼저 적용!
     if (mounted) {
-      setState(() => _currentStep = 3); // 리포트 생성 체크 아이콘 표시
+      setState(() => _currentStep = 3);
     }
 
-    // 5. 🌟 체크 아이콘이 뜬 상태로 Provider(API 및 6초 타이머) 완료 대기 (약 0.6초간 눈으로 확인)
     if (mounted) {
       final provider = context.read<CoachingProvider>();
       while (provider.isAiAnalyzing) {
@@ -1060,7 +1116,6 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
       }
     }
 
-    // 6. API 완료 후 전환 콜백 호출
     if (mounted && widget.onComplete != null) {
       widget.onComplete!();
     }
@@ -1075,12 +1130,11 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
 
   @override
   Widget build(BuildContext context) {
-    // 3개 단계 설정 데이터
     final List<Map<String, dynamic>> steps = [
       {
         'label': '데이터 수집',
         'icon': Icons.check_circle_outline_rounded,
-        'bg': const Color(0xFFEFF6FF), // 연한 스카이블루
+        'bg': const Color(0xFFEFF6FF),
         'border': const Color(0xFF0284C7).withValues(alpha: 0.20),
         'activeBorder': const Color(0xFF0284C7),
         'iconColor': const Color(0xFF0284C7),
@@ -1088,7 +1142,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
       {
         'label': 'AI 분석',
         'icon': Icons.auto_awesome_rounded,
-        'bg': const Color(0xFFF3E8FF), // 연한 퍼플
+        'bg': const Color(0xFFF3E8FF),
         'border': const Color(0xFF7C3AED).withValues(alpha: 0.20),
         'activeBorder': const Color(0xFF7C3AED),
         'iconColor': const Color(0xFF7C3AED),
@@ -1096,7 +1150,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
       {
         'label': '리포트 생성',
         'icon': Icons.description_rounded,
-        'bg': const Color(0xFFECFDF5), // 연한 그린
+        'bg': const Color(0xFFECFDF5),
         'border': const Color(0xFF10B981).withValues(alpha: 0.20),
         'activeBorder': const Color(0xFF10B981),
         'iconColor': const Color(0xFF10B981),
@@ -1108,40 +1162,36 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
-          color: AppTheme.lightBackground, // 기존 앱 테마 색상으로 변경
+          color: AppTheme.lightBackground,
         ),
         child: Stack(
           children: [
-            // 3. 메인 콘텐츠 (중앙 정렬)
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 28.0),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // 1. 상단 여백 (A, B, C를 중앙 근처에 배치)
                     const Spacer(flex: 3),
 
-                    // A. Hero Orbit Visual (대기 카드의 궤도 비주얼을 확장 및 회전 연출)
+                    // A. Hero Orbit Visual
                     SizedBox(
                       height: 140,
                       width: 140,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // 1) 360도 회전하는 점선 궤도 링
                           RotationTransition(
                             turns: _rotationController,
                             child: CustomPaint(
                               size: const Size(140, 140),
                               painter: _DashedCirclePainter(
-                                color: const Color(0xFF7C3AED).withOpacity(0.35),
+                                color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
                                 strokeWidth: 2.0,
                               ),
                             ),
                           ),
 
-                          // 2) 글로우 후광 펄스
                           AnimatedBuilder(
                             animation: _pulseAnimation,
                             builder: (context, child) {
@@ -1153,8 +1203,8 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                                   shape: BoxShape.circle,
                                   gradient: RadialGradient(
                                     colors: [
-                                      const Color(0xFF7C3AED).withOpacity(0.08 + (0.16 * t)),
-                                      const Color(0xFF7C3AED).withOpacity(0.0),
+                                      const Color(0xFF7C3AED).withValues(alpha: 0.08 + (0.16 * t)),
+                                      const Color(0xFF7C3AED).withValues(alpha: 0.0),
                                     ],
                                     stops: const [0.0, 0.75],
                                   ),
@@ -1163,7 +1213,6 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                             },
                           ),
 
-                          // 3) 중앙 메인 AI 서클 (스케일 펌핑)
                           AnimatedBuilder(
                             animation: _pulseAnimation,
                             builder: (context, child) {
@@ -1185,12 +1234,12 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                                     ),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xFF7C3AED).withOpacity(0.10 + (0.10 * t)),
+                                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10 + (0.10 * t)),
                                         spreadRadius: 6 + (6 * t),
                                         blurRadius: 0,
                                       ),
                                       BoxShadow(
-                                        color: const Color(0xFF7C3AED).withOpacity(0.25 + (0.20 * t)),
+                                        color: const Color(0xFF7C3AED).withValues(alpha: 0.25 + (0.20 * t)),
                                         blurRadius: 20 + (12 * t),
                                         offset: Offset(0, 6 + (6 * t)),
                                       ),
@@ -1208,7 +1257,6 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                             },
                           ),
 
-                          // 4) 회전하는 위성 (Check Satellite)
                           Positioned(
                             top: 4,
                             right: 4,
@@ -1235,7 +1283,6 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                             ),
                           ),
 
-                          // 5) 회전하는 위성 (Stats Satellite)
                           Positioned(
                             bottom: 4,
                             left: 4,
@@ -1289,7 +1336,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
 
                     const SizedBox(height: 36),
 
-                    // C. 3-Step Flow Strip (크기 확대 버전)
+                    // C. 3-Step Flow Strip
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: List.generate(steps.length * 2 - 1, (index) {
@@ -1314,11 +1361,11 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                                 children: [
                                   AnimatedContainer(
                                     duration: const Duration(milliseconds: 300),
-                                    width: 46,  // 기존 30 -> 46으로 확대
-                                    height: 46, // 기존 30 -> 46으로 확대
+                                    width: 46,
+                                    height: 46,
                                     decoration: BoxDecoration(
                                       color: step['bg'] as Color,
-                                      borderRadius: BorderRadius.circular(14), // 기존 10 -> 14로 변경
+                                      borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
                                         color: currentBorderColor,
                                         width: isCurrent ? 2.0 : 1.2,
@@ -1326,7 +1373,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                                       boxShadow: isCurrent
                                           ? [
                                         BoxShadow(
-                                          color: (step['iconColor'] as Color).withOpacity(0.25),
+                                          color: (step['iconColor'] as Color).withValues(alpha: 0.25),
                                           blurRadius: 10,
                                           offset: const Offset(0, 3),
                                         ),
@@ -1335,16 +1382,16 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                                     ),
                                     child: Icon(
                                       isDone ? Icons.check_rounded : (step['icon'] as IconData),
-                                      size: 22, // 기존 14 -> 22로 확대
+                                      size: 22,
                                       color: step['iconColor'] as Color,
                                     ),
                                   ),
-                                  const SizedBox(height: 6), // 간격 살짝 확대 (4 -> 6)
+                                  const SizedBox(height: 6),
                                   Text(
                                     step['label'] as String,
                                     textAlign: TextAlign.center,
                                     style: GoogleFonts.dmSans(
-                                      fontSize: 12, // 기존 8.5 -> 12로 확대
+                                      fontSize: 12,
                                       fontWeight: isCurrent || isDone ? FontWeight.w800 : FontWeight.w700,
                                       color: isCurrent
                                           ? (step['iconColor'] as Color)
@@ -1357,7 +1404,6 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                           );
                         }
 
-                        // 화살표 연결선 (46px 상자 중앙 정렬)
                         final stepIndex = index ~/ 2;
                         final isPassed = stepIndex < _currentStep;
                         final Color arrowColor = isPassed
@@ -1365,7 +1411,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                             : const Color(0xFF7C3AED).withValues(alpha: 0.20);
 
                         return Padding(
-                          padding: const EdgeInsets.only(top: 18), // 상자 높이(46px) 중앙에 맞게 10 -> 18 변경
+                          padding: const EdgeInsets.only(top: 18),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -1384,26 +1430,25 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                         );
                       }),
                     ),
-                    // 🌟 2. C와 D 사이 간격 (원하는 만큼 고정값으로 지정: 24 ~ 36)
+
                     const SizedBox(height: 32),
 
-                    // D. Dynamic Live Status Indicator (하단 라이브 메시지 칩)
+                    // D. Dynamic Live Status Indicator
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 300),
                       child: Container(
                         key: ValueKey<int>(_currentStep),
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF7C3AED).withOpacity(0.08),
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: const Color(0xFF7C3AED).withOpacity(0.20),
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
                           ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 🌟 완료 단계(_currentStep == 3)일 때는 체크 아이콘, 진행 중일 때는 스피너 노출
                             _currentStep == 3
                                 ? const Icon(
                               Icons.check_circle_rounded,
@@ -1428,7 +1473,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   color: _currentStep == 3
-                                      ? const Color(0xFF10B981) // 완료 시 초록색 포인트
+                                      ? const Color(0xFF10B981)
                                       : const Color(0xFF7C3AED),
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -1439,7 +1484,6 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
                       ),
                     ),
 
-                    // 🌟 3. D 아래에 Spacer를 배치하여 메시지 칩을 위로 밀어 올림!
                     const Spacer(flex: 2),
                   ],
                 ),
@@ -1499,33 +1543,32 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
       {
         'label': '기록 선택',
         'icon': Icons.check_circle_outline_rounded,
-        'bg': const Color(0xFFEFF6FF), // 연한 스카이블루
+        'bg': const Color(0xFFEFF6FF),
         'border': const Color(0xFF0284C7).withValues(alpha: 0.20),
         'iconColor': const Color(0xFF0284C7),
       },
       {
         'label': 'AI 분석',
         'icon': Icons.auto_awesome_rounded,
-        'bg': const Color(0xFFF3E8FF), // 연한 퍼플
+        'bg': const Color(0xFFF3E8FF),
         'border': const Color(0xFF7C3AED).withValues(alpha: 0.20),
         'iconColor': const Color(0xFF7C3AED),
       },
       {
         'label': '결과 확인',
         'icon': Icons.description_rounded,
-        'bg': const Color(0xFFECFDF5), // 연한 그린
+        'bg': const Color(0xFFECFDF5),
         'border': const Color(0xFF10B981).withValues(alpha: 0.20),
         'iconColor': const Color(0xFF10B981),
       },
     ];
 
     return AspectRatio(
-      aspectRatio: 1.19, // 결과 카드(342 : 286.5)와 1:1로 정확히 일치하는 가로:세로 비율
+      aspectRatio: 1.19,
       child: Container(
         width: double.infinity,
-        clipBehavior: Clip.antiAlias, // 구석 빛 오버레이가 테두리 밖으로 넘치지 않게 자름
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          // 1번: 바탕 4단계 155도 선형 그라데이션
           gradient: const LinearGradient(
             begin: Alignment(-0.4, -0.9),
             end: Alignment(0.4, 0.9),
@@ -1539,12 +1582,12 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
           ),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(
-            color: const Color(0xFF7C3AED).withValues(alpha: 0.08), // rgba(124,58,237,0.08)
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
             width: 1.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF7C3AED).withValues(alpha: 0.10), // rgba(124,58,237,0.10)
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.10),
               blurRadius: 28,
               offset: const Offset(0, 6),
             ),
@@ -1552,7 +1595,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
         ),
         child: Stack(
           children: [
-            // 3번-A: 우상단 스카이블루 은은한 빛
             Positioned(
               top: -24,
               right: -20,
@@ -1568,8 +1610,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                 ),
               ),
             ),
-
-            // 3번-B: 좌하단 퍼플 은은한 빛
             Positioned(
               bottom: -16,
               left: -10,
@@ -1585,21 +1625,17 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                 ),
               ),
             ),
-
-            // 메인 UI 콘텐츠
             Padding(
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14), // 결과 카드 패딩과 동기화
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween, // 비율 상자에 맞춰 높이 균등 자동 정렬
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // 1. Hero Visual (높이 고정에 맞춰 96 -> 82로 미세 조정)
                   SizedBox(
                     height: 82,
                     width: 82,
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // 점선 궤도 링
                         CustomPaint(
                           size: const Size(82, 82),
                           painter: _DashedCirclePainter(
@@ -1607,8 +1643,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                             strokeWidth: 1.5,
                           ),
                         ),
-
-                        // 독립 Radial Gradient 글로우 후광
                         AnimatedBuilder(
                           animation: _glowAnimation,
                           builder: (context, child) {
@@ -1629,8 +1663,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                             );
                           },
                         ),
-
-                        // 중앙 아이콘 서클 + 호흡 애니메이션
                         AnimatedBuilder(
                           animation: _glowAnimation,
                           builder: (context, child) {
@@ -1674,8 +1706,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                             );
                           },
                         ),
-
-                        // 우상단 위성
                         Positioned(
                           top: 0,
                           right: 0,
@@ -1701,8 +1731,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                             ),
                           ),
                         ),
-
-                        // 좌하단 위성
                         Positioned(
                           bottom: 0,
                           left: 0,
@@ -1731,8 +1759,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                       ],
                     ),
                   ),
-
-                  // 2. Title & Subtitle
                   Column(
                     children: [
                       Text(
@@ -1755,8 +1781,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                       ),
                     ],
                   ),
-
-                  // 3. 3-Step Flow Strip
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: List.generate(steps.length * 2 - 1, (index) {
@@ -1816,8 +1840,6 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
                       );
                     }),
                   ),
-
-                  // 4. Live Selected Status Indicator
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -1879,6 +1901,9 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
   }
 }
 
+// =============================================================================
+// Custom Painters
+// =============================================================================
 class _DashedCirclePainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
@@ -1894,20 +1919,18 @@ class _DashedCirclePainter extends CustomPainter {
       ..color = color
       ..strokeWidth = strokeWidth
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.butt; // 끝을 뭉툭하지 않게 깔끔히 자름
+      ..strokeCap = StrokeCap.butt;
 
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
-
     final rect = Rect.fromCircle(center: center, radius: radius);
 
-    // 1. 조각 수를 90개로 늘려 촘촘하게 설정
     const int totalSegments = 90;
     const double stepArc = (2 * 3.141592653589793) / totalSegments;
 
     for (int i = 0; i < totalSegments; i += 2) {
       canvas.drawArc(
-        rect, // 외부에서 선언한 rect 재사용
+        rect,
         i * stepArc,
         stepArc * 0.85,
         false,
