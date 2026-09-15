@@ -465,20 +465,33 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                 direction: SlideDirection.bottomToTop,
                 offsetDistance: 45.0,
                 child: Container(
+                  width: double.infinity,
+                  clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    // 1번: 바탕 4단계 155도 선형 그라데이션
+                    gradient: const LinearGradient(
+                      begin: Alignment(-0.4, -0.9),
+                      end: Alignment(0.4, 0.9),
+                      colors: [
+                        Color(0xFFF5F0FF),
+                        Color(0xFFEDE9FE),
+                        Color(0xFFFAFAFF),
+                        Color(0xFFEFF6FF),
+                      ],
+                      stops: [0.0, 0.28, 0.60, 1.0],
+                    ),
                     borderRadius: BorderRadius.circular(28),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF0284C7).withValues(alpha: 0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
                     border: Border.all(
-                      color: const Color(0xFFE2E8F0),
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.08), // rgba(124,58,237,0.08)
                       width: 1.2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10), // rgba(124,58,237,0.10)
+                        blurRadius: 28,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
                   ),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
@@ -973,196 +986,465 @@ class _AiCoachingSloganBannerState extends State<AiCoachingSloganBanner> {
 // AiAnalysisFullScreenLoading
 // =============================================================================
 class AiAnalysisFullScreenLoading extends StatefulWidget {
-  const AiAnalysisFullScreenLoading({super.key});
+  final VoidCallback? onComplete;
+
+  const AiAnalysisFullScreenLoading({super.key, this.onComplete});
 
   @override
   State<AiAnalysisFullScreenLoading> createState() => _AiAnalysisFullScreenLoadingState();
 }
 
 class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoading>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
+  late AnimationController _rotationController;
   late AnimationController _pulseController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _opacityAnimation;
+  late Animation<double> _pulseAnimation;
 
-  Timer? _stepTimer;
-  int _currentStep = 0;
+  int _currentStep = 0; // 0: 데이터 수집, 1: 밸런스 측정, 2: 리포트 생성
 
-  static const List<Map<String, String>> _steps = [
-    {
-      "title": "운동 데이터 수집 중",
-      "subtitle": "센서에 측정된 스쿼트 궤적과 관절 각도를 수집합니다",
-    },
-    {
-      "title": "AI 자세 밸런스 정밀 측정",
-      "subtitle": "상체 숙임과 무릎 깊이의 안정성을 분석하고 있습니다",
-    },
-    {
-      "title": "맞춤 코칭 리포트 생성 중",
-      "subtitle": "운동 성과와 부상 예방을 위한 피드백을 작성합니다",
-    },
+  final List<String> _stepMessages = [
+    "스쿼트 데이터를 수집하고 있습니다.",
+    "Gemini AI 스쿼트 분석을 시작합니다.",
+    "맞춤 피드백 리포트를 생성 중입니다.",
+    "모든 분석이 완료되었습니다!",
   ];
 
   @override
   void initState() {
     super.initState();
 
+    // 1. 점선 궤도 360도 무한 회전 애니메이션
+    _rotationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 16),
+    )..repeat();
+
+    // 2. 중앙 아이콘 호흡/펄스 애니메이션
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 0.88, end: 1.12).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _pulseAnimation = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
     );
 
-    _opacityAnimation = Tween<double>(begin: 0.2, end: 0.7).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    // 3. 로딩 단계 진행 타이머 시뮬레이션
+    _startStepProgress();
+  }
 
-    _stepTimer = Timer.periodic(const Duration(milliseconds: 1800), (timer) {
-      if (!mounted) return;
-      if (_currentStep < _steps.length - 1) {
-        setState(() {
-          _currentStep++;
-        });
+  void _startStepProgress() async {
+    // 1. [0.0초 ~ 1.8초] 1단계 진행 (데이터 수집)
+    await Future.delayed(const Duration(milliseconds: 1800));
+    if (mounted) setState(() => _currentStep = 1);
+
+    // 2. [1.8초 ~ 3.6초] 2단계 진행 (밸런스 측정)
+    await Future.delayed(const Duration(milliseconds: 1800));
+    if (mounted) setState(() => _currentStep = 2);
+
+    // 3. [3.6초 ~ 5.4초] 3단계 진행 (리포트 생성)
+    await Future.delayed(const Duration(milliseconds: 1800));
+
+    // 4. 🌟 5.4초 시점에 3단계 완료 체크(_currentStep = 3)를 먼저 적용!
+    if (mounted) {
+      setState(() => _currentStep = 3); // 리포트 생성 체크 아이콘 표시
+    }
+
+    // 5. 🌟 체크 아이콘이 뜬 상태로 Provider(API 및 6초 타이머) 완료 대기 (약 0.6초간 눈으로 확인)
+    if (mounted) {
+      final provider = context.read<CoachingProvider>();
+      while (provider.isAiAnalyzing) {
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (!mounted) return;
       }
-    });
+    }
+
+    // 6. API 완료 후 전환 콜백 호출
+    if (mounted && widget.onComplete != null) {
+      widget.onComplete!();
+    }
   }
 
   @override
   void dispose() {
+    _rotationController.dispose();
     _pulseController.dispose();
-    _stepTimer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final currentStepData = _steps[_currentStep];
+    // 3개 단계 설정 데이터
+    final List<Map<String, dynamic>> steps = [
+      {
+        'label': '데이터 수집',
+        'icon': Icons.check_circle_outline_rounded,
+        'bg': const Color(0xFFEFF6FF), // 연한 스카이블루
+        'border': const Color(0xFF0284C7).withValues(alpha: 0.20),
+        'activeBorder': const Color(0xFF0284C7),
+        'iconColor': const Color(0xFF0284C7),
+      },
+      {
+        'label': 'AI 분석',
+        'icon': Icons.auto_awesome_rounded,
+        'bg': const Color(0xFFF3E8FF), // 연한 퍼플
+        'border': const Color(0xFF7C3AED).withValues(alpha: 0.20),
+        'activeBorder': const Color(0xFF7C3AED),
+        'iconColor': const Color(0xFF7C3AED),
+      },
+      {
+        'label': '리포트 생성',
+        'icon': Icons.description_rounded,
+        'bg': const Color(0xFFECFDF5), // 연한 그린
+        'border': const Color(0xFF10B981).withValues(alpha: 0.20),
+        'activeBorder': const Color(0xFF10B981),
+        'iconColor': const Color(0xFF10B981),
+      },
+    ];
 
-    return SizedBox.expand(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: const BoxDecoration(
-          color: AppTheme.lightBackground,
+          color: AppTheme.lightBackground, // 기존 앱 테마 색상으로 변경
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            const Spacer(),
-            SizedBox(
-              height: 160,
-              width: 160,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scaleAnimation.value * 1.45,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF38BDF8).withValues(alpha: _opacityAnimation.value * 0.15),
+            // 3. 메인 콘텐츠 (중앙 정렬)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 1. 상단 여백 (A, B, C를 중앙 근처에 배치)
+                    const Spacer(flex: 3),
+
+                    // A. Hero Orbit Visual (대기 카드의 궤도 비주얼을 확장 및 회전 연출)
+                    SizedBox(
+                      height: 140,
+                      width: 140,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // 1) 360도 회전하는 점선 궤도 링
+                          RotationTransition(
+                            turns: _rotationController,
+                            child: CustomPaint(
+                              size: const Size(140, 140),
+                              painter: _DashedCirclePainter(
+                                color: const Color(0xFF7C3AED).withOpacity(0.35),
+                                strokeWidth: 2.0,
+                              ),
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scaleAnimation.value * 1.2,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF0284C7).withValues(alpha: _opacityAnimation.value * 0.3),
+
+                          // 2) 글로우 후광 펄스
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              final double t = _pulseAnimation.value;
+                              return Container(
+                                width: 110,
+                                height: 110,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      const Color(0xFF7C3AED).withOpacity(0.08 + (0.16 * t)),
+                                      const Color(0xFF7C3AED).withOpacity(0.0),
+                                    ],
+                                    stops: const [0.0, 0.75],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                  ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Container(
-                      width: 88,
-                      height: 88,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF0284C7).withValues(alpha: 0.45),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
+
+                          // 3) 중앙 메인 AI 서클 (스케일 펌핑)
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) {
+                              final double t = _pulseAnimation.value;
+                              return Transform.scale(
+                                scale: 0.95 + (0.08 * t),
+                                child: Container(
+                                  width: 84,
+                                  height: 84,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    gradient: const LinearGradient(
+                                      begin: Alignment(-0.5, -0.8),
+                                      end: Alignment(0.5, 0.8),
+                                      colors: [
+                                        Color(0xFF7C3AED),
+                                        Color(0xFF9D4EDD),
+                                      ],
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF7C3AED).withOpacity(0.10 + (0.10 * t)),
+                                        spreadRadius: 6 + (6 * t),
+                                        blurRadius: 0,
+                                      ),
+                                      BoxShadow(
+                                        color: const Color(0xFF7C3AED).withOpacity(0.25 + (0.20 * t)),
+                                        blurRadius: 20 + (12 * t),
+                                        offset: Offset(0, 6 + (6 * t)),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.auto_awesome_rounded,
+                                      size: 34,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          // 4) 회전하는 위성 (Check Satellite)
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDBEAFE),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x383B82F6),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check_circle_rounded,
+                                size: 14,
+                                color: Color(0xFF3B82F6),
+                              ),
+                            ),
+                          ),
+
+                          // 5) 회전하는 위성 (Stats Satellite)
+                          Positioned(
+                            bottom: 4,
+                            left: 4,
+                            child: Container(
+                              width: 30,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFD1FAE5),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2.5),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x3810B981),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.bar_chart_rounded,
+                                size: 14,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.auto_awesome,
-                        color: Colors.white,
-                        size: 40,
+                    ),
+
+                    const SizedBox(height: 28),
+
+                    // B. Title & Subtitle
+                    Text(
+                      "AI 스쿼트 자세 분석 중",
+                      style: GoogleFonts.anton(
+                        fontSize: 24,
+                        letterSpacing: 0.6,
+                        color: const Color(0xFF0F172A),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      "POWERED BY GEMINI AI",
+                      style: GoogleFonts.dmSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF7C3AED),
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+
+                    const SizedBox(height: 36),
+
+                    // C. 3-Step Flow Strip (크기 확대 버전)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: List.generate(steps.length * 2 - 1, (index) {
+                        if (index.isEven) {
+                          final stepIndex = index ~/ 2;
+                          final step = steps[stepIndex];
+
+                          final isDone = stepIndex < _currentStep;
+                          final isCurrent = stepIndex == _currentStep;
+                          final isUpcoming = stepIndex > _currentStep;
+
+                          final Color currentBorderColor = isCurrent
+                              ? (step['activeBorder'] as Color)
+                              : (step['border'] as Color);
+
+                          final double opacity = isUpcoming ? 0.45 : 1.0;
+
+                          return Expanded(
+                            child: Opacity(
+                              opacity: opacity,
+                              child: Column(
+                                children: [
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 300),
+                                    width: 46,  // 기존 30 -> 46으로 확대
+                                    height: 46, // 기존 30 -> 46으로 확대
+                                    decoration: BoxDecoration(
+                                      color: step['bg'] as Color,
+                                      borderRadius: BorderRadius.circular(14), // 기존 10 -> 14로 변경
+                                      border: Border.all(
+                                        color: currentBorderColor,
+                                        width: isCurrent ? 2.0 : 1.2,
+                                      ),
+                                      boxShadow: isCurrent
+                                          ? [
+                                        BoxShadow(
+                                          color: (step['iconColor'] as Color).withOpacity(0.25),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ]
+                                          : [],
+                                    ),
+                                    child: Icon(
+                                      isDone ? Icons.check_rounded : (step['icon'] as IconData),
+                                      size: 22, // 기존 14 -> 22로 확대
+                                      color: step['iconColor'] as Color,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6), // 간격 살짝 확대 (4 -> 6)
+                                  Text(
+                                    step['label'] as String,
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.dmSans(
+                                      fontSize: 12, // 기존 8.5 -> 12로 확대
+                                      fontWeight: isCurrent || isDone ? FontWeight.w800 : FontWeight.w700,
+                                      color: isCurrent
+                                          ? (step['iconColor'] as Color)
+                                          : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        // 화살표 연결선 (46px 상자 중앙 정렬)
+                        final stepIndex = index ~/ 2;
+                        final isPassed = stepIndex < _currentStep;
+                        final Color arrowColor = isPassed
+                            ? const Color(0xFF7C3AED)
+                            : const Color(0xFF7C3AED).withValues(alpha: 0.20);
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 18), // 상자 높이(46px) 중앙에 맞게 10 -> 18 변경
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                width: 18,
+                                height: 2,
+                                color: arrowColor,
+                              ),
+                              CustomPaint(
+                                size: const Size(5, 8),
+                                painter: _ArrowHeadPainter(color: arrowColor),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                    // 🌟 2. C와 D 사이 간격 (원하는 만큼 고정값으로 지정: 24 ~ 36)
+                    const SizedBox(height: 32),
+
+                    // D. Dynamic Live Status Indicator (하단 라이브 메시지 칩)
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Container(
+                        key: ValueKey<int>(_currentStep),
+                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF7C3AED).withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF7C3AED).withOpacity(0.20),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // 🌟 완료 단계(_currentStep == 3)일 때는 체크 아이콘, 진행 중일 때는 스피너 노출
+                            _currentStep == 3
+                                ? const Icon(
+                              Icons.check_circle_rounded,
+                              size: 16,
+                              color: Color(0xFF10B981),
+                            )
+                                : const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFF7C3AED),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Flexible(
+                              child: Text(
+                                _stepMessages[_currentStep],
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: _currentStep == 3
+                                      ? const Color(0xFF10B981) // 완료 시 초록색 포인트
+                                      : const Color(0xFF7C3AED),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // 🌟 3. D 아래에 Spacer를 배치하여 메시지 칩을 위로 밀어 올림!
+                    const Spacer(flex: 2),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 48),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 400),
-              child: Column(
-                key: ValueKey<int>(_currentStep),
-                children: [
-                  Text(
-                    currentStepData["title"]!,
-                    style: const TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.5,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    currentStepData["subtitle"]!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF64748B),
-                      height: 1.4,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 36),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(_steps.length, (index) {
-                final isCompleted = index <= _currentStep;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 350),
-                  curve: Curves.easeOutCubic,
-                  margin: const EdgeInsets.symmetric(horizontal: 5),
-                  height: 7,
-                  width: index == _currentStep ? 32 : 8,
-                  decoration: BoxDecoration(
-                    color: isCompleted ? const Color(0xFF0284C7) : const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                );
-              }),
-            ),
-            const Spacer(),
           ],
         ),
       ),
@@ -1230,369 +1512,368 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
       },
       {
         'label': '결과 확인',
-        'icon': Icons.bar_chart_rounded,
+        'icon': Icons.description_rounded,
         'bg': const Color(0xFFECFDF5), // 연한 그린
         'border': const Color(0xFF10B981).withValues(alpha: 0.20),
         'iconColor': const Color(0xFF10B981),
       },
     ];
 
-    return Container(
-      width: double.infinity,
-      clipBehavior: Clip.antiAlias, // 구석 빛 오버레이가 테두리 밖으로 넘치지 않게 자름
-      decoration: BoxDecoration(
-        // 1번: 바탕 4단계 155도 선형 그라데이션
-        gradient: const LinearGradient(
-          begin: Alignment(-0.4, -0.9),
-          end: Alignment(0.4, 0.9),
-          colors: [
-            Color(0xFFF5F0FF),
-            Color(0xFFEDE9FE),
-            Color(0xFFFAFAFF),
-            Color(0xFFEFF6FF),
+    return AspectRatio(
+      aspectRatio: 1.19, // 결과 카드(342 : 286.5)와 1:1로 정확히 일치하는 가로:세로 비율
+      child: Container(
+        width: double.infinity,
+        clipBehavior: Clip.antiAlias, // 구석 빛 오버레이가 테두리 밖으로 넘치지 않게 자름
+        decoration: BoxDecoration(
+          // 1번: 바탕 4단계 155도 선형 그라데이션
+          gradient: const LinearGradient(
+            begin: Alignment(-0.4, -0.9),
+            end: Alignment(0.4, 0.9),
+            colors: [
+              Color(0xFFF5F0FF),
+              Color(0xFFEDE9FE),
+              Color(0xFFFAFAFF),
+              Color(0xFFEFF6FF),
+            ],
+            stops: [0.0, 0.28, 0.60, 1.0],
+          ),
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.08), // rgba(124,58,237,0.08)
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.10), // rgba(124,58,237,0.10)
+              blurRadius: 28,
+              offset: const Offset(0, 6),
+            ),
           ],
-          stops: [0.0, 0.28, 0.60, 1.0],
         ),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: const Color(0xFF7C3AED).withValues(alpha: 0.08), // rgba(124,58,237,0.08)
-          width: 1.2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF7C3AED).withValues(alpha: 0.10), // rgba(124,58,237,0.10)
-            blurRadius: 28,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // 3번-A: 우상단 스카이블루 은은한 빛
-          Positioned(
-            top: -24,
-            right: -20,
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-              child: Container(
-                width: 110,
-                height: 110,
-                decoration: const BoxDecoration(
-                  color: Color(0x170EA5E9),
-                  shape: BoxShape.circle,
+        child: Stack(
+          children: [
+            // 3번-A: 우상단 스카이블루 은은한 빛
+            Positioned(
+              top: -24,
+              right: -20,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  decoration: const BoxDecoration(
+                    color: Color(0x170EA5E9),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // 3번-B: 좌하단 퍼플 은은한 빛
-          Positioned(
-            bottom: -16,
-            left: -10,
-            child: ImageFiltered(
-              imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-              child: Container(
-                width: 90,
-                height: 90,
-                decoration: const BoxDecoration(
-                  color: Color(0x127C3AED),
-                  shape: BoxShape.circle,
+            // 3번-B: 좌하단 퍼플 은은한 빛
+            Positioned(
+              bottom: -16,
+              left: -10,
+              child: ImageFiltered(
+                imageFilter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                child: Container(
+                  width: 90,
+                  height: 90,
+                  decoration: const BoxDecoration(
+                    color: Color(0x127C3AED),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // 메인 UI 콘텐츠 (기존 Column 구조 유지)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            child: Column(
-              children: [
-                // 1. Hero Visual (React 궤도 비주얼 규격 동일 적용)
-                SizedBox(
-                  height: 96,
-                  width: 96,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // 1. 점선 궤도 링 (Dashed orbit ring)
-                      CustomPaint(
-                        size: const Size(96, 96),
-                        painter: _DashedCirclePainter(
-                          color: const Color(0xFF7C3AED).withValues(alpha: 0.22),
-                          strokeWidth: 1.5,
+            // 메인 UI 콘텐츠
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14), // 결과 카드 패딩과 동기화
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween, // 비율 상자에 맞춰 높이 균등 자동 정렬
+                children: [
+                  // 1. Hero Visual (높이 고정에 맞춰 96 -> 82로 미세 조정)
+                  SizedBox(
+                    height: 82,
+                    width: 82,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // 점선 궤도 링
+                        CustomPaint(
+                          size: const Size(82, 82),
+                          painter: _DashedCirclePainter(
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.22),
+                            strokeWidth: 1.5,
+                          ),
                         ),
-                      ),
 
-                      // 2. React 원본의 뒤편 독립 Radial Gradient 글로우 후광
-                      AnimatedBuilder(
-                        animation: _glowAnimation,
-                        builder: (context, child) {
-                          final double t = _glowAnimation.value;
-                          return Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              // React: rgba(124,58,237, 0.05 ~ 0.15) 펄스
-                              gradient: RadialGradient(
-                                colors: [
-                                  const Color(0xFF7C3AED).withValues(alpha: 0.05 + (0.12 * t)),
-                                  const Color(0xFF7C3AED).withValues(alpha: 0.0),
-                                ],
-                                stops: const [0.0, 0.72],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      // 3. 중앙 아이콘 서클 + 이중 BoxShadow + Figma 스케일 호흡
-                      AnimatedBuilder(
-                        animation: _glowAnimation,
-                        builder: (context, child) {
-                          final double t = _glowAnimation.value;
-                          return Transform.scale(
-                            scale: 0.95 + (0.08 * t), // 0.95배 ~ 1.03배 미세 스케일 펌핑
-                            child: Container(
+                        // 독립 Radial Gradient 글로우 후광
+                        AnimatedBuilder(
+                          animation: _glowAnimation,
+                          builder: (context, child) {
+                            final double t = _glowAnimation.value;
+                            return Container(
                               width: 64,
                               height: 64,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                gradient: const LinearGradient(
-                                  begin: Alignment(-0.5, -0.8),
-                                  end: Alignment(0.5, 0.8),
+                                gradient: RadialGradient(
                                   colors: [
-                                    Color(0xFF7C3AED),
-                                    Color(0xFF9D4EDD),
+                                    const Color(0xFF7C3AED).withValues(alpha: 0.05 + (0.12 * t)),
+                                    const Color(0xFF7C3AED).withValues(alpha: 0.0),
+                                  ],
+                                  stops: const [0.0, 0.72],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // 중앙 아이콘 서클 + 호흡 애니메이션
+                        AnimatedBuilder(
+                          animation: _glowAnimation,
+                          builder: (context, child) {
+                            final double t = _glowAnimation.value;
+                            return Transform.scale(
+                              scale: 0.95 + (0.08 * t),
+                              child: Container(
+                                width: 54,
+                                height: 54,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    begin: Alignment(-0.5, -0.8),
+                                    end: Alignment(0.5, 0.8),
+                                    colors: [
+                                      Color(0xFF7C3AED),
+                                      Color(0xFF9D4EDD),
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF7C3AED).withValues(alpha: 0.05 + (0.05 * t)),
+                                      spreadRadius: 4 + (4 * t),
+                                      blurRadius: 0,
+                                    ),
+                                    BoxShadow(
+                                      color: const Color(0xFF7C3AED).withValues(alpha: 0.18 + (0.16 * t)),
+                                      blurRadius: 14 + (10 * t),
+                                      offset: Offset(0, 4 + (4 * t)),
+                                    ),
                                   ],
                                 ),
-                                boxShadow: [
-                                  // React 링 테두리: 0 0 0 4px (0.05) -> 8px (0.10)
-                                  BoxShadow(
-                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.05 + (0.05 * t)),
-                                    spreadRadius: 4 + (4 * t),
-                                    blurRadius: 0,
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 20,
+                                    color: Colors.white,
                                   ),
-                                  // React 메인 음영: 0 4px 14px (0.18) -> 0 8px 24px (0.34)
-                                  BoxShadow(
-                                    color: const Color(0xFF7C3AED).withValues(alpha: 0.18 + (0.16 * t)),
-                                    blurRadius: 14 + (10 * t),
-                                    offset: Offset(0, 4 + (4 * t)),
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.auto_awesome_rounded,
-                                  size: 22,
-                                  color: Colors.white,
                                 ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
 
-                      // 4. 우상단 위성 (Check Satellite)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDBEAFE),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2.5),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x383B82F6),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.check_circle_rounded,
-                            size: 11,
-                            color: Color(0xFF3B82F6),
+                        // 우상단 위성
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDBEAFE),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x383B82F6),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_circle_rounded,
+                              size: 10,
+                              color: Color(0xFF3B82F6),
+                            ),
                           ),
                         ),
-                      ),
 
-                      // 5. 좌하단 위성 (Stats Satellite)
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        child: Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFD1FAE5),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2.5),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x3810B981),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                        // 좌하단 위성
+                        Positioned(
+                          bottom: 0,
+                          left: 0,
+                          child: Container(
+                            width: 22,
+                            height: 22,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD1FAE5),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x3810B981),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.bar_chart_rounded,
+                              size: 10,
+                              color: Color(0xFF10B981),
+                            ),
                           ),
-                          child: const Icon(
-                            Icons.bar_chart_rounded,
-                            size: 11,
-                            color: Color(0xFF10B981),
-                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // 2. Title & Subtitle
+                  Column(
+                    children: [
+                      Text(
+                        "AI 스쿼트 분석",
+                        style: GoogleFonts.anton(
+                          fontSize: 19,
+                          letterSpacing: 0.6,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        "POWERED BY GEMINI AI",
+                        style: GoogleFonts.dmSans(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF7C3AED),
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 16),
+                  // 3. 3-Step Flow Strip
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(steps.length * 2 - 1, (index) {
+                      if (index.isEven) {
+                        final stepIndex = index ~/ 2;
+                        final step = steps[stepIndex];
+                        return Expanded(
+                          child: Column(
+                            children: [
+                              Container(
+                                width: 30,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: step['bg'] as Color,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: step['border'] as Color, width: 1.2),
+                                ),
+                                child: Icon(
+                                  step['icon'] as IconData,
+                                  size: 14,
+                                  color: step['iconColor'] as Color,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                step['label'] as String,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
 
-                // 2. Title & Subtitle
-                Text(
-                  "AI 스쿼트 분석",
-                  style: GoogleFonts.anton(
-                    fontSize: 20,
-                    letterSpacing: 0.6,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "POWERED BY GEMINI AI",
-                  style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF7C3AED),
-                    letterSpacing: 1.2,
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 3. 3-Step Flow Strip
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: List.generate(steps.length * 2 - 1, (index) {
-                    if (index.isEven) {
-                      final stepIndex = index ~/ 2;
-                      final step = steps[stepIndex];
-                      return Expanded(
-                        child: Column(
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              width: 34, // 32 -> 34로 확대
-                              height: 34, // 32 -> 34로 확대
-                              decoration: BoxDecoration(
-                                color: step['bg'] as Color,
-                                borderRadius: BorderRadius.circular(11), // 10 -> 11로 수정
-                                border: Border.all(color: step['border'] as Color, width: 1.2),
-                              ),
-                              child: Icon(
-                                step['icon'] as IconData,
-                                size: 16,
-                                color: step['iconColor'] as Color,
-                              ),
+                              width: 16,
+                              height: 1.5,
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              step['label'] as String,
-                              textAlign: TextAlign.center,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 9, // 10 -> 9로 수정
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF64748B),
+                            CustomPaint(
+                              size: const Size(4, 7),
+                              painter: _ArrowHeadPainter(
+                                color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
                               ),
                             ),
                           ],
                         ),
                       );
-                    }
+                    }),
+                  ),
 
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 12), // 박스 크기 확대에 맞춘 중앙 정렬 보정
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 20, // 14 -> 20으로 연장
-                            height: 1.5,
-                            color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
-                          ),
-                          CustomPaint(
-                            size: const Size(4, 7),
-                            painter: _ArrowHeadPainter(
-                              color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 4. Live Selected Status Indicator
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF0284C7).withValues(alpha: 0.08)
-                        : const Color(0xFF7C3AED).withValues(alpha: 0.05), // 미선택 시 연보라 배경
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
+                  // 4. Live Selected Status Indicator
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFF0284C7).withValues(alpha: 0.20)
-                          : const Color(0xFF7C3AED).withValues(alpha: 0.15), // 미선택 시 보라 테두리
+                          ? const Color(0xFF0284C7).withValues(alpha: 0.08)
+                          : const Color(0xFF7C3AED).withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isSelected
+                            ? const Color(0xFF0284C7).withValues(alpha: 0.20)
+                            : const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isSelected
+                                    ? const Color(0xFF0284C7).withValues(alpha: 0.25)
+                                    : const Color(0xFF7C3AED).withValues(alpha: 0.25),
+                                spreadRadius: 2,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: Text(
+                            isSelected
+                                ? "${widget.selectedCount}개 선택됨 · 분석 버튼을 눌러주세요"
+                                : "아래 기록을 선택해 분석을 시작하세요",
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isSelected
-                                  ? const Color(0xFF0284C7).withValues(alpha: 0.25)
-                                  : const Color(0xFF7C3AED).withValues(alpha: 0.25),
-                              spreadRadius: 2, // 점 둘레 은은한 링 효과
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Flexible(
-                        child: Text(
-                          isSelected
-                              ? "${widget.selectedCount}개 선택됨 · 분석 버튼을 눌러주세요"
-                              : "아래 기록을 선택해 분석을 시작하세요",
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF7C3AED),
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1618,15 +1899,17 @@ class _DashedCirclePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
 
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
     // 1. 조각 수를 90개로 늘려 촘촘하게 설정
     const int totalSegments = 90;
     const double stepArc = (2 * 3.141592653589793) / totalSegments;
 
     for (int i = 0; i < totalSegments; i += 2) {
       canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
+        rect, // 외부에서 선언한 rect 재사용
         i * stepArc,
-        stepArc * 0.85, // 2. 85%는 선으로 채우고 15%만 미세한 간격(Gap)으로 남김
+        stepArc * 0.85,
         false,
         paint,
       );
