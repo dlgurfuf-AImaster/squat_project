@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
-import 'package:app/screens/select_coaching_record_screen.dart';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+
 import '../dtos/aggregate_coaching_request.dart';
 import '../dtos/coaching_response.dart';
 import '../providers/coaching_provider.dart';
 import '../theme/app_theme.dart';
+import 'select_coaching_record_screen.dart';
 
+/// AI 코칭 화면
 class CoachingScreen extends StatefulWidget {
   const CoachingScreen({super.key});
 
@@ -17,19 +22,25 @@ class CoachingScreen extends StatefulWidget {
 }
 
 class _CoachingScreenState extends State<CoachingScreen> {
+  /// 선택된 서버 기록 UUID 집합
   final Set<String> _selectedServerUuids = {};
 
   @override
   void initState() {
     super.initState();
+    // 화면 빌드 후 초기 서버 기록 페치
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CoachingProvider>().fetchServerRecords();
+      if (mounted) {
+        context.read<CoachingProvider>().fetchServerRecords();
+      }
     });
   }
 
   // ---------------------------------------------------------------------------
   // Shared Event Handlers
   // ---------------------------------------------------------------------------
+
+  /// 서버 기록 선택 화면으로 이동 및 선택 결과 반영
   Future<void> _handleSelectHistory() async {
     final selected = await Navigator.push<Set<String>>(
       context,
@@ -45,7 +56,10 @@ class _CoachingScreenState extends State<CoachingScreen> {
     }
   }
 
+  /// AI 코칭 분석 요청 (단일/통합 자동 분기)
   Future<void> _handleRequestCoaching(CoachingProvider provider) async {
+    if (_selectedServerUuids.isEmpty) return; // 방어적 예외 처리
+
     final selectedList = _selectedServerUuids.toList();
     setState(() {
       _selectedServerUuids.clear();
@@ -60,6 +74,7 @@ class _CoachingScreenState extends State<CoachingScreen> {
     }
   }
 
+  /// 코칭 상태 초기화 및 선택 해제
   void _handleReset(CoachingProvider provider) {
     provider.resetCoaching();
     setState(() {
@@ -72,75 +87,80 @@ class _CoachingScreenState extends State<CoachingScreen> {
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.lightBackground,
-      body: SafeArea(
-        child: Consumer<CoachingProvider>(
-          builder: (context, provider, child) {
-            final coaching = provider.latestCoaching;
-            final errorMessage = provider.errorMessage;
-            final isAiAnalyzing = provider.isAiAnalyzing;
-            final isFetching = provider.isFetching;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: AppTheme.lightBackground,
+        body: SafeArea(
+          child: Consumer<CoachingProvider>(
+            builder: (context, provider, child) {
+              final coaching = provider.latestCoaching;
+              final errorMessage = provider.errorMessage;
+              final isAiAnalyzing = provider.isAiAnalyzing;
+              final isFetching = provider.isFetching;
 
-            return Column(
-              children: [
-                // 1. [상단 헤더]
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const _HeaderView(),
-                      _ResetButton(
-                        isFetching: isFetching,
-                        isDisabled: isFetching || isAiAnalyzing,
-                        onTap: () => _handleReset(provider),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 2. [메인 콘텐츠 영역]
-                Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    child: isAiAnalyzing
-                        ? const AiAnalysisFullScreenLoading(key: ValueKey('ai_loading'))
-                        : coaching != null
-                        ? StaggeredResultContentView(
-                      key: ValueKey('result_${coaching.hashCode}'),
-                      coaching: coaching,
-                      selectedUuids: _selectedServerUuids,
-                      isFetching: isFetching,
-                      onSelectHistory: _handleSelectHistory,
-                      onRequestCoaching: () => _handleRequestCoaching(provider),
-                    )
-                        : ListView(
-                      key: const ValueKey('normal_screen'),
-                      padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 16.0),
+              return Column(
+                children: [
+                  // 1. [상단 헤더 영역]
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        if (errorMessage != null)
-                          _buildErrorCard(errorMessage)
-                        else
-                          _buildPlaceholderCard(_selectedServerUuids.length),
-
-                        const SizedBox(height: 16),
-
-                        _ActionButtons(
+                        const _HeaderView(),
+                        _ResetButton(
                           isFetching: isFetching,
-                          selectedUuids: _selectedServerUuids,
-                          onSelectHistory: _handleSelectHistory,
-                          onRequestCoaching: () => _handleRequestCoaching(provider),
+                          isDisabled: isFetching || isAiAnalyzing,
+                          onTap: () => _handleReset(provider),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+
+                  // 2. [메인 콘텐츠 영역 - 상태별 스위칭]
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      child: isAiAnalyzing
+                          ? const AiAnalysisFullScreenLoading(key: ValueKey('ai_loading'))
+                          : coaching != null
+                          ? StaggeredResultContentView(
+                        key: ValueKey('result_${coaching.hashCode}'),
+                        coaching: coaching,
+                        selectedUuids: _selectedServerUuids,
+                        isFetching: isFetching,
+                        onSelectHistory: _handleSelectHistory,
+                        onRequestCoaching: () => _handleRequestCoaching(provider),
+                      )
+                          : ListView(
+                        key: const ValueKey('normal_screen'),
+                        padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 16.0),
+                        children: [
+                          if (errorMessage != null)
+                            _buildErrorCard(errorMessage)
+                          else
+                            _buildPlaceholderCard(_selectedServerUuids.length),
+                          const SizedBox(height: 20),
+                          _ActionButtons(
+                            isFetching: isFetching,
+                            selectedUuids: _selectedServerUuids,
+                            onSelectHistory: _handleSelectHistory,
+                            onRequestCoaching: () => _handleRequestCoaching(provider),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -186,6 +206,8 @@ class _CoachingScreenState extends State<CoachingScreen> {
 // =============================================================================
 // Header & Reset Button Widgets
 // =============================================================================
+
+/// 상단 앱 제목 및 아이콘 헤더
 class _HeaderView extends StatelessWidget {
   const _HeaderView();
 
@@ -230,6 +252,7 @@ class _HeaderView extends StatelessWidget {
   }
 }
 
+/// 우측 상단 초기화 버튼
 class _ResetButton extends StatelessWidget {
   final bool isFetching;
   final bool isDisabled;
@@ -284,7 +307,9 @@ class _ResetButton extends StatelessWidget {
 // =============================================================================
 // Action Buttons Component
 // =============================================================================
-class _ActionButtons extends StatelessWidget {
+
+/// 하단 메인 액션 버튼 모듈 (기록 보기 + AI 분석 요청 호흡 애니메이션 적용)
+class _ActionButtons extends StatefulWidget {
   final bool isFetching;
   final Set<String> selectedUuids;
   final VoidCallback onSelectHistory;
@@ -298,112 +323,195 @@ class _ActionButtons extends StatelessWidget {
   });
 
   @override
+  State<_ActionButtons> createState() => _ActionButtonsState();
+}
+
+class _ActionButtonsState extends State<_ActionButtons>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _breathController;
+  late final Animation<double> _breathAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // 호흡 주기 애니메이션 (1.2초 간격 무한 반복)
+    _breathController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+
+    _breathAnimation = CurvedAnimation(
+      parent: _breathController,
+      curve: Curves.easeInOut,
+    );
+  }
+
+  @override
+  void dispose() {
+    _breathController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isEnabled = selectedUuids.isNotEmpty && !isFetching;
+    final isEnabled = widget.selectedUuids.isNotEmpty && !widget.isFetching;
 
     return Row(
       children: [
+        // 1. 좌측 버튼: 서버 기록 보기
         Expanded(
-          child: SizedBox(
+          child: Container(
             height: 52,
-            child: OutlinedButton(
-              onPressed: onSelectHistory,
-              style: OutlinedButton.styleFrom(
-                backgroundColor: const Color(0xFFE0F2FE),
-                side: BorderSide.none,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppTheme.primarySky,
+                width: 1.2,
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history_rounded, size: 18, color: Color(0xFF0284C7)),
-                  SizedBox(width: 6),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      "기록 보기 및 선택",
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0284C7),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.primarySky.withValues(alpha: 0.12),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(18),
+              child: InkWell(
+                onTap: widget.onSelectHistory,
+                borderRadius: BorderRadius.circular(18),
+                splashColor: AppTheme.primarySky.withValues(alpha: 0.15),
+                highlightColor: AppTheme.primarySky.withValues(alpha: 0.08),
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.history_rounded,
+                        size: 18,
+                        color: AppTheme.primarySky,
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          "서버 기록 보기",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primarySky,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
         ),
+
         const SizedBox(width: 10),
+
+        // 2. 우측 버튼: AI 분석 요청 (그림자 호흡 애니메이션 적용)
         Expanded(
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            height: 52,
-            decoration: BoxDecoration(
-              gradient: isEnabled
-                  ? const LinearGradient(
-                colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
-              )
-                  : null,
-              color: isEnabled ? null : const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(18),
-              boxShadow: isEnabled
-                  ? [
-                BoxShadow(
-                  color: const Color(0xFF0284C7).withValues(alpha: 0.35),
-                  blurRadius: 10,
-                  offset: const Offset(0, 3),
+          child: AnimatedBuilder(
+            animation: _breathAnimation,
+            builder: (context, child) {
+              final double breathValue = _breathAnimation.value;
+
+              return Container(
+                height: 52,
+                decoration: BoxDecoration(
+                  gradient: isEnabled
+                      ? const LinearGradient(
+                    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                  )
+                      : null,
+                  color: isEnabled ? null : const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(18),
+                  boxShadow: isEnabled
+                      ? [
+                    BoxShadow(
+                      color: const Color(0xFF0284C7).withValues(
+                        alpha: 0.18 + (breathValue * 0.32),
+                      ),
+                      blurRadius: 4 + (breathValue * 6),
+                      spreadRadius: 0.5 + (breathValue * 1.5),
+                      offset: const Offset(0, 3),
+                    ),
+                    BoxShadow(
+                      color: const Color(0xFF0369A1).withValues(alpha: 0.18),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                      : [],
                 ),
-              ]
-                  : [],
-            ),
-            padding: EdgeInsets.all(isEnabled ? 1.8 : 0),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: isEnabled ? Colors.white : const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(isEnabled ? 16.2 : 18),
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: isEnabled ? onRequestCoaching : null,
-                  borderRadius: BorderRadius.circular(isEnabled ? 16.2 : 18),
-                  child: Container(
-                    alignment: Alignment.center,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          color: isEnabled ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                          size: 18,
-                        ),
-                        const SizedBox(width: 6),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            selectedUuids.isNotEmpty
-                                ? "AI 분석 요청 (${selectedUuids.length})"
-                                : "AI 분석 요청",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: isEnabled ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
-                            ),
-                          ),
-                        ),
+                padding: EdgeInsets.all(isEnabled ? 2.0 : 0),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: isEnabled
+                        ? const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.white,
+                        Color(0xFFF8FAFC),
                       ],
+                    )
+                        : null,
+                    color: isEnabled ? null : const Color(0xFFE2E8F0),
+                    borderRadius: BorderRadius.circular(isEnabled ? 16.0 : 18),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: isEnabled ? widget.onRequestCoaching : null,
+                      borderRadius: BorderRadius.circular(isEnabled ? 16.0 : 18),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.auto_awesome,
+                              color: isEnabled
+                                  ? const Color(0xFF0284C7).withValues(
+                                  alpha: 0.75 + (breathValue * 0.25))
+                                  : const Color(0xFF94A3B8),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 6),
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                widget.selectedUuids.isNotEmpty
+                                    ? "AI 분석 요청 (${widget.selectedUuids.length})"
+                                    : "AI 분석 요청",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: isEnabled
+                                      ? const Color(0xFF0284C7)
+                                      : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ],
@@ -414,6 +522,8 @@ class _ActionButtons extends StatelessWidget {
 // =============================================================================
 // StaggeredResultContentView
 // =============================================================================
+
+/// AI 분석 결과 화면 (순차적 애니메이션 렌더링)
 class StaggeredResultContentView extends StatefulWidget {
   final CoachingResponse coaching;
   final Set<String> selectedUuids;
@@ -454,39 +564,44 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
     super.dispose();
   }
 
+  /// AI 메시지 문자열 분리/정제 헬퍼 함수
+  ({String summary, List<String> detailList}) _parseCoachingMessage(String rawMessage) {
+    final String trimmed = rawMessage.trim();
+    if (trimmed.isEmpty) return (summary: '', detailList: []);
+
+    final List<String> lines = trimmed.split('\n');
+    final String summary = lines.first.replaceAll('**', '').trim();
+
+    List<String> detailList = [];
+    if (lines.length > 1) {
+      detailList = lines
+          .sublist(1)
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .map((line) => line.replaceAll(RegExp(r'^\s*[\-\•\*\d\.]+\s*'), '').trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+    }
+
+    return (summary: summary, detailList: detailList);
+  }
+
   @override
   Widget build(BuildContext context) {
     final coaching = widget.coaching;
     final isSingle = coaching.coachingType == 'SINGLE';
-    final String rawMessage = coaching.coachingMessage.trim();
-
-    String summary = '';
-    List<String> detailList = [];
-
-    if (rawMessage.isNotEmpty) {
-      final List<String> lines = rawMessage.split('\n');
-      summary = lines.first.replaceAll('**', '').trim();
-
-      if (lines.length > 1) {
-        detailList = lines
-            .sublist(1)
-            .map((line) => line.trim())
-            .where((line) => line.isNotEmpty)
-            .map((line) => line.replaceAll(RegExp(r'^\s*[\-\•\*\d\.]+\s*'), '').trim())
-            .where((line) => line.isNotEmpty)
-            .toList();
-      }
-    }
+    final parsed = _parseCoachingMessage(coaching.coachingMessage);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 16.0),
       children: [
         AiCoachingSloganBanner(
-          slogan: summary.isNotEmpty ? summary : null,
+          slogan: parsed.summary.isNotEmpty ? parsed.summary : null,
           animationController: _controller,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 메인 요약 및 데이터 카드
               DirectionalSlideFade(
                 controller: _controller,
                 beginInterval: 0.36,
@@ -515,9 +630,15 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10),
-                        blurRadius: 28,
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.22),
+                        blurRadius: 16,
+                        spreadRadius: 1,
                         offset: const Offset(0, 6),
+                      ),
+                      const BoxShadow(
+                        color: Color.fromRGBO(23, 32, 64, 0.04),
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
@@ -598,7 +719,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                             _MetricTile(
                               label: '얕은 깊이',
                               count: coaching.totalDepthErrorCount,
-                              color: const Color(0xFF8B5CF6),
+                              color: const Color(0xFFF97316),
                               icon: Icons.arrow_downward_rounded,
                             ),
                             _MetricTile(
@@ -615,9 +736,10 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                 ),
               ),
 
-              if (detailList.isNotEmpty) ...[
+              // 세부 분석 메시지 리스트 순차 등장
+              if (parsed.detailList.isNotEmpty) ...[
                 const SizedBox(height: 14),
-                ...List.generate(detailList.length, (index) {
+                ...List.generate(parsed.detailList.length, (index) {
                   final double start = (0.42 + (index * 0.04)).clamp(0.0, 0.75);
                   final double end = (start + 0.15).clamp(start + 0.05, 0.88);
 
@@ -653,7 +775,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                           const SizedBox(width: 10),
                           Expanded(
                             child: _buildRichText(
-                              detailList[index],
+                              parsed.detailList[index],
                               baseStyle: TextStyle(
                                 fontFamily: 'Pretendard',
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -674,8 +796,9 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
           ),
         ),
 
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
 
+        // 하단 액션 버튼 슬라이드 애니메이션
         DirectionalSlideFade(
           controller: _controller,
           beginInterval: 0.80,
@@ -693,6 +816,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
     );
   }
 
+  /// 마크다운 강세(`**`)를 파싱하여 Bold 텍스트 지원하는 RichText 생성
   static Widget _buildRichText(String text, {required TextStyle baseStyle}) {
     final List<TextSpan> spans = [];
     final List<String> parts = text.split('**');
@@ -724,6 +848,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
   }
 }
 
+/// 측정지표 단일 카드 타일
 class _MetricTile extends StatelessWidget {
   final String label;
   final int count;
@@ -812,8 +937,10 @@ class _MetricTile extends StatelessWidget {
 // =============================================================================
 // DirectionalSlideFade
 // =============================================================================
+
 enum SlideDirection { topToBottom, bottomToTop }
 
+/// 구간 설정 가능한 상/하 슬라이드 & 페이드 인 위젯
 class DirectionalSlideFade extends StatelessWidget {
   final AnimationController controller;
   final double beginInterval;
@@ -867,6 +994,8 @@ class DirectionalSlideFade extends StatelessWidget {
 // =============================================================================
 // AiCoachingSloganBanner
 // =============================================================================
+
+/// 상단 슬로건 배너 (기본 슬로건 순환 및 애니메이션 제공)
 class AiCoachingSloganBanner extends StatefulWidget {
   final String? slogan;
   final Widget child;
@@ -1049,6 +1178,8 @@ class _AiCoachingSloganBannerState extends State<AiCoachingSloganBanner> {
 // =============================================================================
 // AiAnalysisFullScreenLoading
 // =============================================================================
+
+/// AI 분석 진행 중 풀스크린 로딩 뷰
 class AiAnalysisFullScreenLoading extends StatefulWidget {
   final VoidCallback? onComplete;
 
@@ -1064,7 +1195,7 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
-  int _currentStep = 0; // 0: 데이터 수집, 1: 밸런스 측정, 2: 리포트 생성
+  int _currentStep = 0;
 
   static const List<String> _stepMessages = [
     "스쿼트 데이터를 수집하고 있습니다.",
@@ -1097,26 +1228,26 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
 
   void _startStepProgress() async {
     await Future.delayed(const Duration(milliseconds: 1800));
-    if (mounted) setState(() => _currentStep = 1);
+    if (!mounted) return;
+    setState(() => _currentStep = 1);
 
     await Future.delayed(const Duration(milliseconds: 1800));
-    if (mounted) setState(() => _currentStep = 2);
+    if (!mounted) return;
+    setState(() => _currentStep = 2);
 
     await Future.delayed(const Duration(milliseconds: 1800));
+    if (!mounted) return;
+    setState(() => _currentStep = 3);
 
-    if (mounted) {
-      setState(() => _currentStep = 3);
-    }
-
+    // AI 분석이 끝날 때까지 대기
     if (mounted) {
       final provider = context.read<CoachingProvider>();
-      while (provider.isAiAnalyzing) {
-        await Future.delayed(const Duration(milliseconds: 100));
-        if (!mounted) return;
+      while (provider.isAiAnalyzing && mounted) {
+        await Future.delayed(const Duration(milliseconds: 150));
       }
     }
 
-    if (mounted && widget.onComplete != null) {
+    if (widget.onComplete != null && mounted) {
       widget.onComplete!();
     }
   }
@@ -1157,340 +1288,330 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
       },
     ];
 
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          color: AppTheme.lightBackground,
-        ),
-        child: Stack(
-          children: [
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 28.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Spacer(flex: 3),
+    return ColoredBox(
+      color: AppTheme.lightBackground,
+      child: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 3),
 
-                    // A. Hero Orbit Visual
-                    SizedBox(
-                      height: 140,
-                      width: 140,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          RotationTransition(
-                            turns: _rotationController,
-                            child: CustomPaint(
-                              size: const Size(140, 140),
-                              painter: _DashedCirclePainter(
-                                color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
-                                strokeWidth: 2.0,
-                              ),
+                  // A. Hero Orbit Visual
+                  SizedBox(
+                    height: 140,
+                    width: 140,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        RotationTransition(
+                          turns: _rotationController,
+                          child: CustomPaint(
+                            size: const Size(140, 140),
+                            painter: _DashedCirclePainter(
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.35),
+                              strokeWidth: 2.0,
                             ),
                           ),
-
-                          AnimatedBuilder(
-                            animation: _pulseAnimation,
-                            builder: (context, child) {
-                              final double t = _pulseAnimation.value;
-                              return Container(
-                                width: 110,
-                                height: 110,
+                        ),
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            final double t = _pulseAnimation.value;
+                            return Container(
+                              width: 110,
+                              height: 110,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: RadialGradient(
+                                  colors: [
+                                    const Color(0xFF7C3AED).withValues(alpha: 0.08 + (0.16 * t)),
+                                    const Color(0xFF7C3AED).withValues(alpha: 0.0),
+                                  ],
+                                  stops: const [0.0, 0.75],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            final double t = _pulseAnimation.value;
+                            return Transform.scale(
+                              scale: 0.95 + (0.08 * t),
+                              child: Container(
+                                width: 84,
+                                height: 84,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: RadialGradient(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment(-0.5, -0.8),
+                                    end: Alignment(0.5, 0.8),
                                     colors: [
-                                      const Color(0xFF7C3AED).withValues(alpha: 0.08 + (0.16 * t)),
-                                      const Color(0xFF7C3AED).withValues(alpha: 0.0),
-                                    ],
-                                    stops: const [0.0, 0.75],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-
-                          AnimatedBuilder(
-                            animation: _pulseAnimation,
-                            builder: (context, child) {
-                              final double t = _pulseAnimation.value;
-                              return Transform.scale(
-                                scale: 0.95 + (0.08 * t),
-                                child: Container(
-                                  width: 84,
-                                  height: 84,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: const LinearGradient(
-                                      begin: Alignment(-0.5, -0.8),
-                                      end: Alignment(0.5, 0.8),
-                                      colors: [
-                                        Color(0xFF7C3AED),
-                                        Color(0xFF9D4EDD),
-                                      ],
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10 + (0.10 * t)),
-                                        spreadRadius: 6 + (6 * t),
-                                        blurRadius: 0,
-                                      ),
-                                      BoxShadow(
-                                        color: const Color(0xFF7C3AED).withValues(alpha: 0.25 + (0.20 * t)),
-                                        blurRadius: 20 + (12 * t),
-                                        offset: Offset(0, 6 + (6 * t)),
-                                      ),
+                                      Color(0xFF7C3AED),
+                                      Color(0xFF9D4EDD),
                                     ],
                                   ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.auto_awesome_rounded,
-                                      size: 34,
-                                      color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF7C3AED).withValues(alpha: 0.10 + (0.10 * t)),
+                                      spreadRadius: 6 + (6 * t),
+                                      blurRadius: 0,
                                     ),
+                                    BoxShadow(
+                                      color: const Color(0xFF7C3AED).withValues(alpha: 0.25 + (0.20 * t)),
+                                      blurRadius: 20 + (12 * t),
+                                      offset: Offset(0, 6 + (6 * t)),
+                                    ),
+                                  ],
+                                ),
+                                child: const Center(
+                                  child: Icon(
+                                    Icons.auto_awesome_rounded,
+                                    size: 34,
+                                    color: Colors.white,
                                   ),
                                 ),
-                              );
-                            },
-                          ),
-
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child: Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFDBEAFE),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2.5),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x383B82F6),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
                               ),
-                              child: const Icon(
-                                Icons.check_circle_rounded,
-                                size: 14,
-                                color: Color(0xFF3B82F6),
+                            );
+                          },
+                        ),
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDBEAFE),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2.5),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x383B82F6),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.check_circle_rounded,
+                              size: 14,
+                              color: Color(0xFF3B82F6),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 4,
+                          left: 4,
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD1FAE5),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 2.5),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x3810B981),
+                                  blurRadius: 8,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.bar_chart_rounded,
+                              size: 14,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // B. Title & Subtitle
+                  Text(
+                    "AI 스쿼트 자세 분석 중",
+                    style: GoogleFonts.anton(
+                      fontSize: 24,
+                      letterSpacing: 0.6,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    "POWERED BY GEMINI AI",
+                    style: GoogleFonts.dmSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF7C3AED),
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+
+                  const SizedBox(height: 36),
+
+                  // C. 3-Step Flow Strip
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: List.generate(steps.length * 2 - 1, (index) {
+                      if (index.isEven) {
+                        final stepIndex = index ~/ 2;
+                        final step = steps[stepIndex];
+
+                        final isDone = stepIndex < _currentStep;
+                        final isCurrent = stepIndex == _currentStep;
+                        final isUpcoming = stepIndex > _currentStep;
+
+                        final Color currentBorderColor = isCurrent
+                            ? (step['activeBorder'] as Color)
+                            : (step['border'] as Color);
+
+                        final double opacity = isUpcoming ? 0.45 : 1.0;
+
+                        return Expanded(
+                          child: Opacity(
+                            opacity: opacity,
+                            child: Column(
+                              children: [
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: step['bg'] as Color,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(
+                                      color: currentBorderColor,
+                                      width: isCurrent ? 2.0 : 1.2,
+                                    ),
+                                    boxShadow: isCurrent
+                                        ? [
+                                      BoxShadow(
+                                        color: (step['iconColor'] as Color).withValues(alpha: 0.25),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ]
+                                        : [],
+                                  ),
+                                  child: Icon(
+                                    isDone ? Icons.check_rounded : (step['icon'] as IconData),
+                                    size: 22,
+                                    color: step['iconColor'] as Color,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  step['label'] as String,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 12,
+                                    fontWeight: isCurrent || isDone ? FontWeight.w800 : FontWeight.w700,
+                                    color: isCurrent
+                                        ? (step['iconColor'] as Color)
+                                        : const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final stepIndex = index ~/ 2;
+                      final isPassed = stepIndex < _currentStep;
+                      final Color arrowColor = isPassed
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFF7C3AED).withValues(alpha: 0.20);
+
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 18),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: 18,
+                              height: 2,
+                              color: arrowColor,
+                            ),
+                            CustomPaint(
+                              size: const Size(5, 8),
+                              painter: _ArrowHeadPainter(color: arrowColor),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // D. Dynamic Live Status Indicator
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: Container(
+                      key: ValueKey<int>(_currentStep),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _currentStep == 3
+                              ? const Icon(
+                            Icons.check_circle_rounded,
+                            size: 16,
+                            color: Color(0xFF10B981),
+                          )
+                              : const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF7C3AED),
                               ),
                             ),
                           ),
-
-                          Positioned(
-                            bottom: 4,
-                            left: 4,
-                            child: Container(
-                              width: 30,
-                              height: 30,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD1FAE5),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2.5),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x3810B981),
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
+                          const SizedBox(width: 10),
+                          Flexible(
+                            child: Text(
+                              _stepMessages[_currentStep],
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _currentStep == 3
+                                    ? const Color(0xFF10B981)
+                                    : const Color(0xFF7C3AED),
                               ),
-                              child: const Icon(
-                                Icons.bar_chart_rounded,
-                                size: 14,
-                                color: Color(0xFF10B981),
-                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ),
 
-                    const SizedBox(height: 28),
-
-                    // B. Title & Subtitle
-                    Text(
-                      "AI 스쿼트 자세 분석 중",
-                      style: GoogleFonts.anton(
-                        fontSize: 24,
-                        letterSpacing: 0.6,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "POWERED BY GEMINI AI",
-                      style: GoogleFonts.dmSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF7C3AED),
-                        letterSpacing: 1.4,
-                      ),
-                    ),
-
-                    const SizedBox(height: 36),
-
-                    // C. 3-Step Flow Strip
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: List.generate(steps.length * 2 - 1, (index) {
-                        if (index.isEven) {
-                          final stepIndex = index ~/ 2;
-                          final step = steps[stepIndex];
-
-                          final isDone = stepIndex < _currentStep;
-                          final isCurrent = stepIndex == _currentStep;
-                          final isUpcoming = stepIndex > _currentStep;
-
-                          final Color currentBorderColor = isCurrent
-                              ? (step['activeBorder'] as Color)
-                              : (step['border'] as Color);
-
-                          final double opacity = isUpcoming ? 0.45 : 1.0;
-
-                          return Expanded(
-                            child: Opacity(
-                              opacity: opacity,
-                              child: Column(
-                                children: [
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    width: 46,
-                                    height: 46,
-                                    decoration: BoxDecoration(
-                                      color: step['bg'] as Color,
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: currentBorderColor,
-                                        width: isCurrent ? 2.0 : 1.2,
-                                      ),
-                                      boxShadow: isCurrent
-                                          ? [
-                                        BoxShadow(
-                                          color: (step['iconColor'] as Color).withValues(alpha: 0.25),
-                                          blurRadius: 10,
-                                          offset: const Offset(0, 3),
-                                        ),
-                                      ]
-                                          : [],
-                                    ),
-                                    child: Icon(
-                                      isDone ? Icons.check_rounded : (step['icon'] as IconData),
-                                      size: 22,
-                                      color: step['iconColor'] as Color,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    step['label'] as String,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 12,
-                                      fontWeight: isCurrent || isDone ? FontWeight.w800 : FontWeight.w700,
-                                      color: isCurrent
-                                          ? (step['iconColor'] as Color)
-                                          : const Color(0xFF64748B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        final stepIndex = index ~/ 2;
-                        final isPassed = stepIndex < _currentStep;
-                        final Color arrowColor = isPassed
-                            ? const Color(0xFF7C3AED)
-                            : const Color(0xFF7C3AED).withValues(alpha: 0.20);
-
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 18),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: 18,
-                                height: 2,
-                                color: arrowColor,
-                              ),
-                              CustomPaint(
-                                size: const Size(5, 8),
-                                painter: _ArrowHeadPainter(color: arrowColor),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // D. Dynamic Live Status Indicator
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: Container(
-                        key: ValueKey<int>(_currentStep),
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF7C3AED).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFF7C3AED).withValues(alpha: 0.20),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _currentStep == 3
-                                ? const Icon(
-                              Icons.check_circle_rounded,
-                              size: 16,
-                              color: Color(0xFF10B981),
-                            )
-                                : const SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Color(0xFF7C3AED),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Flexible(
-                              child: Text(
-                                _stepMessages[_currentStep],
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: _currentStep == 3
-                                      ? const Color(0xFF10B981)
-                                      : const Color(0xFF7C3AED),
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const Spacer(flex: 2),
-                  ],
-                ),
+                  const Spacer(flex: 2),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1499,6 +1620,8 @@ class _AiAnalysisFullScreenLoadingState extends State<AiAnalysisFullScreenLoadin
 // =============================================================================
 // AIHeroPlaceholder
 // =============================================================================
+
+/// 결과 데이터가 없을 때 표시되는 초기 히어로 그래픽 카드
 class AIHeroPlaceholder extends StatefulWidget {
   final int selectedCount;
 
@@ -1587,9 +1710,15 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF7C3AED).withValues(alpha: 0.10),
-              blurRadius: 28,
+              color: const Color(0xFF7C3AED).withValues(alpha: 0.22),
+              blurRadius: 16,
+              spreadRadius: 1,
               offset: const Offset(0, 6),
+            ),
+            const BoxShadow(
+              color: Color.fromRGBO(23, 32, 64, 0.04),
+              blurRadius: 8,
+              offset: Offset(0, 2),
             ),
           ],
         ),
@@ -1904,6 +2033,8 @@ class _AIHeroPlaceholderState extends State<AIHeroPlaceholder>
 // =============================================================================
 // Custom Painters
 // =============================================================================
+
+/// 점선 원 캔버스 렌더러
 class _DashedCirclePainter extends CustomPainter {
   final Color color;
   final double strokeWidth;
@@ -1926,7 +2057,7 @@ class _DashedCirclePainter extends CustomPainter {
     final rect = Rect.fromCircle(center: center, radius: radius);
 
     const int totalSegments = 90;
-    const double stepArc = (2 * 3.141592653589793) / totalSegments;
+    const double stepArc = (2 * math.pi) / totalSegments; // math.pi 활용
 
     for (int i = 0; i < totalSegments; i += 2) {
       canvas.drawArc(
@@ -1945,6 +2076,7 @@ class _DashedCirclePainter extends CustomPainter {
   }
 }
 
+/// 단방향 화살표 머리 렌더러
 class _ArrowHeadPainter extends CustomPainter {
   final Color color;
 
