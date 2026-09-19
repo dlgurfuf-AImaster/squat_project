@@ -72,7 +72,7 @@ class ArduinoStatusScreen extends StatelessWidget {
   }
 
   // ===========================================================================
-  // 📌 1. 상단 타이틀 헤더 (홈 화면 양식 이식)
+  // 📌 1. 상단 타이틀 헤더
   // ===========================================================================
   Widget _buildHeader() {
     return Row(
@@ -113,8 +113,8 @@ class ArduinoStatusScreen extends StatelessWidget {
     );
   }
 
-// ===========================================================================
-  // 🖼️ 메인 착용 가이드 & 연결 안내 카드 (태그 윗면 중앙 직선 연결)
+  // ===========================================================================
+  // 🖼️ 메인 착용 가이드 & 연결 안내 카드
   // ===========================================================================
   Widget _buildMainSensorGuideCard({
     required bool isConnected,
@@ -126,13 +126,11 @@ class ArduinoStatusScreen extends StatelessWidget {
         ? const Color(0xFFF59E0B)
         : const Color(0xFF94A3B8);
 
-    // 📍 1. 신체 이미지 상의 실제 센서 포인트 좌표
     const Offset waistDotPos = Offset(105, 140);
     const Offset thighDotPos = Offset(213, 202);
 
-    // 🏷️ 2. 태그 직사각형 "윗면 중앙" 접점 좌표
-    const Offset waistTagAttach = Offset(54, 164);   // 허리 태그 top: 160의 윗면 중앙
-    const Offset thighTagAttach = Offset(267, 255);  // 허벅지 태그 bottom: 30의 윗면 중앙
+    const Offset waistTagAttach = Offset(54, 164);
+    const Offset thighTagAttach = Offset(267, 255);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -156,7 +154,6 @@ class ArduinoStatusScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 상단 타이틀
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: Row(
@@ -178,8 +175,6 @@ class ArduinoStatusScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // 💡 메인 그래픽 레이어 (Stack)
           SizedBox(
             height: 325,
             width: double.infinity,
@@ -188,23 +183,23 @@ class ArduinoStatusScreen extends StatelessWidget {
                 final double width = constraints.maxWidth;
                 final double centerX = width / 2;
 
-                // 중앙 정렬 기준 오프셋 계산
-                final Offset actualWaistDot = Offset(centerX + (waistDotPos.dx - 162.5), waistDotPos.dy);
-                final Offset actualThighDot = Offset(centerX + (thighDotPos.dx - 162.5), thighDotPos.dy);
-                final Offset actualWaistTag = Offset(centerX + (waistTagAttach.dx - 162.5), waistTagAttach.dy);
-                final Offset actualThighTag = Offset(centerX + (thighTagAttach.dx - 162.5), thighTagAttach.dy);
+                final Offset actualWaistDot =
+                Offset(centerX + (waistDotPos.dx - 162.5), waistDotPos.dy);
+                final Offset actualThighDot =
+                Offset(centerX + (thighDotPos.dx - 162.5), thighDotPos.dy);
+                final Offset actualWaistTag = Offset(
+                    centerX + (waistTagAttach.dx - 162.5), waistTagAttach.dy);
+                final Offset actualThighTag = Offset(
+                    centerX + (thighTagAttach.dx - 162.5), thighTagAttach.dy);
 
                 return Stack(
                   alignment: Alignment.center,
                   children: [
-                    // LAYER 1: 스쿼트 인체 와이어프레임 배경
                     Image.asset(
                       'assets/images/body_wireframe.png',
                       fit: BoxFit.contain,
                       height: 325,
                     ),
-
-                    // LAYER 2: LED 점과 태그 윗면 중앙을 잇는 직선
                     Positioned.fill(
                       child: CustomPaint(
                         painter: _HudLinePainter(
@@ -217,22 +212,16 @@ class ArduinoStatusScreen extends StatelessWidget {
                         ),
                       ),
                     ),
-
-                    // LAYER 3: 신체 부위 타겟 LED 점 (허리)
                     Positioned(
                       left: actualWaistDot.dx - 9,
                       top: actualWaistDot.dy - 9,
                       child: _buildGlowingLedDot(activeColor, isConnected),
                     ),
-
-                    // LAYER 3: 신체 부위 타겟 LED 점 (허벅지)
                     Positioned(
                       left: actualThighDot.dx - 9,
                       top: actualThighDot.dy - 9,
                       child: _buildGlowingLedDot(activeColor, isConnected),
                     ),
-
-                    // LAYER 4: 말풍선 태그 (허리 센서)
                     Positioned(
                       top: 160,
                       left: 1,
@@ -244,8 +233,6 @@ class ArduinoStatusScreen extends StatelessWidget {
                         isLeftAlign: true,
                       ),
                     ),
-
-                    // LAYER 4: 말풍선 태그 (허벅지 센서)
                     Positioned(
                       bottom: 30,
                       right: 6,
@@ -267,7 +254,6 @@ class ArduinoStatusScreen extends StatelessWidget {
     );
   }
 
-  /// 💡 타겟 신체 부위에 콕 찍히는 발광 LED 점 위젯
   Widget _buildGlowingLedDot(Color activeColor, bool isConnected) {
     return Container(
       width: 18,
@@ -298,7 +284,6 @@ class ArduinoStatusScreen extends StatelessWidget {
     );
   }
 
-  /// 카드 위에서 깔끔하게 떠 있는 라이트 핀 태그
   Widget _buildMinimalPinTag({
     required String title,
     required String subtitle,
@@ -350,7 +335,7 @@ class ArduinoStatusScreen extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 9,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF94A3B8), // #94A3B8 슬레이트 그레이
+                  color: Color(0xFF94A3B8),
                 ),
               ),
             ],
@@ -364,7 +349,6 @@ class ArduinoStatusScreen extends StatelessWidget {
     );
   }
 
-  /// 상태 인디케이터 Dot
   Widget _buildPulseDot(Color color, bool isConnected) {
     return Container(
       width: 6,
@@ -384,6 +368,7 @@ class ArduinoStatusScreen extends StatelessWidget {
       ),
     );
   }
+
   Widget _buildStatusChip({
     required bool isConnected,
     required bool isConnecting,
@@ -432,89 +417,7 @@ class ArduinoStatusScreen extends StatelessWidget {
   }
 
   // ===========================================================================
-  // 📱 3. 허리/허벅지 센서 서브 카드 (가로 배치)
-  // ===========================================================================
-  Widget _buildSensorSubCard({
-    required String title,
-    required String deviceName,
-    required bool isConnected,
-    required IconData icon,
-  }) {
-    final Color activeColor =
-    isConnected ? AppTheme.accentGreen : const Color(0xFF94A3B8);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(23, 32, 64, 0.03),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: activeColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, size: 20, color: activeColor),
-              ),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: activeColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF0F172A),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            deviceName,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF94A3B8),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isConnected ? "통신 중" : "미연결",
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: activeColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // 🔘 4. 하단 버튼 영역 (홈 화면 버튼 디자인 테마 이식)
+  // 🔘 4. 하단 버튼 영역 및 통합된 버튼 헬퍼
   // ===========================================================================
   Widget _buildActionButton({
     required BuildContext context,
@@ -527,7 +430,7 @@ class ArduinoStatusScreen extends StatelessWidget {
         subtitle: "Connecting to sensors",
         icon: Icons.bluetooth_searching_rounded,
         isLoading: true,
-        isPrimary: true,
+        isPrimary: true, // 👈 파란색 스타일 적용
         onTap: () {},
       );
     }
@@ -537,11 +440,7 @@ class ArduinoStatusScreen extends StatelessWidget {
         title: "모든 연결 해제하기",
         subtitle: "Disconnect All Devices",
         icon: Icons.power_settings_new_rounded,
-        isPrimary: false,
-        customBorderColor: const Color(0xFFFEE2E2),
-        iconBgColor: const Color(0xFFFEF2F2),
-        iconColor: const Color(0xFFEF4444),
-        titleColor: const Color(0xFFEF4444),
+        isPrimary: false, // 👈 흰색 배경 + 빨간 테두리/글씨 (Danger) 스타일 적용
         onTap: () => _disconnectDevice(context),
       );
     }
@@ -550,114 +449,120 @@ class ArduinoStatusScreen extends StatelessWidget {
       title: "센서 모듈 연결하기",
       subtitle: "Scan & Connect Sensors",
       icon: Icons.bluetooth_searching_rounded,
-      isPrimary: true,
+      isPrimary: true, // 👈 파란색 스타일 적용
       onTap: () => _startScanAndConnect(context),
     );
   }
 
-  /// 홈 화면 액션 카드 스타일 버튼 헬퍼 위젯
+  /// 홈 화면 액션 카드 스타일 통합 버튼 헬퍼 위젯 (UI 구조 및 테마 보정)
   Widget _buildHomeStyleCardButton({
     required String title,
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    bool isPrimary = false,
+    bool isPrimary = true,
     bool isLoading = false,
-    Color? customBorderColor,
-    Color? iconBgColor,
-    Color? iconColor,
-    Color? titleColor,
   }) {
-    return Material(
-      color: isPrimary ? AppTheme.primarySky : Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      elevation: 0,
-      child: InkWell(
-        onTap: isLoading ? null : onTap,
+    // 1. isPrimary 유무에 따른 색상 및 테마 설정
+    final Color bgColor = isPrimary ? AppTheme.primarySky : Colors.white;
+    final Color titleColor = isPrimary ? Colors.white : const Color(0xFFEF4444);
+    final Color subtitleColor = isPrimary
+        ? Colors.white.withValues(alpha: 0.8)
+        : const Color(0xFF94A3B8);
+    final Color iconColor = isPrimary ? Colors.white : const Color(0xFFEF4444);
+    final Color iconBgColor = isPrimary
+        ? Colors.white.withValues(alpha: 0.2)
+        : const Color(0xFFFEF2F2);
+
+    final Border? border = isPrimary
+        ? null
+        : Border.all(
+      color: const Color(0xFFFCA5A5), // 빨간 테두리
+      width: 1.5,
+    );
+
+    final List<BoxShadow> boxShadow = isPrimary
+        ? [
+      BoxShadow(
+        color: AppTheme.primarySky.withValues(alpha: 0.35),
+        blurRadius: 12,
+        offset: const Offset(0, 6),
+      ),
+    ]
+        : [
+      BoxShadow(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ];
+
+    // 2. 바른 올바른 구조: Container(외곽 데코레이션) -> Material(투명) -> InkWell(터치 영역)
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: isPrimary
-                ? null
-                : Border.all(
-              color: customBorderColor ?? const Color(0xFFF1F5F9),
-              width: 1.2,
-            ),
-            boxShadow: isPrimary
-                ? [
-              BoxShadow(
-                color: AppTheme.primarySky.withValues(alpha: 0.35),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              )
-            ]
-                : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              )
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isPrimary
-                      ? Colors.white.withValues(alpha: 0.2)
-                      : (iconBgColor ?? const Color(0xFFF1F5F9)),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: isLoading
-                    ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
+        border: border,
+        boxShadow: boxShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isLoading ? null : onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                )
-                    : Icon(
-                  icon,
-                  size: 22,
-                  color: isPrimary
-                      ? Colors.white
-                      : (iconColor ?? const Color(0xFF0F172A)),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: isPrimary
-                            ? Colors.white
-                            : (titleColor ?? const Color(0xFF0F172A)),
-                      ),
+                  child: isLoading
+                      ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: isPrimary
-                            ? Colors.white.withValues(alpha: 0.8)
-                            : const Color(0xFF94A3B8),
-                      ),
-                    ),
-                  ],
+                  )
+                      : Icon(
+                    icon,
+                    size: 22,
+                    color: iconColor,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: titleColor,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: subtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -665,7 +570,7 @@ class ArduinoStatusScreen extends StatelessWidget {
   }
 
   // ===========================================================================
-  // ⚡ 비즈니스 로직 메서드 (기존 기능 100% 유지)
+  // ⚡ 비즈니스 로직 메서드
   // ===========================================================================
   void _startScanAndConnect(BuildContext context) async {
     final bluetoothProvider = context.read<BluetoothProvider>();
@@ -698,7 +603,7 @@ class ArduinoStatusScreen extends StatelessWidget {
 }
 
 // =============================================================================
-// ✏️ 직선 연결선 커스텀 페인터 (LED 점 <-> 말풍선 태그)
+// ✏️ 커스텀 페인터 및 서브 카드 클래스 (기존 로직 유지)
 // =============================================================================
 class _HudLinePainter extends CustomPainter {
   final Offset waistDot;
@@ -731,13 +636,11 @@ class _HudLinePainter extends CustomPainter {
       ..color = isConnected ? activeColor : const Color(0xFF94A3B8)
       ..style = PaintingStyle.fill;
 
-    // 1. 허리 센서 직선 (Dot -> 태그)
     canvas.drawLine(waistDot, waistTag, linePaint);
-    canvas.drawCircle(waistTag, 2.5, dotJointPaint); // 태그 접점 원형 관절
+    canvas.drawCircle(waistTag, 2.5, dotJointPaint);
 
-    // 2. 허벅지 센서 직선 (Dot -> 태그)
     canvas.drawLine(thighDot, thighTag, linePaint);
-    canvas.drawCircle(thighTag, 2.5, dotJointPaint); // 태그 접점 원형 관절
+    canvas.drawCircle(thighTag, 2.5, dotJointPaint);
   }
 
   @override
@@ -751,9 +654,6 @@ class _HudLinePainter extends CustomPainter {
   }
 }
 
-// =============================================================================
-// 🫁 들숨날숨 숨쉬는(Breathing Glow) 스타일의 센서 서브 카드
-// =============================================================================
 class PulsingSensorSubCard extends StatefulWidget {
   final String title;
   final String deviceName;
@@ -780,21 +680,18 @@ class _PulsingSensorSubCardState extends State<PulsingSensorSubCard>
   @override
   void initState() {
     super.initState();
-
-    // 들숨(1.5초) <-> 날숨(1.5초) 왕복 3.0초 주기
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
 
-    // 유기적인 호흡 곡선 (easeInOut)
     _breathAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeInOut,
     );
 
     if (widget.isConnected) {
-      _controller.repeat(reverse: true); // 0.0 -> 1.0 -> 0.0 반복 왕복
+      _controller.repeat(reverse: true);
     }
   }
 
@@ -825,7 +722,6 @@ class _PulsingSensorSubCardState extends State<PulsingSensorSubCard>
     return AnimatedBuilder(
       animation: _breathAnimation,
       builder: (context, child) {
-        // 0.0(가장 옅음) ~ 1.0(가장 선명함)을 부드럽게 오가는 값
         final double breathValue = _breathAnimation.value;
 
         return Container(
@@ -833,7 +729,6 @@ class _PulsingSensorSubCardState extends State<PulsingSensorSubCard>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            // 테두리 빛깔이 들숨 시 밝아지고 날숨 시 은은해짐
             border: Border.all(
               color: widget.isConnected
                   ? AppTheme.accentGreen.withValues(alpha: 0.2 + (breathValue * 0.4))
@@ -842,15 +737,13 @@ class _PulsingSensorSubCardState extends State<PulsingSensorSubCard>
             ),
             boxShadow: [
               if (widget.isConnected) ...[
-                // 🟢 연결됨: 호흡에 따라 번지는 후광 효과
                 BoxShadow(
                   color: AppTheme.accentGreen.withValues(alpha: 0.12 + (breathValue * 0.35)),
-                  blurRadius: 6 + (breathValue * 12),  // 6px -> 18px 확대
-                  spreadRadius: 1 + (breathValue * 3),  // 1px -> 4px 퍼짐
+                  blurRadius: 6 + (breathValue * 12),
+                  spreadRadius: 1 + (breathValue * 3),
                   offset: const Offset(0, 3),
                 ),
               ] else ...[
-                // ⚪ 미연결: 일반 고정 그림자
                 const BoxShadow(
                   color: Color.fromRGBO(23, 32, 64, 0.03),
                   blurRadius: 8,
@@ -868,13 +761,12 @@ class _PulsingSensorSubCardState extends State<PulsingSensorSubCard>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: activeColor.withValues(alpha: 0.12 + (widget.isConnected ? breathValue * 0.08 : 0.0)),
+                      color: activeColor.withValues(
+                          alpha: 0.12 + (widget.isConnected ? breathValue * 0.08 : 0.0)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(widget.icon, size: 20, color: activeColor),
                   ),
-
-                  // 우측 상단 들숨날숨 펄스 Dot
                   Stack(
                     alignment: Alignment.center,
                     children: [
@@ -883,7 +775,8 @@ class _PulsingSensorSubCardState extends State<PulsingSensorSubCard>
                           width: 8 + (breathValue * 6),
                           height: 8 + (breathValue * 6),
                           decoration: BoxDecoration(
-                            color: activeColor.withValues(alpha: 0.4 - (breathValue * 0.25)),
+                            color: activeColor.withValues(
+                                alpha: 0.4 - (breathValue * 0.25)),
                             shape: BoxShape.circle,
                           ),
                         ),
