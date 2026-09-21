@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/bluetooth_provider.dart';
 import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
+import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -19,25 +20,15 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
+      endDrawer: const _ProfileDrawer(),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 상단 앱 타이틀 & 헤더
+              // 1. 상단 앱 타이틀 & 헤더 (우측 프로필 아바타 버튼 포함)
               const _HomeHeader(),
-              const SizedBox(height: 8),
-
-              // 2. 환영 메시지
-              const Text(
-                "Good morning, 김민준 ✍️  ·  오늘도 파이팅!",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF64748B),
-                ),
-              ),
               const SizedBox(height: 16),
 
               // 3. 주간 운동 통계 칩 배지 (3종)
@@ -54,7 +45,7 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // ✏️ 이번 주 스쿼트 달성률 그래픽 카드
+              // 5. 이번 주 스쿼트 달성률 그래픽 카드
               const IsometricVerticalChart(),
             ],
           ),
@@ -65,7 +56,7 @@ class HomeScreen extends StatelessWidget {
 }
 
 // =============================================================================
-// 1. 홈 헤더 위젯
+// 1. 홈 헤더 위젯 (React App.tsx 시안과 1:1 이식)
 // =============================================================================
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader();
@@ -73,38 +64,81 @@ class _HomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppTheme.primarySky,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.primarySky.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+        // [좌측] 번개 아이콘 로고 & 앱 타이틀
+        Row(
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppTheme.primarySky,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primarySky.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            ],
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.home_rounded,
-              size: 20,
-              color: Colors.white,
+              child: const Center(
+                child: Icon(
+                  Icons.home_rounded,
+                  size: 20,
+                  color: Colors.white,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            const Text(
+              "SquatMate",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: Color(0xFF0F172A),
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 12),
-        const Text(
-          "SquatMate",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFF0F172A),
-            letterSpacing: -0.5,
-          ),
+
+        // [우측] 설정 버튼 (클릭 시 우측 endDrawer 열기)
+        Builder(
+          builder: (context) {
+            return GestureDetector(
+              onTap: () {
+                Scaffold.of(context).openEndDrawer();
+              },
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0284C7).withValues(alpha: 0.28),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Center(
+                  child: Icon(
+                    Icons.settings_rounded, // 👈 설정 아이콘으로 변경
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -112,7 +146,236 @@ class _HomeHeader extends StatelessWidget {
 }
 
 // =============================================================================
-// 2. 주간 연속 및 목표 달성 칩 배지 그룹
+// 2. 계정 정보 드로어 (React ProfileDrawer 1:1 이식)
+// =============================================================================
+class _ProfileDrawer extends StatelessWidget {
+  const _ProfileDrawer();
+
+  // main_holder.dart 기준 플로팅 바텀바 순수 높이 (Container 68 + margin bottom 4)
+  static const double _floatingBarHeight = 72.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final double drawerWidth = MediaQuery.of(context).size.width * 0.78;
+    final user = context.watch<UserProvider>().user;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: _floatingBarHeight), // 👈 72.0만 적용
+      child: Drawer(
+        width: drawerWidth,
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(left: Radius.circular(28)),
+        ),
+        child: Column( // 👈 내부 SafeArea도 필요 없으므로 바로 Column 배치
+          children: [
+            // 1. 닫기 (X) 버튼
+            Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12, right: 16),
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(
+                    Icons.close_rounded,
+                    color: Color(0xFF64748B),
+                    size: 18,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    minimumSize: const Size(32, 32),
+                    padding: EdgeInsets.zero,
+                  ),
+                ),
+              ),
+            ),
+
+            // 2. 프로필 히어로 영역 ("김민준")
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.name,
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF172040),
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF10B981)
+                                  .withValues(alpha: 0.2),
+                              blurRadius: 2,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        user.username,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(
+              height: 1,
+              color: Color(0xFFF8FAFC),
+              thickness: 1.5,
+            ),
+
+            // 3. 메뉴 목록
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                children: [
+                  _DrawerMenuItem(
+                    icon: Icons.person_outline_rounded,
+                    iconBg: const Color(0x170284C7),
+                    iconColor: const Color(0xFF0284C7),
+                    label: "계정 변경하기",
+                    subLabel: "닉네임 수정",
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  _DrawerMenuItem(
+                    icon: Icons.notifications_none_rounded,
+                    iconBg: const Color(0x177C3AED),
+                    iconColor: const Color(0xFF7C3AED),
+                    label: "알림 설정",
+                    subLabel: "운동 알림 관리",
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  _DrawerMenuItem(
+                    icon: Icons.shield_outlined,
+                    iconBg: const Color(0x1710B981),
+                    iconColor: const Color(0xFF10B981),
+                    label: "개인정보 처리방침",
+                    subLabel: "Privacy Policy",
+                    onTap: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(
+              height: 1,
+              color: Color(0xFFF8FAFC),
+              thickness: 1.5,
+            ),
+
+            // 4. 하단 버전 정보
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 14),
+              child: Text(
+                "SquatMate v1.0.0",
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Color(0xFFCBD5E1),
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerMenuItem extends StatelessWidget {
+  final IconData icon;
+  final Color iconBg;
+  final Color iconColor;
+  final String label;
+  final String subLabel;
+  final VoidCallback onTap;
+
+  const _DrawerMenuItem({
+    required this.icon,
+    required this.iconBg,
+    required this.iconColor,
+    required this.label,
+    required this.subLabel,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Icon(icon, color: iconColor, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF172040),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    subLabel,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1), size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 3. 주간 연속 및 목표 달성 칩 배지 그룹
 // =============================================================================
 class _HomeStatBadges extends StatelessWidget {
   final int currentSquatCount;
@@ -168,7 +431,7 @@ class _PillChip extends StatelessWidget {
 }
 
 // =============================================================================
-// 3. 2x2 그리드 메뉴
+// 4. 2x2 그리드 메뉴
 // =============================================================================
 class _HomeGridMenu extends StatelessWidget {
   final CoachingProvider coachingProvider;
@@ -347,7 +610,7 @@ class _ActionCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 4. 모티베이션 배너 (원본 타이머 및 애니메이션 로직 100% 동일)
+// 5. 모티베이션 배너 (타이머 및 애니메이션 로직)
 // =============================================================================
 class MotivationalBanner extends StatefulWidget {
   final Widget child;
@@ -478,7 +741,7 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
 }
 
 // =============================================================================
-// 5. 3D 아이소메트릭 차트 카드
+// 6. 3D 아이소메트릭 차트 카드
 // =============================================================================
 class IsometricVerticalChart extends StatelessWidget {
   const IsometricVerticalChart({super.key});
@@ -609,7 +872,7 @@ class IsometricVerticalChart extends StatelessWidget {
 }
 
 // =============================================================================
-// 6. 3D 수직 원통 커스텀 페인터
+// 7. 3D 수직 원통 커스텀 페인터
 // =============================================================================
 class IsometricUprightCylinderPainter extends CustomPainter {
   final double heightRatio;
