@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppTheme {
   // 메인 컬러 팔레트 (Clean Apple Health Style)
-  static const Color lightBackground = Color(0xFFF8FAFC); // 은은한 아이스 화이트 배경
+  static const Color lightBackground = Color(0xFFF2F7FC);
   static const Color surfaceCard = Color(0xFFFFFFFF);     // 순백색 카드 배경
   static const Color primarySky = Color(0xFF00BFFE);      // 청량하고 밝은 하늘색 (#00BFFE)
 
