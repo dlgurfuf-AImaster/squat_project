@@ -267,4 +267,39 @@ class ApiService {
     }
     return null;
   }
+
+  /// 10. 프로필(닉네임) 수정 요청
+  Future<bool> updateNickname(String newName) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        print("❌ 저장된 JWT 토큰이 없습니다.");
+        return false;
+      }
+
+      final response = await _dio.put(
+        "/user/profile",
+        data: {
+          "name": newName,
+        },
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          receiveTimeout: const Duration(seconds: 5),
+          sendTimeout: const Duration(seconds: 5),
+        ),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await _storage.write(key: 'user_name', value: newName);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print("❌ 닉네임 변경 통신 에러: $e");
+      return false;
+    }
+  }
 }
