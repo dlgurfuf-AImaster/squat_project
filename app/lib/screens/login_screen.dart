@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:app/screens/signup_screen.dart';
 import '/services/api_service.dart';
 import 'main_holder.dart';
 import '../dtos/login_request.dart';
 import '../dtos/login_response.dart';
 import '../theme/app_theme.dart';
+import '../providers/user_provider.dart';
+import '../models/user_model.dart';
 
 /// 로그인 페이지
 class LoginScreen extends StatefulWidget {
@@ -26,7 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // 로그인 처리 함수 (비즈니스 로직 유지)
+  // 로그인 처리 함수
   void _handleLogin() async {
     if (_idController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(
@@ -40,7 +43,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context,
     ).showSnackBar(const SnackBar(content: Text("로그인 중...")));
 
-    // LoginRequest DTO 생성 및 ApiService 호출 방식 변경
+    // LoginRequest DTO 생성 및 ApiService 호출
     final LoginResponse? response = await ApiService().loginUser(
       LoginRequest(
         username: _idController.text,
@@ -51,7 +54,17 @@ class _LoginScreenState extends State<LoginScreen> {
     // LoginResponse 객체 검증
     if (response != null && response.token.isNotEmpty) {
       if (!mounted) return;
-      // 로그인 성공 시 메인 화면으로 이동하며 로그인 화면은 스택에서 제거
+
+      // 로그인 성공 시 UserProvider에 실제 유저 데이터 전달!
+      context.read<UserProvider>().setUser(
+        UserModel(
+          id: 0, // LoginResponse에 id가 없다면 기본값 0 처리 (필요시 response.userId 활용)[cite: 5]
+          username: _idController.text,
+          name: response.name.isNotEmpty ? response.name : _idController.text, //[cite: 5, 6]
+        ),
+      );
+
+      // 메인 화면으로 이동하며 로그인 화면은 스택에서 제거
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const MainHolder()),
@@ -80,7 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   const SizedBox(height: 20),
 
-                  // 1. 브랜드 로고 & 아이콘 영역 (HomeScreen 상단 헤더와 통일감)
+                  // 1. 브랜드 로고 & 아이콘 영역
                   Center(
                     child: Container(
                       width: 68,
@@ -118,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: TextStyle(
                       fontSize: 30,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF0F172A), // 딥 슬레이트
+                      color: Color(0xFF0F172A),
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -153,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // 5. 메인 로그인 버튼 (PrimarySky + 그림자 효과)
+                  // 5. 메인 로그인 버튼
                   ElevatedButton(
                     onPressed: _handleLogin,
                     style: ElevatedButton.styleFrom(
@@ -223,7 +236,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(height: 32),
 
-                  // 7. [임시] 개발자 테스트 모드 버튼 (깔끔한 칩 스타일)
+                  // 7. [임시] 개발자 테스트 모드 버튼 (더미 유저 상태 유지)
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -233,6 +246,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(14),
                       onTap: () {
+                        // 💡 테스트 진입 시 더미 유저 세팅 (필요시)
+                        context.read<UserProvider>().setUser(UserModel.dummy());
                         Navigator.pushReplacement(
                           context,
                           MaterialPageRoute(

@@ -1,5 +1,6 @@
 import 'package:app/providers/bluetooth_provider.dart';
 import 'package:app/providers/coaching_provider.dart';
+import 'package:app/providers/user_provider.dart';
 import 'package:app/screens/main_holder.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -23,6 +24,7 @@ void main() async {
     // 앱 전체에서 provider들을 이용할 수 있도록 주입
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => SquatProvider()),
         ChangeNotifierProvider(create: (_) => BluetoothProvider()),
         ChangeNotifierProvider(create: (_) => CoachingProvider()),
