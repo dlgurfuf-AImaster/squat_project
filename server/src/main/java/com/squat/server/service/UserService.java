@@ -8,6 +8,7 @@ import com.squat.server.model.User;
 import com.squat.server.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -62,5 +63,21 @@ public class UserService {
 
         // 성공 시 유저 정보 반환
         return new LoginResponse(token, user.getName());
+    }
+
+    // 닉네임(프로필 이름) 변경 서비스
+    @Transactional
+    public void updateNickname(String username, String newName) {
+        // 1. 입력값 유효성 검사
+        if (newName == null || newName.trim().isEmpty()) {
+            throw new IllegalArgumentException("올바른 닉네임을 입력해주세요.");
+        }
+
+        // 2. 현재 사용자 DB 조회
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        // 3. 닉네임 수정 (@Transactional에 의해 메서드 종료 시 DB에 자동 UPDATE)
+        user.setName(newName.trim());
     }
 }
