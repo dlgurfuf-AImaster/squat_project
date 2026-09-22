@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/bluetooth_provider.dart';
@@ -7,6 +8,7 @@ import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
+import 'edit_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -107,35 +109,20 @@ class _HomeHeader extends StatelessWidget {
         // [우측] 설정 버튼 (클릭 시 우측 endDrawer 열기)
         Builder(
           builder: (context) {
-            return GestureDetector(
-              onTap: () {
-                Scaffold.of(context).openEndDrawer();
-              },
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.28),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+            return SizedBox(
+              width: 38,
+              height: 38,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: const Icon(
+                  Icons.settings_rounded,
+                  color: Color(0xFF64748B), // 회색
+                  size: 22,
                 ),
-                child: const Center(
-                  child: Icon(
-                    Icons.settings_rounded, // 👈 설정 아이콘으로 변경
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ),
+                onPressed: () {
+                  Scaffold.of(context).openEndDrawer();
+                },
               ),
             );
           },
@@ -146,66 +133,91 @@ class _HomeHeader extends StatelessWidget {
 }
 
 // =============================================================================
-// 2. 계정 정보 드로어 (React ProfileDrawer 1:1 이식)
+// 계정 정보 드로어 (React ProfileDrawer 1:1 디자인 동기화)
 // =============================================================================
 class _ProfileDrawer extends StatelessWidget {
   const _ProfileDrawer();
 
-  // main_holder.dart 기준 플로팅 바텀바 순수 높이 (Container 68 + margin bottom 4)
   static const double _floatingBarHeight = 72.0;
 
   @override
   Widget build(BuildContext context) {
     final double drawerWidth = MediaQuery.of(context).size.width * 0.78;
     final user = context.watch<UserProvider>().user;
+    final String initial = user.name.trim().isNotEmpty ? user.name.trim()[0] : "?";
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: _floatingBarHeight), // 👈 72.0만 적용
+      padding: const EdgeInsets.only(bottom: _floatingBarHeight),
       child: Drawer(
         width: drawerWidth,
         backgroundColor: Colors.white,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.horizontal(left: Radius.circular(28)),
         ),
-        child: Column( // 👈 내부 SafeArea도 필요 없으므로 바로 Column 배치
+        child: Column(
           children: [
-            // 1. 닫기 (X) 버튼
-            Align(
-              alignment: Alignment.topRight,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12, right: 16),
-                child: IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(
-                    Icons.close_rounded,
-                    color: Color(0xFF64748B),
-                    size: 18,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    minimumSize: const Size(32, 32),
-                    padding: EdgeInsets.zero,
-                  ),
+            // 1. [동적 여백]
+            SizedBox(height: statusBarHeight + 40),
+
+            // 2. 프로필 히어로 영역 (아바타 + 닉네임 + 아이디)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFF8FAFC), width: 1.5),
                 ),
               ),
-            ),
-
-            // 2. 프로필 히어로 영역 ("김민준")
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 아바타 원형 서클
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0284C7).withValues(alpha: 0.28),
+                          blurRadius: 20,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 1.04,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // 닉네임
                   Text(
                     user.name,
-                    style: TextStyle(
-                      fontSize: 26,
+                    style: const TextStyle(
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Color(0xFF172040),
                       letterSpacing: -0.5,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 4),
+
+                  // 핸들 아이디
                   Row(
                     children: [
                       Container(
@@ -216,32 +228,25 @@ class _ProfileDrawer extends StatelessWidget {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF10B981)
-                                  .withValues(alpha: 0.2),
+                              color: const Color(0xFF10B981).withValues(alpha: 0.2),
                               blurRadius: 2,
                               spreadRadius: 2,
                             ),
                           ],
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
-                        user.username,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Color(0xFF94A3B8),
+                        "@${user.username}",
+                        style: GoogleFonts.dmSans(
+                          fontSize: 15,
+                          color: const Color(0xFF94A3B8),
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-            ),
-
-            const Divider(
-              height: 1,
-              color: Color(0xFFF8FAFC),
-              thickness: 1.5,
             ),
 
             // 3. 메뉴 목록
@@ -257,6 +262,11 @@ class _ProfileDrawer extends StatelessWidget {
                     subLabel: "닉네임 수정",
                     onTap: () {
                       Navigator.of(context).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const EditProfileScreen(),
+                        ),
+                      );
                     },
                   ),
                   _DrawerMenuItem(
@@ -265,9 +275,7 @@ class _ProfileDrawer extends StatelessWidget {
                     iconColor: const Color(0xFF7C3AED),
                     label: "알림 설정",
                     subLabel: "운동 알림 관리",
-                    onTap: () {
-                      Navigator.of(context).pop();
-                    },
+                    onTap: () => Navigator.of(context).pop(),
                   ),
                   _DrawerMenuItem(
                     icon: Icons.shield_outlined,
@@ -275,28 +283,27 @@ class _ProfileDrawer extends StatelessWidget {
                     iconColor: const Color(0xFF10B981),
                     label: "개인정보 처리방침",
                     subLabel: "Privacy Policy",
-                    onTap: () {
-                      Navigator.of(context).pop();
-                    },
+                    onTap: () => Navigator.of(context).pop(),
                   ),
                 ],
               ),
             ),
 
-            const Divider(
-              height: 1,
-              color: Color(0xFFF8FAFC),
-              thickness: 1.5,
-            ),
-
             // 4. 하단 버전 정보
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 14),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+              decoration: const BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: Color(0xFFF8FAFC), width: 1.5),
+                ),
+              ),
               child: Text(
-                "SquatMate v1.0.0",
-                style: TextStyle(
+                "Health Coach v1.0.0",
+                textAlign: TextAlign.center,
+                style: GoogleFonts.dmSans(
                   fontSize: 10,
-                  color: Color(0xFFCBD5E1),
+                  color: const Color(0xFFCBD5E1),
                   letterSpacing: 0.4,
                 ),
               ),
@@ -308,6 +315,7 @@ class _ProfileDrawer extends StatelessWidget {
   }
 }
 
+// 메뉴 아이템 서브 위젯
 class _DrawerMenuItem extends StatelessWidget {
   final IconData icon;
   final Color iconBg;
@@ -340,7 +348,7 @@ class _DrawerMenuItem extends StatelessWidget {
                 color: iconBg,
                 borderRadius: BorderRadius.circular(11),
               ),
-              child: Icon(icon, color: iconColor, size: 18),
+              child: Icon(icon, color: iconColor, size: 16),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -349,24 +357,28 @@ class _DrawerMenuItem extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: GoogleFonts.dmSans(
                       fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF172040),
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF172040),
                     ),
                   ),
                   const SizedBox(height: 1),
                   Text(
                     subLabel,
-                    style: const TextStyle(
+                    style: GoogleFonts.dmSans(
                       fontSize: 11,
-                      color: Color(0xFF94A3B8),
+                      color: const Color(0xFF94A3B8),
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Color(0xFFCBD5E1), size: 18),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Color(0xFFCBD5E1),
+              size: 15,
+            ),
           ],
         ),
       ),
