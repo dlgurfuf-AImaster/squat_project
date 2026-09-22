@@ -36,10 +36,18 @@ dependencies {
 	// Jackson Databind 라이브러리 추가
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 
+	// Google Gen AI Java SDK
+	implementation 'com.google.genai:google-genai:0.1.1'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+// Java 컴파일 시 UTF-8 인코딩 강제
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = 'UTF-8'
 }
