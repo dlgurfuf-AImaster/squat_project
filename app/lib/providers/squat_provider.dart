@@ -10,6 +10,9 @@ class SquatProvider with ChangeNotifier {
   SquatData _data = SquatData(waistAngle: 0.0, thighAngle: 0.0);
   SquatData get data => _data;
 
+  List<SquatRecord> _localRecords = [];
+  List<SquatRecord> get localRecords => _localRecords;
+
   final SquatAnalyzerService _analyzer = SquatAnalyzerService();
   SquatAnalyzerService get analyzer => _analyzer;
 
@@ -139,7 +142,8 @@ class SquatProvider with ChangeNotifier {
 
       // 4. 저장 완료 후 현재 카운터만 0으로 초기화 (연결은 유지)
       resetCountersOnly();
-      notifyListeners();
+
+      await loadLocalRecords();
 
       return true; // 저장 성공 반환
     } catch (e) {
@@ -147,4 +151,25 @@ class SquatProvider with ChangeNotifier {
       return false;
     }
   }
+
+  /// 앱 내부 SQLite DB에서 전체 운동 기록 불러오기
+  Future<void> loadLocalRecords() async {
+    _localRecords = await DatabaseHelper.instance.getAllRecords();
+    notifyListeners();
+  }
+
+  /// 🧪 [테스트용] 더미 스쿼트 데이터 30개 생성 후 실시간 상태 갱신
+  Future<void> generateDummyRecords() async {
+    try {
+      // 1. DatabaseHelper 실무 담당자에게 더미 데이터 30개 추가 요청
+      await DatabaseHelper.instance.insertDummyRecords();
+
+      // 2. DB 작성이 끝났으므로 최신 데이터 재로드 및 notifyListeners() 전파
+      await loadLocalRecords();
+      print("🧪 더미 데이터 30개 생성 완료 및 홈 화면 UI 갱신 방송 송출!");
+    } catch (e) {
+      print("❌ 더미 데이터 생성 중 에러 발생: $e");
+    }
+  }
+
 }

@@ -8,10 +8,27 @@ import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/workout_stat_calculator.dart';
 import 'edit_profile_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      if (mounted) {
+        context.read<SquatProvider>().loadLocalRecords();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +36,8 @@ class HomeScreen extends StatelessWidget {
     final squatProvider = context.watch<SquatProvider>();
     final coachingProvider = context.read<CoachingProvider>();
     final bool isBTConnected = btProvider.connectionStatus == 'CONNECTED';
+
+    final stats = WorkoutWeeklyStats.calculate(squatProvider.localRecords); // 주간 통계 데이터 객체
 
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
@@ -29,15 +48,19 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 상단 앱 타이틀 & 헤더 (우측 프로필 아바타 버튼 포함)
+              // 1. 상단 앱 타이틀 & 헤더
               const _HomeHeader(),
               const SizedBox(height: 16),
 
-              // 3. 주간 운동 통계 칩 배지 (3종)
-              _HomeStatBadges(currentSquatCount: squatProvider.data.successCount),
+              // 2. 주간 운동 통계 칩 배지 (실데이터 연결)[cite: 4]
+              _HomeStatBadges(
+                streakDays: stats.streakDays,
+                weeklyTotalReps: stats.weeklyTotalReps,
+                maxReps: stats.maxRepsInSingle,
+              ),
               const SizedBox(height: 20),
 
-              // 4. 상단 문구 + 슬림해진 버튼 통합 영역
+              // 3. 상단 문구 + 버튼 통합 영역
               MotivationalBanner(
                 child: _HomeGridMenu(
                   coachingProvider: coachingProvider,
@@ -47,8 +70,11 @@ class HomeScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              // 5. 이번 주 스쿼트 달성률 그래픽 카드
-              const IsometricVerticalChart(),
+              // 4. 3D 주간 스쿼트 리포트 (실데이터 연결)[cite: 4]
+              IsometricVerticalChart(
+                counts: stats.dailyCounts,
+                todayIndex: stats.todayIndex,
+              ),
             ],
           ),
         ),
@@ -58,7 +84,7 @@ class HomeScreen extends StatelessWidget {
 }
 
 // =============================================================================
-// 1. 홈 헤더 위젯 (React App.tsx 시안과 1:1 이식)
+// 1. 홈 헤더 위젯
 // =============================================================================
 class _HomeHeader extends StatelessWidget {
   const _HomeHeader();
@@ -68,7 +94,6 @@ class _HomeHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // [좌측] 번개 아이콘 로고 & 앱 타이틀
         Row(
           children: [
             Container(
@@ -105,8 +130,6 @@ class _HomeHeader extends StatelessWidget {
             ),
           ],
         ),
-
-        // [우측] 설정 버튼 (클릭 시 우측 endDrawer 열기)
         Builder(
           builder: (context) {
             return SizedBox(
@@ -117,7 +140,7 @@ class _HomeHeader extends StatelessWidget {
                 constraints: const BoxConstraints(),
                 icon: const Icon(
                   Icons.settings_rounded,
-                  color: Color(0xFF64748B), // 회색
+                  color: Color(0xFF64748B),
                   size: 22,
                 ),
                 onPressed: () {
@@ -133,7 +156,7 @@ class _HomeHeader extends StatelessWidget {
 }
 
 // =============================================================================
-// 계정 정보 드로어 (React ProfileDrawer 1:1 디자인 동기화)
+// 계정 정보 드로어
 // =============================================================================
 class _ProfileDrawer extends StatelessWidget {
   const _ProfileDrawer();
@@ -157,10 +180,7 @@ class _ProfileDrawer extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // 1. [동적 여백]
             SizedBox(height: statusBarHeight + 40),
-
-            // 2. 프로필 히어로 영역 (아바타 + 닉네임 + 아이디)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -172,7 +192,6 @@ class _ProfileDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 아바타 원형 서클
                   Container(
                     width: 64,
                     height: 64,
@@ -204,8 +223,6 @@ class _ProfileDrawer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // 닉네임
                   Text(
                     user.name,
                     style: const TextStyle(
@@ -216,8 +233,6 @@ class _ProfileDrawer extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-
-                  // 핸들 아이디
                   Row(
                     children: [
                       Container(
@@ -248,8 +263,6 @@ class _ProfileDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            // 3. 메뉴 목록
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -288,8 +301,6 @@ class _ProfileDrawer extends StatelessWidget {
                 ],
               ),
             ),
-
-            // 4. 하단 버전 정보
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
@@ -315,7 +326,6 @@ class _ProfileDrawer extends StatelessWidget {
   }
 }
 
-// 메뉴 아이템 서브 위젯
 class _DrawerMenuItem extends StatelessWidget {
   final IconData icon;
   final Color iconBg;
@@ -387,23 +397,27 @@ class _DrawerMenuItem extends StatelessWidget {
 }
 
 // =============================================================================
-// 3. 주간 연속 및 목표 달성 칩 배지 그룹
+// 3. 주간 연속 및 목표 달성 칩 배지 그룹 (동적 파라미터로 수정)
 // =============================================================================
 class _HomeStatBadges extends StatelessWidget {
-  final int currentSquatCount;
+  final int streakDays;
+  final int weeklyTotalReps;
+  final int maxReps;
 
-  const _HomeStatBadges({required this.currentSquatCount});
+  const _HomeStatBadges({
+    required this.streakDays,
+    required this.weeklyTotalReps,
+    required this.maxReps,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const _PillChip(text: "🔥 7일 연속"),
-        const _PillChip(text: "💪 324회 / 주"),
-        _PillChip(
-          text: "🏆 최고 ${currentSquatCount > 85 ? currentSquatCount : 85}개",
-        ),
+        _PillChip(text: "🔥 ${streakDays}일 연속"),
+        _PillChip(text: "💪 ${weeklyTotalReps}회 / 주"),
+        _PillChip(text: "🏆 최고 ${maxReps}개"),
       ],
     );
   }
@@ -622,7 +636,7 @@ class _ActionCard extends StatelessWidget {
 }
 
 // =============================================================================
-// 5. 모티베이션 배너 (타이머 및 애니메이션 로직)
+// 5. 모티베이션 배너
 // =============================================================================
 class MotivationalBanner extends StatefulWidget {
   final Widget child;
@@ -753,17 +767,25 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
 }
 
 // =============================================================================
-// 6. 3D 아이소메트릭 차트 카드
+// 6. 3D 아이소메트릭 차트 카드 (실데이터 파라미터 수신하도록 변경)
 // =============================================================================
 class IsometricVerticalChart extends StatelessWidget {
-  const IsometricVerticalChart({super.key});
+  final List<int> counts; // [월, 화, 수, 목, 금, 토, 일] 7개 데이터[cite: 4]
+  final int todayIndex;   // 0(월) ~ 6(일)[cite: 4]
+
+  const IsometricVerticalChart({
+    super.key,
+    required this.counts,
+    required this.todayIndex,
+  });
 
   @override
   Widget build(BuildContext context) {
     const List<String> days = ["월", "화", "수", "목", "금", "토", "일"];
-    const List<int> counts = [45, 60, 0, 85, 50, 0, 0];
-    const int todayIndex = 3;
-    const int maxCount = 100;
+
+    // 이번 주 일일 최댓값을 기반으로 차트 비율 계산 (최소 30회 기준)
+    final int maxInWeek = counts.reduce((a, b) => a > b ? a : b);
+    final int maxCount = maxInWeek > 30 ? maxInWeek : 30;
 
     final Color primarySky = AppTheme.primarySky;
 
@@ -796,11 +818,11 @@ class IsometricVerticalChart extends StatelessWidget {
                       color: primarySky.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(Icons.bar_chart_rounded, size: 18, color: primarySky),
+                    child: Icon(Icons.date_range_rounded, size: 18, color: primarySky),
                   ),
                   const SizedBox(width: 8),
                   const Text(
-                    "3D 주간 스쿼트 리포트",
+                    "주간 스쿼트 리포트",
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -816,7 +838,7 @@ class IsometricVerticalChart extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
-                  "목표 80회",
+                  "일일 목표 30회",
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -919,7 +941,6 @@ class IsometricUprightCylinderPainter extends CustomPainter {
     final Color topCapColor = hsl.withLightness((hsl.lightness + 0.20).clamp(0.0, 1.0)).toColor();
     final Color sideDarkColor = hsl.withLightness((hsl.lightness - 0.15).clamp(0.0, 1.0)).toColor();
 
-    // A. 바닥 3D 대각선 그림자
     if (hasValue) {
       final Path shadowPath = Path()
         ..moveTo(0, bottomY)
@@ -939,7 +960,6 @@ class IsometricUprightCylinderPainter extends CustomPainter {
       );
     }
 
-    // B. 비어있는 슬롯 트랙
     final Paint trackPaint = Paint()..color = const Color(0xFFF1F5F9);
     final Path trackPath = Path()
       ..moveTo(0, bottomY)
@@ -959,7 +979,6 @@ class IsometricUprightCylinderPainter extends CustomPainter {
 
     if (!hasValue) return;
 
-    // C. 원통 수직 몸통
     final Paint bodyPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.centerLeft,
@@ -990,7 +1009,6 @@ class IsometricUprightCylinderPainter extends CustomPainter {
 
     canvas.drawPath(bodyPath, bodyPaint);
 
-    // D. 위에서 내려다보는 타원 뚜껑 (Top Cap)
     final Paint topCapPaint = Paint()..color = topCapColor;
     canvas.drawOval(
       Rect.fromCenter(
@@ -1001,7 +1019,6 @@ class IsometricUprightCylinderPainter extends CustomPainter {
       topCapPaint,
     );
 
-    // 오늘 날짜 원통 상단에 테두리 하이라이트
     if (isToday) {
       final Paint borderPaint = Paint()
         ..color = Colors.white.withValues(alpha: 0.9)
