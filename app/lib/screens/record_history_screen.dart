@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../dtos/squat_workout_request.dart';
 import '../models/squat_record.dart';
+import '../providers/squat_provider.dart';
 import '../services/api_service.dart';
 import '../services/database_helper.dart';
 import '../theme/app_theme.dart';
@@ -486,7 +488,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
               icon: const Icon(Icons.add_chart_rounded, color: Colors.amber, size: 22),
               tooltip: "더미 데이터 생성",
               onPressed: () async {
-                await DatabaseHelper.instance.insertDummyRecords();
+                await context.read<SquatProvider>().generateDummyRecords();
                 _refreshRecords();
               },
             ),
@@ -1316,7 +1318,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     );
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16), // 1. 원래의 넉넉한 여백(16) 복구
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -1329,62 +1331,67 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.fitness_center_rounded, color: AppTheme.primarySky, size: 20),
-              const SizedBox(width: 8),
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: "${_selectedDay.month}/${_selectedDay.day}",
-                      style: GoogleFonts.anton(
-                        fontSize: 16,
-                        color: const Color(0xFF0F172A),
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    TextSpan(
-                      text: " 운동 요약",
-                      style: GoogleFonts.dmSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (selectedDayRecords.isEmpty)
-            Container(
-              height: 38,
-              alignment: Alignment.center,
-              child: const Text(
-                "해당 일자에 운동 기록이 없습니다.",
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF94A3B8),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            )
-          else
+      // 2. SingleChildScrollView로 내부 Column을 감싸 1px 오차로 인한 에러 방지
+      child: SingleChildScrollView(
+        physics: const NeverScrollableScrollPhysics(), // 스크롤 동작 차단
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
             Row(
               children: [
-                _buildStatItem("$totalSuccess회", AppTheme.accentGreen),
-                const SizedBox(width: 4),
-                _buildStatItem("${selectedDayRecords.length}세트", AppTheme.primarySky),
-                const SizedBox(width: 4),
-                _buildStatItem("$totalErrors회", Colors.orange),
+                const Icon(Icons.fitness_center_rounded, color: AppTheme.primarySky, size: 20),
+                const SizedBox(width: 8),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: "${_selectedDay.month}/${_selectedDay.day}",
+                        style: GoogleFonts.anton(
+                          fontSize: 16,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      TextSpan(
+                        text: " 운동 요약",
+                        style: GoogleFonts.dmSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
               ],
             ),
-        ],
+            const SizedBox(height: 12), // 3. 14 -> 12로 2px만 살짝 줄여 내부 오버플로우 예방
+            if (selectedDayRecords.isEmpty)
+              Container(
+                height: 38, // 4. 원래의 시원한 높이(38) 유지
+                alignment: Alignment.center,
+                child: const Text(
+                  "해당 일자에 운동 기록이 없습니다.",
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF94A3B8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  _buildStatItem("$totalSuccess회", AppTheme.accentGreen),
+                  const SizedBox(width: 4),
+                  _buildStatItem("${selectedDayRecords.length}세트", AppTheme.primarySky),
+                  const SizedBox(width: 4),
+                  _buildStatItem("$totalErrors회", Colors.orange),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
