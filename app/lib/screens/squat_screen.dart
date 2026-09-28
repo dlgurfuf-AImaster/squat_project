@@ -22,7 +22,7 @@ class _SquatScreenState extends State<SquatScreen> {
     super.didChangeDependencies();
     // 이미지 사전 로딩 (첫 프레임 어두워짐 방지)
     precacheImage(
-      const AssetImage('assets/images/gemini_squat_person.png'),
+      const AssetImage('assets/images/main_icon.png'),
       context,
     );
   }
@@ -41,7 +41,7 @@ class _SquatScreenState extends State<SquatScreen> {
       backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -58,7 +58,7 @@ class _SquatScreenState extends State<SquatScreen> {
 
               // 3. 스쿼트 카운터 카드
               _SquatCounterCard(squat: squat),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
               // 4. 하단 액션 버튼 영역
               _ActionButtons(
@@ -105,11 +105,11 @@ class _SquatHeader extends StatelessWidget {
               ),
               child: Center(
                 child: Transform.translate(
-                  offset: const Offset(1.0, 0.0), // 손수 조정해두신 위치 값 유지
+                  offset: const Offset(1.0, 0.0), // 미세 위치 조정 값 유지
                   child: Image.asset(
-                    'assets/images/gemini_squat_person.png',
-                    width: 24,
-                    height: 24,
+                    'assets/images/main_icon.png',
+                    width: 38, // 원 크기와 동일하게 1:1 비율 적용
+                    height: 38,
                     color: Colors.white,
                     fit: BoxFit.contain,
                   ),
@@ -568,12 +568,13 @@ class _ActionButtons extends StatelessWidget {
     if (squatProvider.isReading) {
       return Row(
         children: [
+          // 🔵 파란 버튼 (저장하기)
           Expanded(
             child: _buildHomeStyleCardButton(
               title: "저장하기",
               subtitle: "Save Record",
               icon: Icons.save_alt_rounded,
-              isPrimary: true,
+              isPrimary: true, // 👈 파란색 스타일 적용
               onTap: () async {
                 bool isSaved = await squatProvider.saveCurrentSessionRecord();
                 if (context.mounted) {
@@ -592,16 +593,14 @@ class _ActionButtons extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
+
+          // 🔴 빨간 버튼 (초기화)
           Expanded(
             child: _buildHomeStyleCardButton(
               title: "초기화",
               subtitle: "Reset Counter",
               icon: Icons.refresh_rounded,
-              isPrimary: false,
-              customBorderColor: const Color(0xFFFEE2E2),
-              iconBgColor: const Color(0xFFFEF2F2),
-              iconColor: const Color(0xFFEF4444),
-              titleColor: const Color(0xFFEF4444),
+              isPrimary: false, // 👈 흰색 배경 + 빨간 테두리/글씨 스타일 적용
               onTap: () {
                 squatProvider.resetCountersOnly();
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -623,98 +622,112 @@ class _ActionButtons extends StatelessWidget {
     required String subtitle,
     required IconData icon,
     required VoidCallback onTap,
-    bool isPrimary = false,
-    Color? customBorderColor,
-    Color? iconBgColor,
-    Color? iconColor,
-    Color? titleColor,
+    bool isPrimary = true, // 💡 true: 파란 버튼, false: 빨간 버튼
   }) {
-    return Material(
-      color: isPrimary ? AppTheme.primarySky : Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
+    // ---------------------------------------------------------------------------
+    // 💡 1. 버튼 타입에 따른 스타일 분기 (여기서 두 스타일을 정의합니다)
+    // ---------------------------------------------------------------------------
+    final Color bgColor = isPrimary ? AppTheme.primarySky : Colors.white;
+    final Color titleColor = isPrimary ? Colors.white : const Color(0xFFEF4444);
+    final Color subtitleColor = isPrimary
+        ? Colors.white.withValues(alpha: 0.8)
+        : const Color(0xFF94A3B8);
+    final Color iconColor = isPrimary ? Colors.white : const Color(0xFFEF4444);
+    final Color iconBgColor = isPrimary
+        ? Colors.white.withValues(alpha: 0.2)
+        : const Color(0xFFFEF2F2);
+
+    // 💡 빨간 버튼 테두리 스타일 설정 (두께, 색상 조정 가능)
+    final Border? border = isPrimary
+        ? null
+        : Border.all(
+      color: const Color(0xFFFCA5A5), // 📌 빨간 테두리 색상 (원하는 색으로 변경 가능)
+      width: 1.5,                     // 📌 테두리 두께
+    );
+
+    // 💡 그림자 스타일 설정
+    final List<BoxShadow> boxShadow = isPrimary
+        ? [
+      // 파란 버튼: 블루 후광 그림자
+      BoxShadow(
+        color: AppTheme.primarySky.withValues(alpha: 0.35),
+        blurRadius: 12,
+        offset: const Offset(0, 6),
+      ),
+    ]
+        : [
+      // 빨간 버튼: 은은한 연빨간/어두운 그림자 (원하는 분위기로 조정 가능)
+      BoxShadow(
+        color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ];
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: bgColor,
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: isPrimary
-                ? null
-                : Border.all(
-              color: customBorderColor ?? const Color(0xFFF1F5F9),
-              width: 1.2,
+        border: border,
+        boxShadow: boxShadow,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                // 아이콘 박스
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: iconBgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: iconColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // 텍스트 영역
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: titleColor,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: subtitleColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            boxShadow: isPrimary
-                ? [
-              BoxShadow(
-                color: AppTheme.primarySky.withValues(alpha: 0.35),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              )
-            ]
-                : [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
-              )
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isPrimary
-                      ? Colors.white.withValues(alpha: 0.2)
-                      : (iconBgColor ?? const Color(0xFFF1F5F9)),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  icon,
-                  size: 22,
-                  color: isPrimary
-                      ? Colors.white
-                      : (iconColor ?? const Color(0xFF0F172A)),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                        color: isPrimary
-                            ? Colors.white
-                            : (titleColor ?? const Color(0xFF0F172A)),
-                      ),
-                    ),
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isPrimary
-                            ? Colors.white.withValues(alpha: 0.8)
-                            : const Color(0xFF94A3B8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
           ),
         ),
       ),
     );
   }
+
 }
 
 // =============================================================================

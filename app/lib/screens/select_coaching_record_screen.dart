@@ -429,12 +429,12 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
 
   Color _getCircleBgColor(int setCount, bool isSelected, bool isToday) {
     if (setCount == 0) {
-      return isToday ? AppTheme.primarySky.withValues(alpha: 0.15) : AppTheme.lightBackground;
+      return isToday ? AppTheme.primarySky.withValues(alpha: 0.18) : AppTheme.lightBackground;
     }
-    if (setCount == 1) return const Color(0xFFEFF6FF);
-    if (setCount == 2) return const Color(0xFFBFDBFE);
-    if (setCount == 3) return const Color(0xFF60A5FA);
-    if (setCount == 4) return const Color(0xFF2563EB);
+    if (setCount == 1) return const Color(0xFFDBEAFE);
+    if (setCount == 2) return const Color(0xFF93C5FD);
+    if (setCount == 3) return const Color(0xFF3B82F6);
+    if (setCount == 4) return const Color(0xFF1D4ED8);
     return const Color(0xFF1E3A8A);
   }
 

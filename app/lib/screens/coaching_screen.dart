@@ -334,7 +334,6 @@ class _ActionButtonsState extends State<_ActionButtons>
   @override
   void initState() {
     super.initState();
-    // 호흡 주기 애니메이션 (1.2초 간격 무한 반복)
     _breathController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -358,10 +357,10 @@ class _ActionButtonsState extends State<_ActionButtons>
 
     return Row(
       children: [
-        // 1. 좌측 버튼: 서버 기록 보기
+        // ── 1. 좌측 버튼: 서버 기록 보기 ───────────────────────────────────
         Expanded(
           child: Container(
-            height: 52,
+            height: 64,
             decoration: BoxDecoration(
               color: const Color(0xFFF8FAFC),
               borderRadius: BorderRadius.circular(18),
@@ -385,27 +384,50 @@ class _ActionButtonsState extends State<_ActionButtons>
                 borderRadius: BorderRadius.circular(18),
                 splashColor: AppTheme.primarySky.withValues(alpha: 0.15),
                 highlightColor: AppTheme.primarySky.withValues(alpha: 0.08),
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.history_rounded,
-                        size: 18,
-                        color: AppTheme.primarySky,
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primarySky.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.history_rounded,
+                          size: 20,
+                          color: AppTheme.primarySky,
+                        ),
                       ),
-                      const SizedBox(width: 6),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          "서버 기록 보기",
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primarySky,
-                          ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                "서버 기록 보기",
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primarySky,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "SERVER HISTORY",
+                              style: TextStyle(
+                                fontSize: 7,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primarySky.withValues(alpha: 0.7),
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -418,7 +440,7 @@ class _ActionButtonsState extends State<_ActionButtons>
 
         const SizedBox(width: 10),
 
-        // 2. 우측 버튼: AI 분석 요청 (그림자 호흡 애니메이션 적용)
+        // ── 2. 우측 버튼: AI 분석 요청 (호흡 애니메이션) ───────────────────────
         Expanded(
           child: AnimatedBuilder(
             animation: _breathAnimation,
@@ -426,7 +448,7 @@ class _ActionButtonsState extends State<_ActionButtons>
               final double breathValue = _breathAnimation.value;
 
               return Container(
-                height: 52,
+                height: 64,
                 decoration: BoxDecoration(
                   gradient: isEnabled
                       ? const LinearGradient(
@@ -474,34 +496,62 @@ class _ActionButtonsState extends State<_ActionButtons>
                     child: InkWell(
                       onTap: isEnabled ? widget.onRequestCoaching : null,
                       borderRadius: BorderRadius.circular(isEnabled ? 16.0 : 18),
-                      child: Container(
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(
-                              Icons.auto_awesome,
-                              color: isEnabled
-                                  ? const Color(0xFF0284C7).withValues(
-                                  alpha: 0.75 + (breathValue * 0.25))
-                                  : const Color(0xFF94A3B8),
-                              size: 18,
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: isEnabled
+                                    ? const Color(0xFF0284C7).withValues(
+                                    alpha: 0.1 + (breathValue * 0.08))
+                                    : const Color(0xFFCBD5E1).withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.auto_awesome,
+                                size: 20,
+                                color: isEnabled
+                                    ? const Color(0xFF0284C7).withValues(
+                                    alpha: 0.75 + (breathValue * 0.25))
+                                    : const Color(0xFF94A3B8),
+                              ),
                             ),
-                            const SizedBox(width: 6),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                widget.selectedUuids.isNotEmpty
-                                    ? "AI 분석 요청 (${widget.selectedUuids.length})"
-                                    : "AI 분석 요청",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: isEnabled
-                                      ? const Color(0xFF0284C7)
-                                      : const Color(0xFF94A3B8),
-                                ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text(
+                                      widget.selectedUuids.isNotEmpty
+                                          ? "AI 분석 요청 (${widget.selectedUuids.length})"
+                                          : "AI 분석 요청",
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: isEnabled
+                                            ? const Color(0xFF0284C7)
+                                            : const Color(0xFF94A3B8),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    "AI COACHING",
+                                    style: TextStyle(
+                                      fontSize: 7,
+                                      fontWeight: FontWeight.w600,
+                                      color: isEnabled
+                                          ? const Color(0xFF0284C7).withValues(alpha: 0.7)
+                                          : const Color(0xFF94A3B8),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],

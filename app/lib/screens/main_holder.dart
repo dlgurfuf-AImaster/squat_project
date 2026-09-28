@@ -20,13 +20,23 @@ class MainHolder extends StatefulWidget {
 
 class _MainHolderState extends State<MainHolder> {
   // Index 매칭: 0(홈), 1(연결), 2(운동), 3(기록), 4(AI 코칭)
-  final List<Widget> _pages = const [
+  static const List<Widget> _pages = [
     HomeScreen(),          // Index 0
     ArduinoStatusScreen(), // Index 1
     SquatScreen(),         // Index 2
     RecordHistoryScreen(), // Index 3
     CoachingScreen(),      // Index 4
   ];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 탭 바 아이콘 이미지 사전 로딩
+    precacheImage(
+      const AssetImage('assets/images/main_icon.png'),
+      context,
+    );
+  }
 
   /// 탭 이동 처리 메서드
   void _onTabSelected(int index, CoachingProvider coachingProvider) {
@@ -73,29 +83,27 @@ class _MainHolderState extends State<MainHolder> {
 
   @override
   Widget build(BuildContext context) {
-    final coachingProvider = Provider.of<CoachingProvider>(context);
+    final coachingProvider = context.watch<CoachingProvider>();
     final currentIndex = coachingProvider.currentTabIndex;
 
     return PopScope(
-      canPop: false, // 시스템 기본 앱 종료 제어
+      canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        // 1. 현재 탭이 홈(0번)이 아니라면 홈 탭으로 이동
         if (currentIndex != 0) {
           coachingProvider.setTabIndex(0);
           return;
         }
 
-        // 2. 이미 홈 탭인 경우 종료 확인 다이얼로그 표시
         final shouldExit = await _showExitDialog();
         if (shouldExit && context.mounted) {
-          SystemNavigator.pop(); // 앱 종료
+          SystemNavigator.pop();
         }
       },
       child: Scaffold(
         backgroundColor: AppTheme.lightBackground,
-        extendBody: true, // 바텀바 뒤로 본문이 자연스럽게 비치도록 확장
+        extendBody: true,
         body: IndexedStack(
           index: currentIndex,
           children: _pages,
@@ -105,12 +113,12 @@ class _MainHolderState extends State<MainHolder> {
     );
   }
 
-  /// 플로팅 모던 바텀 네비게이션 바
+  /// 플로팅 모던 바텀 네비게이션 바 (Custom Row 방식)
   Widget _buildFloatingNavigationBar(CoachingProvider coachingProvider, int currentIndex) {
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
-        height: 68,
+        height: 64,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
@@ -127,59 +135,85 @@ class _MainHolderState extends State<MainHolder> {
             filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Container(
               color: Colors.white.withValues(alpha: 0.88),
-              child: Theme(
-                data: Theme.of(context).copyWith(
-                  splashColor: Colors.transparent,
-                  highlightColor: Colors.transparent,
-                ),
-                child: BottomNavigationBar(
-                  currentIndex: currentIndex,
-                  type: BottomNavigationBarType.fixed,
-                  backgroundColor: Colors.transparent,
-                  selectedItemColor: AppTheme.primarySky,
-                  unselectedItemColor: const Color(0xFF94A3B8),
-                  selectedFontSize: 11,
-                  unselectedFontSize: 11,
-                  elevation: 0,
-                  onTap: (index) => _onTabSelected(index, coachingProvider),
-                  items: [
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.home_rounded),
-                      label: '홈',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.bluetooth_rounded),
-                      label: '연결',
-                    ),
-                    // 가운데 운동(스쿼트) 탭 강조 포인트
-                    BottomNavigationBarItem(
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: currentIndex == 2
-                              ? AppTheme.primarySky
-                              : AppTheme.primarySky.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.fitness_center_rounded,
-                          color: currentIndex == 2 ? Colors.white : AppTheme.primarySky,
-                          size: 20,
-                        ),
+              child: Row(
+                children: [
+                  _buildNavItem(Icons.home_rounded, 0, currentIndex, coachingProvider),
+                  _buildNavItem(Icons.bluetooth_rounded, 1, currentIndex, coachingProvider),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => _onTabSelected(2, coachingProvider),
+                      behavior: HitTestBehavior.opaque,
+                      child: Center(
+                        child: _buildCenterSquatIcon(currentIndex == 2),
                       ),
-                      label: '운동',
                     ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.bar_chart_rounded),
-                      label: '기록',
-                    ),
-                    const BottomNavigationBarItem(
-                      icon: Icon(Icons.auto_awesome_rounded),
-                      label: 'AI 코칭',
-                    ),
-                  ],
-                ),
+                  ),
+                  _buildNavItem(Icons.bar_chart_rounded, 3, currentIndex, coachingProvider),
+                  _buildNavItem(Icons.auto_awesome_rounded, 4, currentIndex, coachingProvider),
+                ],
               ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 일반 아이콘 탭 아이템
+  Widget _buildNavItem(
+      IconData icon,
+      int index,
+      int currentIndex,
+      CoachingProvider coachingProvider,
+      ) {
+    final bool isSelected = currentIndex == index;
+
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onTabSelected(index, coachingProvider),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Center(
+          child: Icon(
+            icon,
+            size: 24,
+            color: isSelected ? AppTheme.primarySky : const Color(0xFF94A3B8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 중앙 스쿼트 강조 아이콘 위젯
+  Widget _buildCenterSquatIcon(bool isSelected) {
+    return Transform.translate(
+      offset: const Offset(0, -2),
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primarySky
+              : AppTheme.primarySky.withValues(alpha: 0.12),
+          shape: BoxShape.circle,
+          boxShadow: isSelected
+              ? [
+            BoxShadow(
+              color: AppTheme.primarySky.withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ]
+              : null,
+        ),
+        child: Center(
+          child: Transform.translate(
+            offset: const Offset(1, 0),
+            child: Image.asset(
+              'assets/images/main_icon.png',
+              width: 38,
+              height: 38,
+              color: isSelected ? Colors.white : AppTheme.primarySky,
             ),
           ),
         ),
