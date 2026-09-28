@@ -31,6 +31,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 이미지 사전 로딩 (첫 프레임 어두워짐 방지)
+    precacheImage(
+      const AssetImage('assets/images/main_icon.png'),
+      context,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final btProvider = context.watch<BluetoothProvider>();
     final squatProvider = context.watch<SquatProvider>();
@@ -58,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 weeklyTotalReps: stats.weeklyTotalReps,
                 maxReps: stats.maxRepsInSingle,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 15),
 
               // 3. 상단 문구 + 버튼 통합 영역
               MotivationalBanner(
@@ -67,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   isBTConnected: isBTConnected,
                 ),
               ),
-
               const SizedBox(height: 10),
 
               // 4. 3D 주간 스쿼트 리포트 (실데이터 연결)[cite: 4]
@@ -397,7 +406,7 @@ class _DrawerMenuItem extends StatelessWidget {
 }
 
 // =============================================================================
-// 3. 주간 연속 및 목표 달성 칩 배지 그룹 (동적 파라미터로 수정)
+// 3. 주간 연속 및 목표 달성 칩 배지 그룹 (동적 조건부 이모지 적용)
 // =============================================================================
 class _HomeStatBadges extends StatelessWidget {
   final int streakDays;
@@ -410,14 +419,29 @@ class _HomeStatBadges extends StatelessWidget {
     required this.maxReps,
   });
 
+  String get _streakFormattedText {
+    if (streakDays == 0) {
+      return "오늘 시작!";
+    } else if (streakDays < 4) {
+      return "${streakDays}일 연속";
+    } else {
+      return "🔥 ${streakDays}일 연속";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.start,
       children: [
-        _PillChip(text: "🔥 ${streakDays}일 연속"),
-        _PillChip(text: "💪 ${weeklyTotalReps}회 / 주"),
-        _PillChip(text: "🏆 최고 ${maxReps}개"),
+        _PillChip(
+          text: _streakFormattedText,
+          isHighlighted: streakDays >= 4,
+        ),
+        SizedBox(width: 5),
+        _PillChip(text: "총 ${weeklyTotalReps}회 / 주"),
+        SizedBox(width: 5),
+        _PillChip(text: "주간 PR ${maxReps}회"),
       ],
     );
   }
@@ -425,29 +449,38 @@ class _HomeStatBadges extends StatelessWidget {
 
 class _PillChip extends StatelessWidget {
   final String text;
+  final bool isHighlighted; // 4일 이상 연속 시 강조 여부
 
-  const _PillChip({required this.text});
+  const _PillChip({
+    required this.text,
+    this.isHighlighted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isHighlighted ? const Color(0xFFFEF2F2) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.2),
+        border: Border.all(
+          color: isHighlighted ? const Color(0xFFEF4444) : const Color(0xFFF1F5F9),
+          width: isHighlighted ? 1.5 : 1.2,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 6,
+            color: isHighlighted
+                ? const Color(0xFFEF4444).withValues(alpha: 0.28)
+                : Colors.black.withValues(alpha: 0.02),
+            blurRadius: isHighlighted ? 8 : 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 13,
+        style: TextStyle(
+          fontSize: 12,
           fontWeight: FontWeight.bold,
           color: Color(0xFF334155),
         ),
@@ -477,8 +510,8 @@ class _HomeGridMenu extends StatelessWidget {
             Expanded(
               child: _ActionCard(
                 title: "운동하기",
-                subtitle: "Start Workout",
-                icon: Icons.show_chart_rounded,
+                subtitle: "Start Squat",
+                imagePath: "assets/images/main_icon.png",
                 isPrimary: true,
                 onTap: () => coachingProvider.setTabIndex(2),
               ),
@@ -533,7 +566,8 @@ class _HomeGridMenu extends StatelessWidget {
 class _ActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
-  final IconData icon;
+  final IconData? icon;
+  final String? imagePath;
   final VoidCallback onTap;
   final bool isPrimary;
   final Color? iconBgColor;
@@ -542,7 +576,8 @@ class _ActionCard extends StatelessWidget {
   const _ActionCard({
     required this.title,
     required this.subtitle,
-    required this.icon,
+    this.icon,
+    this.imagePath,
     required this.onTap,
     this.isPrimary = false,
     this.iconBgColor,
@@ -589,17 +624,34 @@ class _ActionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    width: 38,
+                    height: 38,
+                    alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isPrimary
                           ? Colors.white.withValues(alpha: 0.2)
                           : (iconBgColor ?? const Color(0xFFF1F5F9)),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
+                    child: imagePath != null
+                        ? Transform.translate(
+                      offset: const Offset(1.0, 0.0),
+                      child: Image.asset(
+                        imagePath!,
+                        width: 38,
+                        height: 38,
+                        fit: BoxFit.contain,
+                        color: isPrimary
+                            ? Colors.white
+                            : (iconColor ?? const Color(0xFF0F172A)),
+                      ),
+                    )
+                        : Icon(
                       icon,
                       size: 22,
-                      color: isPrimary ? Colors.white : (iconColor ?? const Color(0xFF0F172A)),
+                      color: isPrimary
+                          ? Colors.white
+                          : (iconColor ?? const Color(0xFF0F172A)),
                     ),
                   ),
                   Column(
@@ -616,7 +668,7 @@ class _ActionCard extends StatelessWidget {
                       const SizedBox(height: 1),
                       Text(
                         subtitle,
-                        style: TextStyle(
+                        style: GoogleFonts.dmSans(
                           fontSize: 11,
                           color: isPrimary
                               ? Colors.white.withValues(alpha: 0.8)
@@ -658,11 +710,11 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
   static const Curve appCubicCurve = Cubic(0.22, 1.0, 0.36, 1.0);
 
   final List<String> _quotes = [
-    "오늘의 한계가\n내일의 시작이다",
-    "스쿼트 하나가\n모든 걸 바꾼다",
-    "땀은\n거짓말하지 않는다",
-    "포기하는 순간\n성장도 멈춘다",
-    "강해지고 싶다면\n지금 시작하라",
+    "오늘의 한계를 넘어\n내일의 나를 만나다",
+    "한 번 더 내딛는 순간\n변화가 시작된다",
+    "지금의 노력이 쌓여\n더 강한 내가 된다",
+    "조금 더 깊게\n조금 더 천천히",
+    "오늘도 끝까지 해내면\n어제보다 강해진다",
   ];
 
   @override
@@ -758,7 +810,7 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
           ),
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 75.0),
+          padding: const EdgeInsets.only(top: 83.0),
           child: widget.child,
         ),
       ],
@@ -767,11 +819,11 @@ class _MotivationalBannerState extends State<MotivationalBanner> {
 }
 
 // =============================================================================
-// 6. 3D 아이소메트릭 차트 카드 (실데이터 파라미터 수신하도록 변경)
+// 6. 3D 아이소메트릭 차트 카드 (정적 액자형 Empty State)
 // =============================================================================
 class IsometricVerticalChart extends StatelessWidget {
-  final List<int> counts; // [월, 화, 수, 목, 금, 토, 일] 7개 데이터[cite: 4]
-  final int todayIndex;   // 0(월) ~ 6(일)[cite: 4]
+  final List<int> counts; // [월, 화, 수, 목, 금, 토, 일] 7개 데이터
+  final int todayIndex;   // 0(월) ~ 6(일)
 
   const IsometricVerticalChart({
     super.key,
@@ -782,6 +834,7 @@ class IsometricVerticalChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const List<String> days = ["월", "화", "수", "목", "금", "토", "일"];
+    final bool isEmpty = counts.every((count) => count == 0);
 
     // 이번 주 일일 최댓값을 기반으로 차트 비율 계산 (최소 30회 기준)
     final int maxInWeek = counts.reduce((a, b) => a > b ? a : b);
@@ -848,10 +901,61 @@ class IsometricVerticalChart extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
+
           SizedBox(
-            height: 145,
-            child: Row(
+            height: 135,
+            child: isEmpty
+                ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (Rect bounds) {
+                      return LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppTheme.primarySky.withValues(alpha: 0.95),
+                          AppTheme.primarySky.withValues(alpha: 0.35),
+                        ],
+                      ).createShader(bounds);
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: const [
+                        Text(
+                          "이번 주 첫 스쿼트,",
+                          textAlign: TextAlign.left,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
+                            letterSpacing: -0.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          "시작해볼까요?",
+                          textAlign: TextAlign.right,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            height: 1.25,
+                            letterSpacing: -0.5,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: List.generate(7, (index) {
@@ -870,7 +974,9 @@ class IsometricVerticalChart extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: isToday ? const Color(0xFF0284C7) : const Color(0xFF64748B),
+                          color: isToday
+                              ? const Color(0xFF0284C7)
+                              : const Color(0xFF64748B),
                         ),
                       )
                           : const SizedBox.shrink(),
@@ -891,7 +997,9 @@ class IsometricVerticalChart extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
-                        color: isToday ? const Color(0xFF0284C7) : const Color(0xFF94A3B8),
+                        color: isToday
+                            ? const Color(0xFF0284C7)
+                            : const Color(0xFF94A3B8),
                       ),
                     ),
                   ],
