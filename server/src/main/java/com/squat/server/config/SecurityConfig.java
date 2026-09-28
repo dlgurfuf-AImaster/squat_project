@@ -61,9 +61,9 @@ public class SecurityConfig {
 
                 // URL 회원가입과 로그인만 무조건 허용
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/user/**").permitAll() // 로그인,회원가입은 허용
+                        .requestMatchers("/api/v1/user/signup", "/api/v1/user/login").permitAll() // signup, login만 허용
                         .requestMatchers("/api/v1/squat/**").authenticated() // 스쿼트 기록은 JWT
-                        .anyRequest().authenticated() // 나머지는 차단
+                        .anyRequest().authenticated() // /api/v1/user/profile을 포함한 나머지는 JWT 인증 필요
                 )
 
                 // 기본 필터 작동 직전 JwtFilter를 통과하도록 함

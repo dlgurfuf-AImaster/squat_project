@@ -9,6 +9,7 @@ import '../dtos/login_response.dart';
 import '../dtos/signup_request.dart';
 import '../dtos/squat_workout_request.dart';
 import '../dtos/squat_workout_response.dart';
+import '../models/user_model.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -242,6 +243,62 @@ class ApiService {
       return response.statusCode == 200 || response.statusCode == 204;
     } catch (e) {
       print("❌ 서버 기록 삭제 에러: $e");
+      return false;
+    }
+  }
+
+  /// 8. 로그아웃 (저장된 토큰 및 유저 정보 삭제)
+  Future<void> logout() async {
+    await _storage.delete(key: 'jwt_token');
+    await _storage.delete(key: 'user_name');
+  }
+
+  /// 9. 보안 저장소에 남아있는 유저 정보로 UserModel 복원 (앱 재실행 / 자동 로그인용)
+  Future<UserModel?> getSavedUser() async {
+    final token = await getToken();
+    final name = await getUserName();
+
+    if (token != null && name != null) {
+      return UserModel(
+        id: 0, // 저장소에 id가 없다면 기본값 처리
+        username: '',
+        name: name,
+      );
+    }
+    return null;
+  }
+
+  /// 10. 프로필(닉네임) 수정 요청
+  Future<bool> updateNickname(String newName) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        print("❌ 저장된 JWT 토큰이 없습니다.");
+        return false;
+      }
+
+      final response = await _dio.put(
+        "/user/profile",
+        data: {
+          "name": newName,
+        },
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+          },
+          receiveTimeout: const Duration(seconds: 5),
+          sendTimeout: const Duration(seconds: 5),
+        ),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        await _storage.write(key: 'user_name', value: newName);
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      print("❌ 닉네임 변경 통신 에러: $e");
       return false;
     }
   }
