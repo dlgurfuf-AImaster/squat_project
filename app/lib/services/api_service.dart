@@ -247,8 +247,8 @@ class ApiService {
     }
   }
 
-  /// 8. 로그아웃 (저장된 토큰 및 유저 정보 삭제)
-  Future<void> logout() async {
+  /// 8. 로컬 인증 정보 삭제
+  Future<void> clearLocalAuth() async {
     await _storage.delete(key: 'jwt_token');
     await _storage.delete(key: 'user_name');
   }
@@ -284,7 +284,7 @@ class ApiService {
       print('자동 로그인 실패: $e');
 
       // JWT가 만료되었거나 잘못된 경우
-      await logout();
+      await clearLocalAuth();
 
       return null;
     }
@@ -322,6 +322,29 @@ class ApiService {
     } catch (e) {
       print("❌ 닉네임 변경 통신 에러: $e");
       return false;
+    }
+  }
+
+  /// 11. 서버 로그아웃
+  Future<void> logout() async {
+    final token = await getToken();
+
+    try {
+      if (token != null && token.isNotEmpty) {
+        await _dio.post(
+          '/user/logout',
+          options: Options(
+            headers: {
+              'Authorization': 'Bearer $token',
+            },
+          ),
+        );
+      }
+    } catch (e) {
+      print("서버 로그아웃 통신 에러: $e");
+    } finally {
+      // 서버 요청 성공 여부와 관계없이 로컬 인증 정보 삭제
+      await clearLocalAuth();
     }
   }
 
