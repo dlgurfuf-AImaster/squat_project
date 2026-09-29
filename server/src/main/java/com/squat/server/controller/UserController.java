@@ -57,4 +57,18 @@ public class UserController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // 현재 로그인한 사용자 정보 조회 (자동 로그인용)
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyProfile(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        try {
+            return ResponseEntity.ok(
+                    userService.getMyProfile(userDetails.getUsername())
+            );
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
