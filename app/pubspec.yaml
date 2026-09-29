@@ -41,6 +41,7 @@ dependencies:
   uuid: ^4.5.1
   table_calendar: ^3.1.2
   google_fonts: ^6.1.0
+  flutter_native_splash: ^2.4.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -50,7 +51,6 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0 # 원래 있던 lints 패키지를 dev_dependencies 하위로 배치
   flutter_launcher_icons: ^0.13.1
-  flutter_native_splash: ^2.4.1
 
 flutter_launcher_icons:
   android: true
