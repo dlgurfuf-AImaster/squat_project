@@ -253,19 +253,41 @@ class ApiService {
     await _storage.delete(key: 'user_name');
   }
 
-  /// 9. 보안 저장소에 남아있는 유저 정보로 UserModel 복원 (앱 재실행 / 자동 로그인용)
-  Future<UserModel?> getSavedUser() async {
-    final token = await getToken();
-    final name = await getUserName();
+  /// 9. 자동 로그인
+  Future<UserModel?> restoreLogin() async {
+    try {
+      final token = await getToken();
 
-    if (token != null && name != null) {
-      return UserModel(
-        id: 0, // 저장소에 id가 없다면 기본값 처리
-        username: '',
-        name: name,
+      // 저장된 JWT가 없으면 로그인하지 않은 상태
+      if (token == null || token.isEmpty) {
+        return null;
+      }
+
+      // JWT를 서버에 보내 현재 사용자 정보 확인
+      final response = await _dio.get(
+        '/user/me',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+          },
+        ),
       );
+
+      if (response.statusCode == 200 && response.data != null) {
+        return UserModel.fromJson(
+          response.data as Map<String, dynamic>,
+        );
+      }
+
+      return null;
+    } catch (e) {
+      print('자동 로그인 실패: $e');
+
+      // JWT가 만료되었거나 잘못된 경우
+      await logout();
+
+      return null;
     }
-    return null;
   }
 
   /// 10. 프로필(닉네임) 수정 요청
@@ -302,4 +324,5 @@ class ApiService {
       return false;
     }
   }
+
 }
