@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 public class JwtProvider {
@@ -31,6 +32,7 @@ public class JwtProvider {
         Date expiryDate = new Date(now.getTime() + expirationTime);
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -52,7 +54,7 @@ public class JwtProvider {
         }
     }
 
-    // 식별자 추출 메소드 ?? 다시 알아보기
+    // 유저 아이디 추출
     public String getUsername(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(secretKey)
@@ -61,5 +63,27 @@ public class JwtProvider {
                 .getPayload();
 
         return claims.getSubject(); // 저장한 유저 아이디 리턴
+    }
+
+    // JWT 고유 ID(jti) 추출
+    public String getJti(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.getId();
+    }
+
+    // JWT 만료시간 추출
+    public Date getExpiration(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(secretKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.getExpiration();
     }
 }
