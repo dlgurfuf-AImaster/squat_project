@@ -3,6 +3,7 @@ package com.squat.server.service;
 import com.squat.server.dto.LoginRequest;
 import com.squat.server.dto.LoginResponse;
 import com.squat.server.dto.SignupRequest;
+import com.squat.server.dto.UserResponse;
 import com.squat.server.jwt.JwtProvider;
 import com.squat.server.model.User;
 import com.squat.server.repository.UserRepository;
@@ -79,5 +80,13 @@ public class UserService {
 
         // 3. 닉네임 수정 (@Transactional에 의해 메서드 종료 시 DB에 자동 UPDATE)
         user.setName(newName.trim());
+    }
+
+    // 현재 로그인한 사용자 정보 조회
+    public UserResponse getMyProfile(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
+
+        return new UserResponse(user);
     }
 }

@@ -22,4 +22,10 @@ class UserProvider extends ChangeNotifier {
     );
     notifyListeners();
   }
+
+  // 유저 초기화 메소드
+  void clearUser() {
+    _user = UserModel.dummy();
+    notifyListeners();
+  }
 }

@@ -12,7 +12,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -79,9 +78,9 @@ public class SquatWorkoutController {
     // 4. 서버 운동 기록 삭제 API
     @DeleteMapping("/records/{uuid}")
     public ResponseEntity<Void> deleteRecordByUuid(
-            @PathVariable String uuid,
-            Principal principal) {
-        squatWorkoutService.deleteRecordByUuid(principal.getName(), uuid);
+            @AuthenticationPrincipal UserDetails userDetails, // 일관성 유지
+            @PathVariable String uuid) {
+        squatWorkoutService.deleteRecordByUuid(userDetails.getUsername(), uuid);
         return ResponseEntity.ok().build();
     }
 }

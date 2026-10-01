@@ -158,6 +158,16 @@ class SquatProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// 전체 로컬 기록 삭제
+  Future<void> clearLocalRecords() async {
+    await DatabaseHelper.instance.deleteAllRecords();
+
+    _localRecords = [];
+
+    notifyListeners();
+  }
+
+
   /// 🧪 [테스트용] 더미 스쿼트 데이터 30개 생성 후 실시간 상태 갱신
   Future<void> generateDummyRecords() async {
     try {
@@ -171,5 +181,7 @@ class SquatProvider with ChangeNotifier {
       print("❌ 더미 데이터 생성 중 에러 발생: $e");
     }
   }
+
+
 
 }

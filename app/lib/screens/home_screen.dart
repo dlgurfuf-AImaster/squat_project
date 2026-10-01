@@ -7,9 +7,11 @@ import '../providers/bluetooth_provider.dart';
 import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stat_calculator.dart';
 import 'edit_profile_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -318,14 +320,185 @@ class _ProfileDrawer extends StatelessWidget {
                   top: BorderSide(color: Color(0xFFF8FAFC), width: 1.5),
                 ),
               ),
-              child: Text(
-                "Health Coach v1.0.0",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                  fontSize: 10,
-                  color: const Color(0xFFCBD5E1),
-                  letterSpacing: 0.4,
-                ),
+              child: Column(
+                children: [
+                  _DrawerMenuItem(
+                    icon: Icons.logout_rounded,
+                    iconBg: const Color(0x1FEF4444),
+                    iconColor: const Color(0xFFEF4444),
+                    label: "로그아웃",
+                    subLabel: "계정에서 로그아웃",
+                    onTap: () async {
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 경고 아이콘
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.warning_rounded,
+                                    color: Color(0xFFEF4444),
+                                    size: 30,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 18),
+
+                                // 제목
+                                const Text(
+                                  '로그아웃하시겠습니까?',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // 설명
+                                const Text(
+                                  '이 기기에 저장된 운동 기록이 삭제될 수 있습니다.',
+                                  style: TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // 주의사항 박스
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    '서버에 동기화되지 않은 기록은\n'
+                                        '로그아웃 후 복구할 수 없습니다.',
+                                    style: TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 13,
+                                      height: 1.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+
+                            actions: [
+                              Row(
+                                children: [
+                                  // 취소 버튼
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(false);
+                                      },
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 13),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '취소',
+                                        style: TextStyle(
+                                          color: Colors.black54,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 10),
+
+                                  // 로그아웃 버튼
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(true);
+                                      },
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: const Color(0xFFEF4444),
+                                        padding: const EdgeInsets.symmetric(vertical: 13),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '로그아웃',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (shouldLogout != true) {
+                        return;
+                      }
+
+                      await context.read<SquatProvider>().clearLocalRecords();
+                      await ApiService().logout();
+
+                      if (!context.mounted) return;
+
+                      context.read<UserProvider>().clearUser();
+
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                            (route) => false,
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    "SquatMate v1.0.0",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 10,
+                      color: const Color(0xFFCBD5E1),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
