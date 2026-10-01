@@ -25,9 +25,8 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2, // DB 버전을 1에서 2로 업그레이드
+      version: 1,
       onCreate: _createDB,
-      onUpgrade: _onUpgrade, // 버전 업그레이드 마이그레이션 콜백 등록
     );
   }
 
@@ -45,15 +44,6 @@ class DatabaseHelper {
         is_synced INTEGER DEFAULT 0
       )
     ''');
-  }
-
-  // 기존 사용자를 위한 DB 마이그레이션 함수 (v1 -> v2 -> v3)
-  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 3) {
-      await db.execute(
-        'ALTER TABLE squat_records ADD COLUMN uuid TEXT',
-      );
-    }
   }
 
   // 📥 1. 스쿼트 운동 기록 1건 저장
