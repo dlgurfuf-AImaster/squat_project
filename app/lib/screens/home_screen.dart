@@ -7,9 +7,11 @@ import '../providers/bluetooth_provider.dart';
 import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
+import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/workout_stat_calculator.dart';
 import 'edit_profile_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -318,14 +320,75 @@ class _ProfileDrawer extends StatelessWidget {
                   top: BorderSide(color: Color(0xFFF8FAFC), width: 1.5),
                 ),
               ),
-              child: Text(
-                "Health Coach v1.0.0",
-                textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(
-                  fontSize: 10,
-                  color: const Color(0xFFCBD5E1),
-                  letterSpacing: 0.4,
-                ),
+              child: Column(
+                children: [
+                  _DrawerMenuItem(
+                    icon: Icons.logout_rounded,
+                    iconBg: const Color(0x1FEF4444),
+                    iconColor: const Color(0xFFEF4444),
+                    label: "로그아웃",
+                    subLabel: "계정에서 로그아웃",
+                    onTap: () async {
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (context) {
+                          return AlertDialog(
+                            title: const Text('로그아웃'),
+                            content: const Text(
+                              '로그아웃하면 이 기기에 저장된 운동 기록이 삭제될 수 있습니다.\n'
+                                  '특히 서버에 동기화되지 않은 기록은 복구할 수 없습니다.\n\n'
+                                  '로그아웃하시겠습니까?',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(false);
+                                },
+                                child: const Text('취소'),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(true);
+                                },
+                                child: const Text('로그아웃'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+
+                      if (shouldLogout != true) {
+                        return;
+                      }
+
+                      await context.read<SquatProvider>().clearLocalRecords();
+                      await ApiService().logout();
+
+                      if (!context.mounted) return;
+
+                      context.read<UserProvider>().clearUser();
+
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                            (route) => false,
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    "SquatMate v1.0.0",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 10,
+                      color: const Color(0xFFCBD5E1),
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
