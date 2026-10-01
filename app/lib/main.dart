@@ -102,6 +102,7 @@ class _MyAppState extends State<MyApp> {
       ),
       child: MaterialApp(
         title: 'SquatMate',
+        debugShowCheckedModeBanner: false,
         theme: AppTheme.darkTheme,
 
         home: widget.isLoggedIn
