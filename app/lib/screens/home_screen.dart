@@ -333,24 +333,134 @@ class _ProfileDrawer extends StatelessWidget {
                         context: context,
                         builder: (context) {
                           return AlertDialog(
-                            title: const Text('로그아웃'),
-                            content: const Text(
-                              '로그아웃하면 이 기기에 저장된 운동 기록이 삭제될 수 있습니다.\n'
-                                  '특히 서버에 동기화되지 않은 기록은 복구할 수 없습니다.\n\n'
-                                  '로그아웃하시겠습니까?',
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
+                            contentPadding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // 경고 아이콘
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.warning_rounded,
+                                    color: Color(0xFFEF4444),
+                                    size: 30,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 18),
+
+                                // 제목
+                                const Text(
+                                  '로그아웃하시겠습니까?',
+                                  style: TextStyle(
+                                    color: Colors.black87,
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // 설명
+                                const Text(
+                                  '이 기기에 저장된 운동 기록이 삭제될 수 있습니다.',
+                                  style: TextStyle(
+                                    color: Colors.black54,
+                                    fontSize: 14,
+                                    height: 1.5,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+
+                                const SizedBox(height: 12),
+
+                                // 주의사항 박스
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEF4444).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    '서버에 동기화되지 않은 기록은\n'
+                                        '로그아웃 후 복구할 수 없습니다.',
+                                    style: TextStyle(
+                                      color: Color(0xFFEF4444),
+                                      fontSize: 13,
+                                      height: 1.5,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+
                             actions: [
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop(false);
-                                },
-                                child: const Text('취소'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop(true);
-                                },
-                                child: const Text('로그아웃'),
+                              Row(
+                                children: [
+                                  // 취소 버튼
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(false);
+                                      },
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 13),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '취소',
+                                        style: TextStyle(
+                                          color: Colors.black54,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 10),
+
+                                  // 로그아웃 버튼
+                                  Expanded(
+                                    child: TextButton(
+                                      onPressed: () {
+                                        Navigator.of(context).pop(true);
+                                      },
+                                      style: TextButton.styleFrom(
+                                        backgroundColor: const Color(0xFFEF4444),
+                                        padding: const EdgeInsets.symmetric(vertical: 13),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        '로그아웃',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           );
