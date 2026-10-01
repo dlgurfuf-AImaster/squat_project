@@ -91,6 +91,13 @@ class DatabaseHelper {
     );
   }
 
+  // 5. 전체 로컬 기록 삭제
+  Future<int> deleteAllRecords() async {
+    final db = await instance.database;
+
+    return await db.delete('squat_records');
+  }
+
   /// TODO 🧪 [테스트용] 로컬 DB에 더미 스쿼트 데이터 30개 생성 (is_synced = 0) (삭제할 것)
   Future<void> insertDummyRecords() async {
     final random = Random();
