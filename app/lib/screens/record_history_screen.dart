@@ -1120,7 +1120,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     const Color successColor = Color(0xFF10B981);
     const Color waistColor = Color(0xFFF59E0B);
     const Color depthColor = Color(0xFFF97316);
-    const Color morningColor = Color(0xFFEF4444);
+    const Color fastRepColor = Color(0xFFEF4444);
 
     final int totalCount = record.successCount +
         record.waistErrorCount +
@@ -1207,7 +1207,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                   const SizedBox(width: 4),
                   _buildRecordStatBadge("얕은깊이", "${record.depthErrorCount}회", depthColor),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("상체선행", "${record.fastRepCount}회", morningColor),
+                  _buildRecordStatBadge("빠른수행", "${record.fastRepCount}회", fastRepColor),
                 ],
               ),
             ],

@@ -463,7 +463,7 @@ class _SquatCounterCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           _CountRow(
-            label: "상체 선행",
+            label: "빠른 수행",
             count: squat.fastRepCount,
             color: const Color(0xFFEF4444),
           ),

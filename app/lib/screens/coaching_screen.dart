@@ -773,7 +773,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                               icon: Icons.arrow_downward_rounded,
                             ),
                             _MetricTile(
-                              label: '상체 선행',
+                              label: '빠른 수행',
                               count: coaching.totalFastRepCount,
                               color: const Color(0xFFEF4444),
                               icon: Icons.trending_up_rounded,
