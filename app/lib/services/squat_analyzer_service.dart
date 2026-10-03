@@ -27,11 +27,13 @@ class SquatAnalyzerService {
     double cleanThigh = thighAngle.clamp(0.0, 180.0);
     double cleanWaist = waistAngle.clamp(0.0, 180.0);
 
-    String message = previousData.status;
+    int total = previousData.totalCount;
     int success = previousData.successCount;
     int waistErr = previousData.waistErrorCount;
     int depthErr = previousData.depthErrorCount;
     int fastRepErr = previousData.fastRepCount;
+
+    String message = previousData.status;
 
     // ============================================================
     // 1. 스쿼트 시작 감지
@@ -73,6 +75,13 @@ class SquatAnalyzerService {
     // ============================================================
     if (cleanThigh <= _completelyStandThreshold &&
         _isCurrentlyExercising) {
+
+      // ------------------------------------------------------------
+      // 전체 스쿼트 횟수
+      // sit-down → stand-up 한 번이 완료되는 순간 정확히 1회 증가
+      // ------------------------------------------------------------
+      total++;
+
       bool hasAnyError = false;
       List<String> errorMessages = [];
 
@@ -88,7 +97,7 @@ class SquatAnalyzerService {
 
       // ------------------------------------------------------------
       // 빠른 수행
-      // 1회 수행 시간이 4초 미만이면 오류
+      // 1회 수행 시간이 3초 미만이면 오류
       // ------------------------------------------------------------
       if (repDuration < _minimumRepDuration) {
         _isFastRepErrorTriggered = true;
@@ -149,6 +158,7 @@ class SquatAnalyzerService {
       waistAngle: cleanWaist,
       thighAngle: cleanThigh,
       status: message,
+      totalCount: total,
       successCount: success,
       waistErrorCount: waistErr,
       depthErrorCount: depthErr,
