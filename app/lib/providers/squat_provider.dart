@@ -6,42 +6,80 @@ import '../models/squat_record.dart';
 import '../services/database_helper.dart';
 
 class SquatProvider with ChangeNotifier {
-  // 화면에 그릴 상태 데이터 계층 (상태값 캡슐화)
-  SquatData _data = SquatData(waistAngle: 0.0, thighAngle: 0.0);
+  // ================================================================
+  // 화면에 그릴 상태 데이터
+  // ================================================================
+  SquatData _data = SquatData(
+    waistAngle: 0.0,
+    thighAngle: 0.0,
+  );
+
   SquatData get data => _data;
 
+  // ================================================================
+  // 로컬 운동 기록
+  // ================================================================
   List<SquatRecord> _localRecords = [];
   List<SquatRecord> get localRecords => _localRecords;
 
+  // ================================================================
+  // 스쿼트 분석 서비스
+  // ================================================================
   final SquatAnalyzerService _analyzer = SquatAnalyzerService();
   SquatAnalyzerService get analyzer => _analyzer;
 
-  List<double>? _baseWaistVec; // 기준점(영점) 허리 벡터
-  List<double>? _baseThighVec; // 기준점(영점) 허벅지 벡터
+  // ================================================================
+  // 기준점(영점) 벡터
+  // ================================================================
+  List<double>? _baseWaistVec;
+  List<double>? _baseThighVec;
 
-  // 허리와 허벅지 독립 필터 인스턴스 멤버 변수로 추가 (alpha = 0.15)
+  // ================================================================
+  // 로우 패스 필터
+  // alpha가 낮을수록 더 부드럽지만 반응이 느려짐
+  // ================================================================
   final LowPassFilter _waistFilter = LowPassFilter(alpha: 0.15);
   final LowPassFilter _thighFilter = LowPassFilter(alpha: 0.15);
 
+  // ================================================================
+  // 데이터 수신 상태
+  // ================================================================
   bool _isReading = false;
   bool get isReading => _isReading;
 
-  /// 운동 시작 버튼 클릭 시 호출: 수신 창구를 개방하고 영점 세팅을 준비합니다.
+  // ================================================================
+  // 운동 시작
+  // ================================================================
   void startReading() {
     _isReading = true;
-    _baseWaistVec = null; // 기존 영점을 비워 차기 유입 데이터를 영점으로 잡도록 유도
+
+    // 기존 영점 제거
+    // 다음으로 들어오는 데이터를 새로운 영점으로 사용
+    _baseWaistVec = null;
     _baseThighVec = null;
+
+    // 이전 필터 상태 초기화
+    _waistFilter.reset();
+    _thighFilter.reset();
+
+    // 이전에 진행 중이던 스쿼트 상태 초기화
+    _analyzer.resetCurrentRepFlags();
   }
 
-  /// 블루투스 연결 해제 시 강제 셧다운 안전장치
+  // ================================================================
+  // 블루투스 연결 해제
+  // ================================================================
   void stopReadingOnDisconnect() {
     _isReading = false;
     _baseWaistVec = null;
     _baseThighVec = null;
 
-    // 연결 해제 시 필터 초기화
+    // 필터 초기화
     _waistFilter.reset();
     _thighFilter.reset();
+
+    // 진행 중이던 스쿼트 상태 초기화
+    _analyzer.resetCurrentRepFlags();
 
     _updateState(
       waist: 0.0,
@@ -50,37 +88,81 @@ class SquatProvider with ChangeNotifier {
     );
   }
 
-  /// 블루투스로부터 들어오는 3차원 원본 데이터를 받아 각도를 가공하는 코어 비즈니스 로직
-  void updateRawData(List<double> currentW, List<double> currentT) {
+  // ================================================================
+  // 블루투스 원본 데이터 처리
+  // ================================================================
+  void updateRawData(
+      List<double> currentW,
+      List<double> currentT,
+      ) {
     if (!_isReading) return;
 
-    // [영점 포착] 버튼이 눌린 후 처음 유입된 싱싱한 패킷을 기준점으로 고정
+    // ==============================================================
+    // 1. 영점 포착
+    // ==============================================================
     if (_baseWaistVec == null || _baseThighVec == null) {
       _baseWaistVec = currentW;
       _baseThighVec = currentT;
-      _updateState(status: "영점 세팅 완료!");
+
+      _updateState(
+        status: "영점 세팅 완료!",
+      );
+
       return;
     }
 
     try {
-      // 3차원 공간 벡터 삼각함수 연산을 통한 상대 각도 추출
-      double rawWAngle = _analyzer.calculateRelativeAngle(_baseWaistVec!, currentW);
-      double rawTAngle = _analyzer.calculateRelativeAngle(_baseThighVec!, currentT);
+      // ============================================================
+      // 2. 기준 벡터와 현재 벡터 사이의 상대 각도 계산
+      // ============================================================
+      double rawWAngle = _analyzer.calculateRelativeAngle(
+        _baseWaistVec!,
+        currentW,
+      );
 
-      // 로우 패스 필터를 통과시켜 노이즈가 제거된 부드러운 각도 획득
+      double rawTAngle = _analyzer.calculateRelativeAngle(
+        _baseThighVec!,
+        currentT,
+      );
+
+      // ============================================================
+      // 3. 로우 패스 필터 적용
+      // ============================================================
       double cleanWAngle = _waistFilter.filter(rawWAngle);
       double cleanTAngle = _thighFilter.filter(rawTAngle);
 
-      _data = _analyzer.analyze(_data, cleanWAngle, cleanTAngle);
+      // ============================================================
+      // 4. 스쿼트 분석
+      //
+      // 여기서 Analyzer가:
+      // - 허리 과숙임
+      // - 얕은 깊이
+      // - 빠른 수행
+      //
+      // 을 각각 독립적으로 판정한다.
+      // ============================================================
+      _data = _analyzer.analyze(
+        _data,
+        cleanWAngle,
+        cleanTAngle,
+      );
+
       notifyListeners();
     } catch (e) {
-      print("🚨 상대 각도 연산 및 자세 분석 도중 예외 발생: $e");
+      print(
+        "🚨 상대 각도 연산 및 자세 분석 도중 예외 발생: $e",
+      );
     }
   }
 
-  /// 순수 운동 카운트 및 피드백 통계만 초기화 (영점/각도는 유지)
+  // ================================================================
+  // 운동 카운트 및 피드백 통계만 초기화
+  //
+  // 영점과 연결 상태는 유지
+  // ================================================================
   void resetCountersOnly() {
     _analyzer.resetCurrentRepFlags();
+
     _data = _data.copyWith(
       successCount: 0,
       waistErrorCount: 0,
@@ -89,41 +171,57 @@ class SquatProvider with ChangeNotifier {
       status: "운동 기록 초기화",
       currentState: "STAND",
     );
+
     notifyListeners();
   }
 
-  /// 전역 상태 전면 리셋 (초기 공장 상태)
+  // ================================================================
+  // 전체 상태 리셋
+  // ================================================================
   void reset() {
     _isReading = false;
+
     _baseWaistVec = null;
     _baseThighVec = null;
 
-    // 전면 리셋 시 필터 상태도 함께 초기화
+    // 필터 상태 초기화
     _waistFilter.reset();
     _thighFilter.reset();
 
+    // Analyzer 상태 초기화
     _analyzer.resetCurrentRepFlags();
+
     _data = SquatData(
       waistAngle: 0.0,
       thighAngle: 0.0,
       status: "정지됨",
     );
+
     notifyListeners();
   }
 
-  /// 내부 상태 객체 일괄 갱신 헬퍼 메서드
-  void _updateState({double? waist, double? thigh, String? status}) {
+  // ================================================================
+  // 내부 상태 갱신 헬퍼
+  // ================================================================
+  void _updateState({
+    double? waist,
+    double? thigh,
+    String? status,
+  }) {
     _data = _data.copyWith(
       waistAngle: waist,
       thighAngle: thigh,
       status: status,
     );
-    notifyListeners(); // UI 계층 실시간 새로고침 전파
+
+    notifyListeners();
   }
 
-  /// 현재 진행된 운동 세션의 기록을 로컬 DB에 저장하는 메서드
+  // ================================================================
+  // 현재 운동 세션 기록 저장
+  // ================================================================
   Future<bool> saveCurrentSessionRecord() async {
-    // 1. 유효성 검사: 성공 횟수와 에러 횟수가 모두 0이면 저장하지 않음 (의미 없는 빈 기록 방지)
+    // 의미 있는 운동 기록이 없는 경우 저장하지 않음
     if (_data.successCount == 0 &&
         _data.waistErrorCount == 0 &&
         _data.depthErrorCount == 0 &&
@@ -133,32 +231,45 @@ class SquatProvider with ChangeNotifier {
     }
 
     try {
-      // 2. SquatData 객체에서 SquatRecord 객체로 변환
+      // SquatData → SquatRecord 변환
       final record = SquatRecord.fromSquatData(_data);
 
-      // 3. DatabaseHelper를 통해 SQLite DB에 Insert
-      final savedId = await DatabaseHelper.instance.insertRecord(record);
-      print("💾 스쿼트 기록이 DB에 성공적으로 저장되었습니다! (Record ID: $savedId)");
+      // SQLite DB에 저장
+      final savedId =
+      await DatabaseHelper.instance.insertRecord(record);
 
-      // 4. 저장 완료 후 현재 카운터만 0으로 초기화 (연결은 유지)
+      print(
+        "💾 스쿼트 기록이 DB에 성공적으로 저장되었습니다! "
+            "(Record ID: $savedId)",
+      );
+
+      // 저장 후 현재 카운터만 초기화
+      // 연결 및 영점은 유지
       resetCountersOnly();
 
+      // 최신 기록 다시 불러오기
       await loadLocalRecords();
 
-      return true; // 저장 성공 반환
+      return true;
     } catch (e) {
       print("❌ DB 저장 중 에러 발생: $e");
       return false;
     }
   }
 
-  /// 앱 내부 SQLite DB에서 전체 운동 기록 불러오기
+  // ================================================================
+  // 로컬 DB 전체 운동 기록 불러오기
+  // ================================================================
   Future<void> loadLocalRecords() async {
-    _localRecords = await DatabaseHelper.instance.getAllRecords();
+    _localRecords =
+    await DatabaseHelper.instance.getAllRecords();
+
     notifyListeners();
   }
 
-  /// 전체 로컬 기록 삭제
+  // ================================================================
+  // 로컬 운동 기록 전체 삭제
+  // ================================================================
   Future<void> clearLocalRecords() async {
     await DatabaseHelper.instance.deleteAllRecords();
 
@@ -167,21 +278,22 @@ class SquatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-
-  /// 🧪 [테스트용] 더미 스쿼트 데이터 30개 생성 후 실시간 상태 갱신
+  // ================================================================
+  // 테스트용 더미 기록 생성
+  // ================================================================
   Future<void> generateDummyRecords() async {
     try {
-      // 1. DatabaseHelper 실무 담당자에게 더미 데이터 30개 추가 요청
+      // 더미 데이터 생성
       await DatabaseHelper.instance.insertDummyRecords();
 
-      // 2. DB 작성이 끝났으므로 최신 데이터 재로드 및 notifyListeners() 전파
+      // 최신 데이터 다시 불러오기
       await loadLocalRecords();
-      print("🧪 더미 데이터 30개 생성 완료 및 홈 화면 UI 갱신 방송 송출!");
+
+      print(
+        "🧪 더미 데이터 30개 생성 완료 및 홈 화면 UI 갱신 방송 송출!",
+      );
     } catch (e) {
       print("❌ 더미 데이터 생성 중 에러 발생: $e");
     }
   }
-
-
-
 }

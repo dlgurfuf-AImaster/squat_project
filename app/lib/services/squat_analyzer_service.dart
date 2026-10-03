@@ -2,18 +2,22 @@ import 'dart:math';
 import '../models/squat_model.dart';
 
 class SquatAnalyzerService {
+  // 튜닝 파라미터
   final double _startSquatThreshold = 40.0;
   final double _fullSquatThreshold = 85.0;
   final double _completelyStandThreshold = 15.0;
-  final double _ascentTolerance = 1.0;
+  final double _minimumRepDuration = 3.0; // 빠른 수행 판정 시간. 현재 3초
 
+  // 현재 스쿼트의 최고 깊이
   double _maxThighAngleInCurrentRep = 0.0;
-  double _previousThighAngle = 0.0;
 
+  // 현재 스쿼트 상태
   bool _isWaistErrorTriggered = false;
   bool _isFastRepErrorTriggered = false;
   bool _isCurrentlyExercising = false;
-  bool _isAscending = false;
+
+  // 현재 스쿼트 시작 시간
+  DateTime? _repStartTime;
 
   SquatData analyze(
       SquatData previousData,
@@ -29,88 +33,116 @@ class SquatAnalyzerService {
     int depthErr = previousData.depthErrorCount;
     int fastRepErr = previousData.fastRepCount;
 
+    // ============================================================
     // 1. 스쿼트 시작 감지
+    // ============================================================
     if (cleanThigh > _startSquatThreshold) {
       if (!_isCurrentlyExercising) {
-        _previousThighAngle = cleanThigh;
-      }
+        _isCurrentlyExercising = true;
 
-      _isCurrentlyExercising = true;
+        // 스쿼트 1회 시작 시간 기록
+        _repStartTime = DateTime.now();
+      }
     }
 
+    // ============================================================
+    // 2. 운동 진행 중 분석
+    // ============================================================
     if (_isCurrentlyExercising) {
-      // 현재까지의 최고 깊이 기록
+      // 현재까지 도달한 최대 깊이 기록
       if (cleanThigh > _maxThighAngleInCurrentRep) {
         _maxThighAngleInCurrentRep = cleanThigh;
       }
 
-      // 충분한 깊이에 도달한 이후 허벅지 각도가 감소하면 상승 시작
-      if (_maxThighAngleInCurrentRep >= _fullSquatThreshold &&
-          cleanThigh < _previousThighAngle - _ascentTolerance) {
-        _isAscending = true;
-      }
-
-      // 하강 중 충분한 깊이에 도달하기 전에 허리가 과도하게 숙여진 경우
-      if (!_isAscending &&
-          _maxThighAngleInCurrentRep < _fullSquatThreshold &&
-          cleanWaist > 40.0) {
+      // ------------------------------------------------------------
+      // 허리 과숙임
+      // 운동 중 어느 순간이라도 허리 각도가 40°를 초과하면
+      // 해당 스쿼트에서 허리 과숙임 오류 발생
+      // ------------------------------------------------------------
+      if (cleanWaist > 40.0) {
         _isWaistErrorTriggered = true;
       }
 
-      // 충분한 깊이에 도달한 후 상승하면서 상체가 먼저 무너지는 경우
-      if (_isAscending &&
-          !_isWaistErrorTriggered &&
-          cleanWaist > 40.0) {
-        _isFastRepErrorTriggered = true;
-      }
-
       message =
-      "운동 진행 중... 현재 최대 깊이: ${_maxThighAngleInCurrentRep.toStringAsFixed(1)}도";
-
-      _previousThighAngle = cleanThigh;
+      "운동 진행 중... 현재 최대 깊이: "
+          "${_maxThighAngleInCurrentRep.toStringAsFixed(1)}도";
     }
 
-    // 2. 완전히 일어선 시점에 한 회 정산
+    // ============================================================
+    // 3. 완전히 일어선 시점에 한 회 정산
+    // ============================================================
     if (cleanThigh <= _completelyStandThreshold &&
         _isCurrentlyExercising) {
       bool hasAnyError = false;
       List<String> errorMessages = [];
 
-      // 충분한 깊이에 도달하지 못한 경우
+      // ------------------------------------------------------------
+      // 수행 시간 계산
+      // ------------------------------------------------------------
+      double repDuration = 0.0;
+
+      if (_repStartTime != null) {
+        repDuration =
+            DateTime.now().difference(_repStartTime!).inMilliseconds / 1000.0;
+      }
+
+      // ------------------------------------------------------------
+      // 빠른 수행
+      // 1회 수행 시간이 4초 미만이면 오류
+      // ------------------------------------------------------------
+      if (repDuration < _minimumRepDuration) {
+        _isFastRepErrorTriggered = true;
+      }
+
+      // ------------------------------------------------------------
+      // 얕은 깊이
+      // 최대 허벅지 각도가 85°에 도달하지 못한 경우
+      // ------------------------------------------------------------
       if (_maxThighAngleInCurrentRep < _fullSquatThreshold) {
         depthErr++;
         hasAnyError = true;
         errorMessages.add("얕은 깊이");
       }
 
-      // 하강 중 허리 과숙임
+      // ------------------------------------------------------------
+      // 허리 과숙임
+      // ------------------------------------------------------------
       if (_isWaistErrorTriggered) {
         waistErr++;
         hasAnyError = true;
         errorMessages.add("허리 과숙임");
       }
 
-      // 최고 깊이 이후 상승 중 상체 선행
+      // ------------------------------------------------------------
+      // 빠른 수행
+      // ------------------------------------------------------------
       if (_isFastRepErrorTriggered) {
         fastRepErr++;
         hasAnyError = true;
-        errorMessages.add("상체 선행");
+        errorMessages.add("빠른 수행");
       }
 
+      // ------------------------------------------------------------
+      // 최종 결과
+      // ------------------------------------------------------------
       if (!hasAnyError) {
         success++;
         message = "✨ 스쿼트 ${success}회 성공! 완벽합니다.";
       } else {
         message =
-        "❌ 무효 (${errorMessages.join(', ')}) 최고 깊이: ${_maxThighAngleInCurrentRep.toStringAsFixed(1)}도";
+        "❌ 무효 (${errorMessages.join(', ')}) "
+            "최고 깊이: ${_maxThighAngleInCurrentRep.toStringAsFixed(1)}도 "
+            "수행 시간: ${repDuration.toStringAsFixed(1)}초";
       }
 
+      // ============================================================
+      // 4. 현재 스쿼트 상태 초기화
+      // ============================================================
       _maxThighAngleInCurrentRep = 0.0;
-      _previousThighAngle = 0.0;
       _isWaistErrorTriggered = false;
       _isFastRepErrorTriggered = false;
       _isCurrentlyExercising = false;
-      _isAscending = false;
+      _repStartTime = null;
     }
 
     return previousData.copyWith(
@@ -124,15 +156,20 @@ class SquatAnalyzerService {
     );
   }
 
+  // ================================================================
+  // 현재 진행 중인 스쿼트 상태 초기화
+  // ================================================================
   void resetCurrentRepFlags() {
     _maxThighAngleInCurrentRep = 0.0;
-    _previousThighAngle = 0.0;
     _isWaistErrorTriggered = false;
     _isFastRepErrorTriggered = false;
     _isCurrentlyExercising = false;
-    _isAscending = false;
+    _repStartTime = null;
   }
 
+  // ================================================================
+  // 기준 벡터와 현재 벡터 사이의 상대 각도 계산
+  // ================================================================
   double calculateRelativeAngle(
       List<double> base,
       List<double> current,
