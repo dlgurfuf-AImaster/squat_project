@@ -21,13 +21,13 @@ public class GeminiService {
         }
     }
 
-    // 💡 1. 단일 세트 피드백 (영문 프롬프트 -> 한국어 응답 지정)
+    // 1. 단일 세트 피드백
     public String generateSingleCoaching(int successCount, int waistErrorCount, int depthErrorCount, int fastRepCount) {
         String prompt = String.format(
                 """
                         You are a friendly and professional AI fitness trainer.
                         Here is the result of the member's just-completed 1-set squat:
-                        - Successful reps: %d | Excessive forward lean: %d | Shallow squat: %d | Upper-body-first movement: %d
+                        - Successful reps: %d | Excessive forward lean: %d | Shallow squat: %d | Fast performance: %d
         
                         [Feedback Guidelines]
                         - Base all feedback strictly on the provided squat measurements.
@@ -39,7 +39,7 @@ public class GeminiService {
                         - Avoid vague advice such as "be careful", "maintain good posture", or "try harder".
                         - "Excessive forward lean" means the torso leans too far forward during the squat.
                         - "Shallow squat" means the squat does not reach sufficient depth.
-                        - "Upper-body-first movement" means the upper body initiates the movement before the lower body, causing the torso to move ahead of the lower body.
+                        - "Fast performance" means the squat repetition was performed too quickly, preventing sufficient controlled movement and holding throughout the repetition.
         
                         [Formatting Rules]
                         1. CRITICAL: You MUST write the entire response in Korean.
@@ -48,7 +48,7 @@ public class GeminiService {
                            - VARIETY RULE: Do not reuse static sentences. Dynamically express the slogan in Korean using varied synonyms, action verbs, and natural expressions so each response feels unique.
                            - Concept Variations for Line 1:
                              * Shallow squat main error: Dynamically vary between Korean concepts like "pushing depth to the limit", "focusing on full depth", or "staying low until the end".
-                             * Upper-body-first main error: Dynamically vary between Korean concepts like "chest up & core engaged", "keeping torso upright to protect back", or "eyes forward & chest open".
+                             * Fast performance main error: Dynamically vary between Korean concepts like "slow down and control the movement", "move with deliberate control", or "focus on a steady tempo".
                              * High success / No errors: Dynamically vary between Korean concepts like "perfect tension & keep this feel", "great form onto the next set", or "maintaining this exact trajectory".
                         4. From line 2 onwards: Provide 2-3 bullet points (- ) giving clear one-point cues/tips for the next set in Korean using varied, natural vocabulary.
                         5. Never use emojis. Use bold text (**keyword**) for key terms to improve readability.""",
@@ -58,7 +58,7 @@ public class GeminiService {
         return callGeminiApi(prompt);
     }
 
-    // 💡 2. 장기 / 누적 세트 피드백 (영문 프롬프트 -> 한국어 응답 지정)
+    // 2. 종합 세트 피드백
     public String generateAggregateCoaching(int totalSessions, int successCount, int waistErrorCount, int depthErrorCount, int fastRepCount) {
         int totalAttempts = successCount + waistErrorCount + depthErrorCount + fastRepCount;
         double accuracy = totalAttempts > 0 ? ((double) successCount / totalAttempts) * 100 : 0;
@@ -68,7 +68,7 @@ public class GeminiService {
                         You are a professional AI fitness trainer.
                         Here is the aggregated squat data for the member across %d sets:
                         - Successful reps: %d (Success rate: %.1f%%)
-                        - Excessive forward lean: %d | Shallow squat: %d | Upper-body-first movement: %d
+                        - Excessive forward lean: %d | Shallow squat: %d | Fast performance: %d
         
                         [Feedback Guidelines]
                         - Base all feedback strictly on the provided squat measurements.
@@ -81,7 +81,7 @@ public class GeminiService {
                         - Avoid vague advice such as "be careful", "maintain good posture", or "try harder".
                         - "Excessive forward lean" means the torso leans too far forward during the squat.
                         - "Shallow squat" means the squat does not reach sufficient depth.
-                        - "Upper-body-first movement" means the upper body initiates the movement before the lower body, causing the torso to move ahead of the lower body.
+                        - "Fast performance" means the squat repetition was performed too quickly, preventing sufficient controlled movement and holding throughout the repetition.
         
                         [Formatting Rules]
                         1. CRITICAL: You MUST write the entire response in Korean.
@@ -90,7 +90,7 @@ public class GeminiService {
                            - VARIETY RULE: Avoid static boilerplate phrases. Actively use creative Korean phrasing, synonyms, and varied vocabulary so each session analysis feels fresh and distinct.
                            - Concept Variations for Line 1:
                              * Shallow squat dominant: Dynamically vary between Korean concepts like "today's key is depth", "completing full range of motion", or "securing depth for lower body activation".
-                             * Upper-body-first dominant: Dynamically vary between Korean concepts like "upright posture is top priority today", "chest open & tension maintained", or "aligning chest and back posture".
+                             * Fast performance dominant: Dynamically vary between Korean concepts like "slow down and control the movement", "move with deliberate control", or "focus on a steady tempo".
                              * Overall good posture: Dynamically vary between Korean concepts like "stable form maintained", "perfect tempo & execution", or "keep this exact momentum".
                         4. Line break, then write 2-3 bullet points (- ) in Korean explaining main causes and practical actionable tips with fresh, varied wording.
                         5. Never use emojis. Use bold text (**keyword**) for key terms to improve readability.""",
@@ -100,7 +100,7 @@ public class GeminiService {
         return callGeminiApi(prompt);
     }
 
-    // 💡 공식 Gen AI SDK 호출 메서드
+    // 공식 Gen AI SDK 호출 메서드
     private String callGeminiApi(String prompt) {
         if (client == null) {
             if (apiKey != null && !apiKey.isBlank()) {
