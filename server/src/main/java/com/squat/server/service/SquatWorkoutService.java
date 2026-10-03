@@ -37,7 +37,7 @@ public class SquatWorkoutService {
         workout.setSuccessCount(request.getSuccessCount());
         workout.setWaistErrorCount(request.getWaistErrorCount());
         workout.setDepthErrorCount(request.getDepthErrorCount());
-        workout.setUpperBodyLeadCount(request.getUpperBodyLeadCount());
+        workout.setFastRepCount(request.getFastRepCount());
         workout.setRecordTime(request.getRecordTime());
 
         return squatWorkoutRepository.save(workout);

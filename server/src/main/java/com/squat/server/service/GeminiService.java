@@ -22,7 +22,7 @@ public class GeminiService {
     }
 
     // 💡 1. 단일 세트 피드백 (영문 프롬프트 -> 한국어 응답 지정)
-    public String generateSingleCoaching(int successCount, int waistErrorCount, int depthErrorCount, int upperBodyLeadCount) {
+    public String generateSingleCoaching(int successCount, int waistErrorCount, int depthErrorCount, int fastRepCount) {
         String prompt = String.format(
                 """
                         You are a friendly and professional AI fitness trainer.
@@ -52,15 +52,15 @@ public class GeminiService {
                              * High success / No errors: Dynamically vary between Korean concepts like "perfect tension & keep this feel", "great form onto the next set", or "maintaining this exact trajectory".
                         4. From line 2 onwards: Provide 2-3 bullet points (- ) giving clear one-point cues/tips for the next set in Korean using varied, natural vocabulary.
                         5. Never use emojis. Use bold text (**keyword**) for key terms to improve readability.""",
-                successCount, waistErrorCount, depthErrorCount, upperBodyLeadCount
+                successCount, waistErrorCount, depthErrorCount, fastRepCount
         );
 
         return callGeminiApi(prompt);
     }
 
     // 💡 2. 장기 / 누적 세트 피드백 (영문 프롬프트 -> 한국어 응답 지정)
-    public String generateAggregateCoaching(int totalSessions, int successCount, int waistErrorCount, int depthErrorCount, int upperBodyLeadCount) {
-        int totalAttempts = successCount + waistErrorCount + depthErrorCount + upperBodyLeadCount;
+    public String generateAggregateCoaching(int totalSessions, int successCount, int waistErrorCount, int depthErrorCount, int fastRepCount) {
+        int totalAttempts = successCount + waistErrorCount + depthErrorCount + fastRepCount;
         double accuracy = totalAttempts > 0 ? ((double) successCount / totalAttempts) * 100 : 0;
 
         String prompt = String.format(
@@ -94,7 +94,7 @@ public class GeminiService {
                              * Overall good posture: Dynamically vary between Korean concepts like "stable form maintained", "perfect tempo & execution", or "keep this exact momentum".
                         4. Line break, then write 2-3 bullet points (- ) in Korean explaining main causes and practical actionable tips with fresh, varied wording.
                         5. Never use emojis. Use bold text (**keyword**) for key terms to improve readability.""",
-                totalSessions, successCount, accuracy, waistErrorCount, depthErrorCount, upperBodyLeadCount
+                totalSessions, successCount, accuracy, waistErrorCount, depthErrorCount, fastRepCount
         );
 
         return callGeminiApi(prompt);

@@ -11,7 +11,7 @@ public class SquatWorkoutRequest {
     private int successCount;
     private int waistErrorCount;
     private int depthErrorCount;
-    private int upperBodyLeadCount;
+    private int fastRepCount;
 
     @JsonProperty("recordTime")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -32,8 +32,8 @@ public class SquatWorkoutRequest {
     public int getDepthErrorCount() { return depthErrorCount; }
     public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public int getUpperBodyLeadCount() { return upperBodyLeadCount; }
-    public void setUpperBodyLeadCount(int upperBodyLeadCount) { this.upperBodyLeadCount = upperBodyLeadCount; }
+    public int getFastRepCount() { return fastRepCount; }
+    public void setFastRepCount(int fastRepCount) { this.fastRepCount = fastRepCount; }
 
     public LocalDateTime getRecordTime() { return recordTime; }
     public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }

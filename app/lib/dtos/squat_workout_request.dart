@@ -5,7 +5,7 @@ class SquatWorkoutRequest {
   final int successCount;
   final int waistErrorCount;
   final int depthErrorCount;
-  final int upperBodyLeadCount;
+  final int fastRepCount;
   final DateTime recordTime;
 
   SquatWorkoutRequest({
@@ -13,7 +13,7 @@ class SquatWorkoutRequest {
     required this.successCount,
     required this.waistErrorCount,
     required this.depthErrorCount,
-    required this.upperBodyLeadCount,
+    required this.fastRepCount,
     required this.recordTime,
   });
 
@@ -23,7 +23,7 @@ class SquatWorkoutRequest {
       successCount: record.successCount,
       waistErrorCount: record.waistErrorCount,
       depthErrorCount: record.depthErrorCount,
-      upperBodyLeadCount: record.upperBodyLeadCount,
+      fastRepCount: record.fastRepCount,
       recordTime: record.date,
     );
   }
@@ -34,7 +34,7 @@ class SquatWorkoutRequest {
       "successCount": successCount,
       "waistErrorCount": waistErrorCount,
       "depthErrorCount": depthErrorCount,
-      "upperBodyLeadCount": upperBodyLeadCount,
+      "fastRepCount": fastRepCount,
       "recordTime": recordTime.toIso8601String().split('.')[0], // yyyy-MM-ddTHH:mm:ss
     };
   }

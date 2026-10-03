@@ -7,20 +7,20 @@ public class CoachingResponse {
     private int totalSuccessCount;
     private int totalWaistErrorCount;
     private int totalDepthErrorCount;
-    private int totalUpperBodyLeadCount;
+    private int totalFastRepCount;
     private String coachingMessage;
 
     public CoachingResponse() {}
 
     public CoachingResponse(String coachingType, int totalSessions, int totalSuccessCount,
                             int totalWaistErrorCount, int totalDepthErrorCount,
-                            int totalUpperBodyLeadCount, String coachingMessage) {
+                            int totalFastRepCount, String coachingMessage) {
         this.coachingType = coachingType;
         this.totalSessions = totalSessions;
         this.totalSuccessCount = totalSuccessCount;
         this.totalWaistErrorCount = totalWaistErrorCount;
         this.totalDepthErrorCount = totalDepthErrorCount;
-        this.totalUpperBodyLeadCount = totalUpperBodyLeadCount;
+        this.totalFastRepCount = totalFastRepCount;
         this.coachingMessage = coachingMessage;
     }
 
@@ -30,6 +30,6 @@ public class CoachingResponse {
     public int getTotalSuccessCount() { return totalSuccessCount; }
     public int getTotalWaistErrorCount() { return totalWaistErrorCount; }
     public int getTotalDepthErrorCount() { return totalDepthErrorCount; }
-    public int getTotalUpperBodyLeadCount() { return totalUpperBodyLeadCount; }
+    public int getTotalFastRepCount() { return totalFastRepCount; }
     public String getCoachingMessage() { return coachingMessage; }
 }

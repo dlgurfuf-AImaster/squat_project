@@ -11,7 +11,7 @@ class SquatAnalyzerService {
   double _previousThighAngle = 0.0;
 
   bool _isWaistErrorTriggered = false;
-  bool _isUpperBodyLeadTriggered = false;
+  bool _isFastRepErrorTriggered = false;
   bool _isCurrentlyExercising = false;
   bool _isAscending = false;
 
@@ -27,7 +27,7 @@ class SquatAnalyzerService {
     int success = previousData.successCount;
     int waistErr = previousData.waistErrorCount;
     int depthErr = previousData.depthErrorCount;
-    int upperBodyLeadErr = previousData.upperBodyLeadCount;
+    int fastRepErr = previousData.fastRepCount;
 
     // 1. 스쿼트 시작 감지
     if (cleanThigh > _startSquatThreshold) {
@@ -61,7 +61,7 @@ class SquatAnalyzerService {
       if (_isAscending &&
           !_isWaistErrorTriggered &&
           cleanWaist > 40.0) {
-        _isUpperBodyLeadTriggered = true;
+        _isFastRepErrorTriggered = true;
       }
 
       message =
@@ -91,8 +91,8 @@ class SquatAnalyzerService {
       }
 
       // 최고 깊이 이후 상승 중 상체 선행
-      if (_isUpperBodyLeadTriggered) {
-        upperBodyLeadErr++;
+      if (_isFastRepErrorTriggered) {
+        fastRepErr++;
         hasAnyError = true;
         errorMessages.add("상체 선행");
       }
@@ -108,7 +108,7 @@ class SquatAnalyzerService {
       _maxThighAngleInCurrentRep = 0.0;
       _previousThighAngle = 0.0;
       _isWaistErrorTriggered = false;
-      _isUpperBodyLeadTriggered = false;
+      _isFastRepErrorTriggered = false;
       _isCurrentlyExercising = false;
       _isAscending = false;
     }
@@ -120,7 +120,7 @@ class SquatAnalyzerService {
       successCount: success,
       waistErrorCount: waistErr,
       depthErrorCount: depthErr,
-      upperBodyLeadCount: upperBodyLeadErr,
+      fastRepCount: fastRepErr,
     );
   }
 
@@ -128,7 +128,7 @@ class SquatAnalyzerService {
     _maxThighAngleInCurrentRep = 0.0;
     _previousThighAngle = 0.0;
     _isWaistErrorTriggered = false;
-    _isUpperBodyLeadTriggered = false;
+    _isFastRepErrorTriggered = false;
     _isCurrentlyExercising = false;
     _isAscending = false;
   }

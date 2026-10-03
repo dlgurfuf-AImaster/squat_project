@@ -384,7 +384,7 @@ class _SquatCounterCard extends StatelessWidget {
     final int totalCount = squat.successCount +
         squat.waistErrorCount +
         squat.depthErrorCount +
-        squat.upperBodyLeadCount;
+        squat.fastRepCount;
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -464,7 +464,7 @@ class _SquatCounterCard extends StatelessWidget {
           const SizedBox(height: 7),
           _CountRow(
             label: "상체 선행",
-            count: squat.upperBodyLeadCount,
+            count: squat.fastRepCount,
             color: const Color(0xFFEF4444),
           ),
         ],

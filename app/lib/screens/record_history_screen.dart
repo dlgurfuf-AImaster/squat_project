@@ -162,8 +162,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             final totalSuccess = dayRecords.fold<int>(0, (sum, r) => sum + r.successCount);
             final totalWaist = dayRecords.fold<int>(0, (sum, r) => sum + r.waistErrorCount);
             final totalDepth = dayRecords.fold<int>(0, (sum, r) => sum + r.depthErrorCount);
-            final totalUpperBodyLead = dayRecords.fold<int>(0, (sum, r) => sum + r.upperBodyLeadCount);
-            final totalErrors = totalWaist + totalDepth + totalUpperBodyLead;
+            final totalFastRep = dayRecords.fold<int>(0, (sum, r) => sum + r.fastRepCount);
+            final totalErrors = totalWaist + totalDepth + totalFastRep;
 
             final selectedInDay = dayRecords
                 .where((r) => r.id != null && _selectedRecordIds.contains(r.id))
@@ -1125,7 +1125,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     final int totalCount = record.successCount +
         record.waistErrorCount +
         record.depthErrorCount +
-        record.upperBodyLeadCount;
+        record.fastRepCount;
 
     return GestureDetector(
       onTap: isSelectable ? onTap : null,
@@ -1207,7 +1207,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                   const SizedBox(width: 4),
                   _buildRecordStatBadge("얕은깊이", "${record.depthErrorCount}회", depthColor),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("상체선행", "${record.upperBodyLeadCount}회", morningColor),
+                  _buildRecordStatBadge("상체선행", "${record.fastRepCount}회", morningColor),
                 ],
               ),
             ],
@@ -1314,7 +1314,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     final totalSuccess = selectedDayRecords.fold<int>(0, (sum, r) => sum + r.successCount);
     final totalErrors = selectedDayRecords.fold<int>(
       0,
-          (sum, r) => sum + r.waistErrorCount + r.depthErrorCount + r.upperBodyLeadCount,
+          (sum, r) => sum + r.waistErrorCount + r.depthErrorCount + r.fastRepCount,
     );
 
     return Container(

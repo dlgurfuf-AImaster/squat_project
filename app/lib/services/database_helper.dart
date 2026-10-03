@@ -40,7 +40,7 @@ class DatabaseHelper {
         successCount INTEGER NOT NULL,
         waistErrorCount INTEGER NOT NULL,
         depthErrorCount INTEGER NOT NULL,
-        upperBodyLeadCount INTEGER NOT NULL,
+        fastRepCount INTEGER NOT NULL,
         is_synced INTEGER DEFAULT 0
       )
     ''');
@@ -107,7 +107,7 @@ class DatabaseHelper {
         successCount: random.nextInt(15) + 5,   // 5 ~ 19회 성공
         waistErrorCount: random.nextInt(5),     // 0 ~ 4회 오류
         depthErrorCount: random.nextInt(5),     // 0 ~ 4회 오류
-        upperBodyLeadCount: random.nextInt(4),   // 0 ~ 3회 오류
+        fastRepCount: random.nextInt(4),   // 0 ~ 3회 오류
         isSynced: false,                        // 💡 미전송(0) 상태로 설정
       );
 

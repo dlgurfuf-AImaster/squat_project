@@ -11,7 +11,7 @@ public class SquatWorkoutResponse {
     private int successCount;
     private int waistErrorCount;
     private int depthErrorCount;
-    private int upperBodyLeadCount;
+    private int fastRepCount;
     private String coachingMessage;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -21,14 +21,14 @@ public class SquatWorkoutResponse {
     }
 
     public SquatWorkoutResponse(Long id, String uuid, int totalCount, int successCount, int waistErrorCount,
-                                int depthErrorCount, int upperBodyLeadCount, String coachingMessage, LocalDateTime recordTime) {
+                                int depthErrorCount, int fastRepCount, String coachingMessage, LocalDateTime recordTime) {
         this.id = id;
         this.uuid = uuid;
         this.totalCount = totalCount;
         this.successCount = successCount;
         this.waistErrorCount = waistErrorCount;
         this.depthErrorCount = depthErrorCount;
-        this.upperBodyLeadCount = upperBodyLeadCount;
+        this.fastRepCount = fastRepCount;
         this.coachingMessage = coachingMessage;
         this.recordTime = recordTime;
     }
@@ -42,7 +42,7 @@ public class SquatWorkoutResponse {
                 workout.getSuccessCount(),
                 workout.getWaistErrorCount(),
                 workout.getDepthErrorCount(),
-                workout.getUpperBodyLeadCount(),
+                workout.getFastRepCount(),
                 workout.getCoachingMessage(),
                 workout.getRecordTime()
         );
@@ -67,8 +67,8 @@ public class SquatWorkoutResponse {
     public int getDepthErrorCount() { return depthErrorCount; }
     public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public int getUpperBodyLeadCount() { return upperBodyLeadCount; }
-    public void setUpperBodyLeadCount(int upperBodyLeadCount) { this.upperBodyLeadCount = upperBodyLeadCount; }
+    public int getFastRepCount() { return fastRepCount; }
+    public void setFastRepCount(int fastRepCount) { this.fastRepCount = fastRepCount; }
 
     public String getCoachingMessage() { return coachingMessage; }
     public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }

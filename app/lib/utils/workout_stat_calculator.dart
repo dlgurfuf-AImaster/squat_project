@@ -38,7 +38,7 @@ class WorkoutWeeklyStats {
       final normalizedDate = DateTime(recordDate.year, recordDate.month, recordDate.day);
 
       // 1세트 총 횟수 (성공 + 오류 전체 합산)
-      final int totalReps = r.successCount + r.waistErrorCount + r.depthErrorCount + r.upperBodyLeadCount;
+      final int totalReps = r.successCount + r.waistErrorCount + r.depthErrorCount + r.fastRepCount;
 
       if (totalReps > 0) {
         activeDates.add(normalizedDate);
