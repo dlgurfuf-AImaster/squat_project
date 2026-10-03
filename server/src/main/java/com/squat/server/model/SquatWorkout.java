@@ -29,7 +29,7 @@ public class SquatWorkout {
     private int successCount; // 성공
     private int waistErrorCount; // 허리 과숙임
     private int depthErrorCount; // 얕은 스쿼트
-    private int goodMorningCount; // 엉덩이 선행 횟수
+    private int upperBodyLeadCount; // 엉덩이 선행 횟수
 
     @Column(columnDefinition = "TEXT")
     private String coachingMessage; // AI 코칭 메세지 (긴 텍스트라 TEXT타입)
@@ -39,7 +39,7 @@ public class SquatWorkout {
     @PrePersist // INSERT 전에 자동 실행
     protected void onCreate() {
         // DB 저장 직전 성공 및 오류 횟수를 자동으로 더해 totalCount 세팅
-        this.totalCount = this.successCount + this.waistErrorCount + this.depthErrorCount + this.goodMorningCount;
+        this.totalCount = this.successCount + this.waistErrorCount + this.depthErrorCount + this.upperBodyLeadCount;
     }
 
     // --- Getter & Setter ---
@@ -64,8 +64,8 @@ public class SquatWorkout {
     public int getDepthErrorCount() { return depthErrorCount; }
     public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public int getGoodMorningCount() { return goodMorningCount; }
-    public void setGoodMorningCount(int goodMorningCount) { this.goodMorningCount = goodMorningCount; }
+    public int getUpperBodyLeadCount() { return upperBodyLeadCount; }
+    public void setUpperBodyLeadCount(int upperBodyLeadCount) { this.upperBodyLeadCount = upperBodyLeadCount; }
 
     public String getCoachingMessage() { return coachingMessage; }
     public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }

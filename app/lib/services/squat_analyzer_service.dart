@@ -9,7 +9,7 @@ class SquatAnalyzerService {
 
   double _maxThighAngleInCurrentRep = 0.0;
   bool _isWaistErrorTriggered = false;
-  bool _isGoodMorningErrorTriggered = false;
+  bool _isUpperBodyLeadTriggered = false;
   bool _isCurrentlyExercising = false;
 
   SquatData analyze(SquatData previousData, double waistAngle, double thighAngle) {
@@ -20,7 +20,7 @@ class SquatAnalyzerService {
     int success = previousData.successCount;
     int waistErr = previousData.waistErrorCount;
     int depthErr = previousData.depthErrorCount;
-    int gmErr = previousData.goodMorningCount;
+    int upperBodyLeadErr = previousData.upperBodyLeadCount;
 
     // --------------------------------------------------------
     // 1. [수정된 부분] 최소 40도를 넘어야만 '진짜 운동 시작'으로 인정
@@ -42,7 +42,7 @@ class SquatAnalyzerService {
       }
       // 올라올 때 허리 실수
       if (cleanWaist > 40.0 && _maxThighAngleInCurrentRep >= _fullSquatThreshold) {
-        _isGoodMorningErrorTriggered = true;
+        _isUpperBodyLeadTriggered = true;
       }
 
       message = "운동 진행 중... 현재 최대 깊이: ${_maxThighAngleInCurrentRep.toStringAsFixed(1)}도";
@@ -70,8 +70,8 @@ class SquatAnalyzerService {
         errorMessages.add("내려갈 때 허리 숙임");
       }
 
-      if (_isGoodMorningErrorTriggered) {
-        gmErr++;
+      if (_isUpperBodyLeadTriggered) {
+        upperBodyLeadErr++;
         hasAnyError = true;
         errorMessages.add("일어날 때 허리 무너짐");
       }
@@ -86,7 +86,7 @@ class SquatAnalyzerService {
       // 🔥 정산이 끝났으니 공책 완전히 청소
       _maxThighAngleInCurrentRep = 0.0;
       _isWaistErrorTriggered = false;
-      _isGoodMorningErrorTriggered = false;
+      _isUpperBodyLeadTriggered = false;
       _isCurrentlyExercising = false;
     }
 
@@ -97,7 +97,7 @@ class SquatAnalyzerService {
       successCount: success,
       waistErrorCount: waistErr,
       depthErrorCount: depthErr,
-      goodMorningCount: gmErr,
+      upperBodyLeadCount: upperBodyLeadErr,
     );
   }
 
@@ -105,7 +105,7 @@ class SquatAnalyzerService {
   void resetCurrentRepFlags() {
     _maxThighAngleInCurrentRep = 0.0;
     _isWaistErrorTriggered = false;
-    _isGoodMorningErrorTriggered = false;
+    _isUpperBodyLeadTriggered = false;
     _isCurrentlyExercising = false; // 💡 새 로직의 핵심 플래그도 함께 초기화!
   }
 

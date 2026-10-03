@@ -44,7 +44,7 @@ public class SquatCoachingService {
                     workout.getSuccessCount(),
                     workout.getWaistErrorCount(),
                     workout.getDepthErrorCount(),
-                    workout.getGoodMorningCount(),
+                    workout.getUpperBodyLeadCount(),
                     workout.getCoachingMessage());
         }
 
@@ -53,7 +53,7 @@ public class SquatCoachingService {
                 workout.getSuccessCount(),
                 workout.getWaistErrorCount(),
                 workout.getDepthErrorCount(),
-                workout.getGoodMorningCount()
+                workout.getUpperBodyLeadCount()
         );
 
         // Gemini API 실패로 null이 들어오면 DB 업데이트를 스킵하고 null 반환
@@ -68,7 +68,7 @@ public class SquatCoachingService {
                 workout.getSuccessCount(),
                 workout.getWaistErrorCount(),
                 workout.getDepthErrorCount(),
-                workout.getGoodMorningCount(),
+                workout.getUpperBodyLeadCount(),
                 coachingMessage);
     }
 
@@ -113,13 +113,13 @@ public class SquatCoachingService {
         int totalSuccess = workouts.stream().mapToInt(SquatWorkout::getSuccessCount).sum();
         int totalWaist = workouts.stream().mapToInt(SquatWorkout::getWaistErrorCount).sum();
         int totalDepth = workouts.stream().mapToInt(SquatWorkout::getDepthErrorCount).sum();
-        int totalGoodMorning = workouts.stream().mapToInt(SquatWorkout::getGoodMorningCount).sum();
+        int totalUpperBodyLead = workouts.stream().mapToInt(SquatWorkout::getUpperBodyLeadCount).sum();
 
         String coachingMessage = geminiService.generateAggregateCoaching(
-                workouts.size(), totalSuccess, totalWaist, totalDepth, totalGoodMorning
+                workouts.size(), totalSuccess, totalWaist, totalDepth, totalUpperBodyLead
         );
 
         return new CoachingResponse("AGGREGATE", workouts.size(),
-                totalSuccess, totalWaist, totalDepth, totalGoodMorning, coachingMessage);
+                totalSuccess, totalWaist, totalDepth, totalUpperBodyLead, coachingMessage);
     }
 }

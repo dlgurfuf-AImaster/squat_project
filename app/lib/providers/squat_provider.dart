@@ -85,7 +85,7 @@ class SquatProvider with ChangeNotifier {
       successCount: 0,
       waistErrorCount: 0,
       depthErrorCount: 0,
-      goodMorningCount: 0,
+      upperBodyLeadCount: 0,
       status: "운동 기록 초기화",
       currentState: "STAND",
     );
@@ -127,7 +127,7 @@ class SquatProvider with ChangeNotifier {
     if (_data.successCount == 0 &&
         _data.waistErrorCount == 0 &&
         _data.depthErrorCount == 0 &&
-        _data.goodMorningCount == 0) {
+        _data.upperBodyLeadCount == 0) {
       print("⚠️ 스쿼트 수행 기록이 없어 저장을 스킵합니다.");
       return false;
     }

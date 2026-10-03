@@ -5,7 +5,7 @@ class SquatWorkoutResponse {
   final int successCount;
   final int waistErrorCount;
   final int depthErrorCount;
-  final int goodMorningCount;
+  final int upperBodyLeadCount;
   final String? coachingMessage;
   final String recordTime;
 
@@ -16,7 +16,7 @@ class SquatWorkoutResponse {
     required this.successCount,
     required this.waistErrorCount,
     required this.depthErrorCount,
-    required this.goodMorningCount,
+    required this.upperBodyLeadCount,
     this.coachingMessage,
     required this.recordTime,
   });
@@ -29,7 +29,7 @@ class SquatWorkoutResponse {
       successCount: json['successCount'] ?? 0,
       waistErrorCount: json['waistErrorCount'] ?? 0,
       depthErrorCount: json['depthErrorCount'] ?? 0,
-      goodMorningCount: json['goodMorningCount'] ?? 0,
+      upperBodyLeadCount: json['upperBodyLeadCount'] ?? 0,
       coachingMessage: json['coachingMessage'],
       recordTime: json['recordTime'] ?? '',
     );

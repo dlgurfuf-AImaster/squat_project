@@ -11,7 +11,7 @@ public class SquatWorkoutResponse {
     private int successCount;
     private int waistErrorCount;
     private int depthErrorCount;
-    private int goodMorningCount;
+    private int upperBodyLeadCount;
     private String coachingMessage;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -21,14 +21,14 @@ public class SquatWorkoutResponse {
     }
 
     public SquatWorkoutResponse(Long id, String uuid, int totalCount, int successCount, int waistErrorCount,
-                                int depthErrorCount, int goodMorningCount, String coachingMessage, LocalDateTime recordTime) {
+                                int depthErrorCount, int upperBodyLeadCount, String coachingMessage, LocalDateTime recordTime) {
         this.id = id;
         this.uuid = uuid;
         this.totalCount = totalCount;
         this.successCount = successCount;
         this.waistErrorCount = waistErrorCount;
         this.depthErrorCount = depthErrorCount;
-        this.goodMorningCount = goodMorningCount;
+        this.upperBodyLeadCount = upperBodyLeadCount;
         this.coachingMessage = coachingMessage;
         this.recordTime = recordTime;
     }
@@ -42,7 +42,7 @@ public class SquatWorkoutResponse {
                 workout.getSuccessCount(),
                 workout.getWaistErrorCount(),
                 workout.getDepthErrorCount(),
-                workout.getGoodMorningCount(),
+                workout.getUpperBodyLeadCount(),
                 workout.getCoachingMessage(),
                 workout.getRecordTime()
         );
@@ -67,8 +67,8 @@ public class SquatWorkoutResponse {
     public int getDepthErrorCount() { return depthErrorCount; }
     public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public int getGoodMorningCount() { return goodMorningCount; }
-    public void setGoodMorningCount(int goodMorningCount) { this.goodMorningCount = goodMorningCount; }
+    public int getUpperBodyLeadCount() { return upperBodyLeadCount; }
+    public void setUpperBodyLeadCount(int upperBodyLeadCount) { this.upperBodyLeadCount = upperBodyLeadCount; }
 
     public String getCoachingMessage() { return coachingMessage; }
     public void setCoachingMessage(String coachingMessage) { this.coachingMessage = coachingMessage; }

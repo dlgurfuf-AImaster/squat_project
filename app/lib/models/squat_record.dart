@@ -10,7 +10,7 @@ class SquatRecord {
   final int successCount;     // 성공 횟수
   final int waistErrorCount;   // 숙임 오류 횟수
   final int depthErrorCount;   // 깊이 부족 오류 횟수
-  final int goodMorningCount;  // 굿모닝 자세 오류 횟수
+  final int upperBodyLeadCount;  // 굿모닝 자세 오류 횟수
   final bool isSynced; // 서버 백업 동기화 여부 필드
 
   SquatRecord({
@@ -20,7 +20,7 @@ class SquatRecord {
     required this.successCount,
     required this.waistErrorCount,
     required this.depthErrorCount,
-    required this.goodMorningCount,
+    required this.upperBodyLeadCount,
     this.isSynced = false,
   }) : uuid = uuid ?? const Uuid().v4();
 
@@ -31,7 +31,7 @@ class SquatRecord {
       successCount: data.successCount,
       waistErrorCount: data.waistErrorCount,
       depthErrorCount: data.depthErrorCount,
-      goodMorningCount: data.goodMorningCount,
+      upperBodyLeadCount: data.upperBodyLeadCount,
     );
   }
 
@@ -44,7 +44,7 @@ class SquatRecord {
       'successCount': successCount,
       'waistErrorCount': waistErrorCount,
       'depthErrorCount': depthErrorCount,
-      'goodMorningCount': goodMorningCount,
+      'upperBodyLeadCount': upperBodyLeadCount,
       'is_synced': isSynced ? 1 : 0,
     };
   }
@@ -58,7 +58,7 @@ class SquatRecord {
       successCount: map['successCount'],
       waistErrorCount: map['waistErrorCount'],
       depthErrorCount: map['depthErrorCount'],
-      goodMorningCount: map['goodMorningCount'],
+      upperBodyLeadCount: map['upperBodyLeadCount'],
       isSynced: (map['is_synced'] ?? 0) == 1,
     );
   }

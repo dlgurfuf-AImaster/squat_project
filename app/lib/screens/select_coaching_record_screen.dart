@@ -651,9 +651,9 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
     final int successCount = record.successCount ?? 0;
     final int waistErrorCount = record.waistErrorCount ?? 0;
     final int depthErrorCount = record.depthErrorCount ?? 0;
-    final int goodMorningCount = record.goodMorningCount ?? 0;
+    final int upperBodyLeadCount = record.upperBodyLeadCount ?? 0;
 
-    final int totalCount = successCount + waistErrorCount + depthErrorCount + goodMorningCount;
+    final int totalCount = successCount + waistErrorCount + depthErrorCount + upperBodyLeadCount;
     final DateTime recordDate = _getRecordDate(record);
 
     return GestureDetector(
@@ -727,7 +727,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                   const SizedBox(width: 4),
                   _buildRecordStatBadge("얕은깊이", "${depthErrorCount}회", depthColor),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("상체선행", "${goodMorningCount}회", morningColor),
+                  _buildRecordStatBadge("상체선행", "${upperBodyLeadCount}회", morningColor),
                 ],
               ),
             ],
@@ -950,7 +950,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
       totalReps += (record.successCount as int? ?? 0) +
           (record.waistErrorCount as int? ?? 0) +
           (record.depthErrorCount as int? ?? 0) +
-          (record.goodMorningCount as int? ?? 0);
+          (record.upperBodyLeadCount as int? ?? 0);
     }
 
     return Container(

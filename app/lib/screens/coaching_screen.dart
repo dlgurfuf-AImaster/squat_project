@@ -774,7 +774,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
                             ),
                             _MetricTile(
                               label: '상체 선행',
-                              count: coaching.totalGoodMorningCount,
+                              count: coaching.totalUpperBodyLeadCount,
                               color: const Color(0xFFEF4444),
                               icon: Icons.trending_up_rounded,
                             ),
