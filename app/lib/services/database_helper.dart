@@ -138,15 +138,64 @@ class DatabaseHelper {
 
       final totalCount = random.nextInt(15) + 5;
 
-      final successCount = random.nextInt(totalCount + 1);
+      int successCount = 0;
+      int waistErrorCount = 0;
+      int depthErrorCount = 0;
+      int fastRepCount = 0;
+
+      // 실제 스쿼트 하나씩 판정한다고 가정
+      for (int rep = 0; rep < totalCount; rep++) {
+        // 성공 60%, 오류 발생 40%
+        final hasError = random.nextDouble() < 0.4;
+
+        if (!hasError) {
+          successCount++;
+          continue;
+        }
+
+        // 오류가 발생한 경우,
+        // 각 오류는 동일한 확률로 독립적으로 발생
+        final hasWaistError = random.nextBool();
+        final hasDepthError = random.nextBool();
+        final hasFastRepError = random.nextBool();
+
+        // 오류가 하나 이상 발생하도록 보장
+        if (!hasWaistError &&
+            !hasDepthError &&
+            !hasFastRepError) {
+          final errorType = random.nextInt(3);
+
+          if (errorType == 0) {
+            waistErrorCount++;
+          } else if (errorType == 1) {
+            depthErrorCount++;
+          } else {
+            fastRepCount++;
+          }
+
+          continue;
+        }
+
+        if (hasWaistError) {
+          waistErrorCount++;
+        }
+
+        if (hasDepthError) {
+          depthErrorCount++;
+        }
+
+        if (hasFastRepError) {
+          fastRepCount++;
+        }
+      }
 
       final record = SquatRecord(
         date: recordDate,
         totalCount: totalCount,
         successCount: successCount,
-        waistErrorCount: random.nextInt(10),
-        depthErrorCount: random.nextInt(10),
-        fastRepCount: random.nextInt(10),
+        waistErrorCount: waistErrorCount,
+        depthErrorCount: depthErrorCount,
+        fastRepCount: fastRepCount,
         isSynced: false,
       );
 
