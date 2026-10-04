@@ -160,10 +160,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
               ..sort((a, b) => b.date.compareTo(a.date));
 
             final totalSuccess = dayRecords.fold<int>(0, (sum, r) => sum + r.successCount);
-            final totalWaist = dayRecords.fold<int>(0, (sum, r) => sum + r.waistErrorCount);
-            final totalDepth = dayRecords.fold<int>(0, (sum, r) => sum + r.depthErrorCount);
-            final totalFastRep = dayRecords.fold<int>(0, (sum, r) => sum + r.fastRepCount);
-            final totalErrors = totalWaist + totalDepth + totalFastRep;
 
             final selectedInDay = dayRecords
                 .where((r) => r.id != null && _selectedRecordIds.contains(r.id))
@@ -258,11 +254,23 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                _buildSummaryStatBox("성공", "$totalSuccess회", AppTheme.accentGreen),
+                                _buildSummaryStatBox(
+                                  "Total",
+                                  "${dayRecords.fold<int>(0, (sum, r) => sum + r.totalCount)}회",
+                                  AppTheme.primarySky,
+                                ),
                                 const SizedBox(width: 6),
-                                _buildSummaryStatBox("세트", "${dayRecords.length}세트", AppTheme.primarySky),
+                                _buildSummaryStatBox(
+                                  "Sets",
+                                  "${dayRecords.length}세트",
+                                  const Color(0xFF8B5CF6),
+                                ),
                                 const SizedBox(width: 6),
-                                _buildSummaryStatBox("자세 오차", "$totalErrors회", Colors.orange),
+                                _buildSummaryStatBox(
+                                  "Success",
+                                  "$totalSuccess회",
+                                  AppTheme.accentGreen,
+                                ),
                               ],
                             ),
                           ],
@@ -321,7 +329,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                                   color: hasSelected ? Colors.white : const Color(0xFF94A3B8),
                                 ),
                                 label: Text(
-                                  "서버 (${selectedInDay.length})세트 전송",
+                                  "서버 전송 (${selectedInDay.length})세트",
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -588,7 +596,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      "(${selectedRecords.length})세트 전송",
+                      "서버 (${selectedRecords.length})",
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1306,10 +1314,14 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
       List<SquatRecord> allRecords,
       List<SquatRecord> selectedDayRecords,
       ) {
-    final totalSuccess = selectedDayRecords.fold<int>(0, (sum, r) => sum + r.successCount);
-    final totalErrors = selectedDayRecords.fold<int>(
+    final totalCount = selectedDayRecords.fold<int>(
       0,
-          (sum, r) => sum + r.waistErrorCount + r.depthErrorCount + r.fastRepCount,
+          (sum, r) => sum + r.totalCount,
+    );
+
+    final totalSuccess = selectedDayRecords.fold<int>(
+      0,
+          (sum, r) => sum + r.successCount,
     );
 
     return Container(
@@ -1378,11 +1390,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             else
               Row(
                 children: [
+                  _buildStatItem("$totalCount회", AppTheme.primarySky),
+                  const SizedBox(width: 4),
+                  _buildStatItem("${selectedDayRecords.length}세트", const Color(0xFF8B5CF6)),
+                  const SizedBox(width: 4),
                   _buildStatItem("$totalSuccess회", AppTheme.accentGreen),
-                  const SizedBox(width: 4),
-                  _buildStatItem("${selectedDayRecords.length}세트", AppTheme.primarySky),
-                  const SizedBox(width: 4),
-                  _buildStatItem("$totalErrors회", Colors.orange),
                 ],
               ),
           ],
