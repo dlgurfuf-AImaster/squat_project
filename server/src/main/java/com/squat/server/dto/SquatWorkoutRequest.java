@@ -8,10 +8,11 @@ import java.time.LocalDateTime;
 public class SquatWorkoutRequest {
     private String uuid;
 
+    private int totalCount;
     private int successCount;
     private int waistErrorCount;
     private int depthErrorCount;
-    private int goodMorningCount;
+    private int fastRepCount;
 
     @JsonProperty("recordTime")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
@@ -23,6 +24,9 @@ public class SquatWorkoutRequest {
     public String getUuid() { return uuid; }
     public void setUuid(String uuid) { this.uuid = uuid; }
 
+    public int getTotalCount() { return totalCount; }
+    public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
+
     public int getSuccessCount() { return successCount; }
     public void setSuccessCount(int successCount) { this.successCount = successCount; }
 
@@ -32,10 +36,9 @@ public class SquatWorkoutRequest {
     public int getDepthErrorCount() { return depthErrorCount; }
     public void setDepthErrorCount(int depthErrorCount) { this.depthErrorCount = depthErrorCount; }
 
-    public int getGoodMorningCount() { return goodMorningCount; }
-    public void setGoodMorningCount(int goodMorningCount) { this.goodMorningCount = goodMorningCount; }
+    public int getFastRepCount() { return fastRepCount; }
+    public void setFastRepCount(int fastRepCount) { this.fastRepCount = fastRepCount; }
 
     public LocalDateTime getRecordTime() { return recordTime; }
     public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
-
 }
