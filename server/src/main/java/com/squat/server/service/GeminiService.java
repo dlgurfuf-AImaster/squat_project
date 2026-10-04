@@ -59,17 +59,26 @@ public class GeminiService {
     }
 
     // 2. 종합 세트 피드백
-    public String generateAggregateCoaching(int totalSessions, int successCount, int waistErrorCount, int depthErrorCount, int fastRepCount) {
-        int totalAttempts = successCount + waistErrorCount + depthErrorCount + fastRepCount;
-        double accuracy = totalAttempts > 0 ? ((double) successCount / totalAttempts) * 100 : 0;
+    public String generateAggregateCoaching(
+            int totalSessions,
+            int totalCount,
+            int successCount,
+            int waistErrorCount,
+            int depthErrorCount,
+            int fastRepCount
+    ) {
+        double accuracy = totalCount > 0
+                ? ((double) successCount / totalCount) * 100
+                : 0;
 
         String prompt = String.format(
                 """
                         You are a professional AI fitness trainer.
                         Here is the aggregated squat data for the member across %d sets:
+                        - Total squat attempts: %d
                         - Successful reps: %d (Success rate: %.1f%%)
                         - Excessive forward lean: %d | Shallow squat: %d | Fast performance: %d
-        
+    
                         [Feedback Guidelines]
                         - Base all feedback strictly on the provided squat measurements.
                         - Never invent, assume, or mention problems that are not represented in the provided data.
@@ -82,7 +91,7 @@ public class GeminiService {
                         - "Excessive forward lean" means the torso leans too far forward during the squat.
                         - "Shallow squat" means the squat does not reach sufficient depth.
                         - "Fast performance" means the squat repetition was performed too quickly, preventing sufficient controlled movement and holding throughout the repetition.
-        
+    
                         [Formatting Rules]
                         1. CRITICAL: You MUST write the entire response in Korean.
                         2. Start directly with the analysis without any intro, greetings, or concluding remarks.
@@ -94,7 +103,13 @@ public class GeminiService {
                              * Overall good posture: Dynamically vary between Korean concepts like "stable form maintained", "perfect tempo & execution", or "keep this exact momentum".
                         4. Line break, then write 2-3 bullet points (- ) in Korean explaining main causes and practical actionable tips with fresh, varied wording.
                         5. Never use emojis. Use bold text (**keyword**) for key terms to improve readability.""",
-                totalSessions, successCount, accuracy, waistErrorCount, depthErrorCount, fastRepCount
+                totalSessions,
+                totalCount,
+                successCount,
+                accuracy,
+                waistErrorCount,
+                depthErrorCount,
+                fastRepCount
         );
 
         return callGeminiApi(prompt);
