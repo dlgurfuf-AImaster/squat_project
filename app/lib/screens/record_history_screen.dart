@@ -160,10 +160,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
               ..sort((a, b) => b.date.compareTo(a.date));
 
             final totalSuccess = dayRecords.fold<int>(0, (sum, r) => sum + r.successCount);
-            final totalWaist = dayRecords.fold<int>(0, (sum, r) => sum + r.waistErrorCount);
-            final totalDepth = dayRecords.fold<int>(0, (sum, r) => sum + r.depthErrorCount);
-            final totalGoodMorning = dayRecords.fold<int>(0, (sum, r) => sum + r.goodMorningCount);
-            final totalErrors = totalWaist + totalDepth + totalGoodMorning;
 
             final selectedInDay = dayRecords
                 .where((r) => r.id != null && _selectedRecordIds.contains(r.id))
@@ -258,11 +254,23 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                             const SizedBox(height: 10),
                             Row(
                               children: [
-                                _buildSummaryStatBox("성공", "$totalSuccess회", AppTheme.accentGreen),
+                                _buildSummaryStatBox(
+                                  "Total",
+                                  "${dayRecords.fold<int>(0, (sum, r) => sum + r.totalCount)}회",
+                                  AppTheme.primarySky,
+                                ),
                                 const SizedBox(width: 6),
-                                _buildSummaryStatBox("세트", "${dayRecords.length}세트", AppTheme.primarySky),
+                                _buildSummaryStatBox(
+                                  "Sets",
+                                  "${dayRecords.length}세트",
+                                  const Color(0xFF8B5CF6),
+                                ),
                                 const SizedBox(width: 6),
-                                _buildSummaryStatBox("자세 오차", "$totalErrors회", Colors.orange),
+                                _buildSummaryStatBox(
+                                  "Success",
+                                  "$totalSuccess회",
+                                  AppTheme.accentGreen,
+                                ),
                               ],
                             ),
                           ],
@@ -321,7 +329,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                                   color: hasSelected ? Colors.white : const Color(0xFF94A3B8),
                                 ),
                                 label: Text(
-                                  "서버 (${selectedInDay.length})세트 전송",
+                                  "서버 전송 (${selectedInDay.length})세트",
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
@@ -588,7 +596,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      "(${selectedRecords.length})세트 전송",
+                      "서버 (${selectedRecords.length})",
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -1120,12 +1128,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     const Color successColor = Color(0xFF10B981);
     const Color waistColor = Color(0xFFF59E0B);
     const Color depthColor = Color(0xFFF97316);
-    const Color morningColor = Color(0xFFEF4444);
-
-    final int totalCount = record.successCount +
-        record.waistErrorCount +
-        record.depthErrorCount +
-        record.goodMorningCount;
+    const Color fastRepColor = Color(0xFFEF4444);
 
     return GestureDetector(
       onTap: isSelectable ? onTap : null,
@@ -1182,7 +1185,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                   _buildSyncChip(record.isSynced),
                   const Spacer(),
                   Text(
-                    "$totalCount",
+                    "${record.totalCount}",
                     style: GoogleFonts.anton(
                       fontSize: 22,
                       color: AppTheme.primarySky,
@@ -1207,7 +1210,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                   const SizedBox(width: 4),
                   _buildRecordStatBadge("얕은깊이", "${record.depthErrorCount}회", depthColor),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("상체선행", "${record.goodMorningCount}회", morningColor),
+                  _buildRecordStatBadge("빠른수행", "${record.fastRepCount}회", fastRepColor),
                 ],
               ),
             ],
@@ -1311,10 +1314,14 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
       List<SquatRecord> allRecords,
       List<SquatRecord> selectedDayRecords,
       ) {
-    final totalSuccess = selectedDayRecords.fold<int>(0, (sum, r) => sum + r.successCount);
-    final totalErrors = selectedDayRecords.fold<int>(
+    final totalCount = selectedDayRecords.fold<int>(
       0,
-          (sum, r) => sum + r.waistErrorCount + r.depthErrorCount + r.goodMorningCount,
+          (sum, r) => sum + r.totalCount,
+    );
+
+    final totalSuccess = selectedDayRecords.fold<int>(
+      0,
+          (sum, r) => sum + r.successCount,
     );
 
     return Container(
@@ -1383,11 +1390,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
             else
               Row(
                 children: [
+                  _buildStatItem("$totalCount회", AppTheme.primarySky),
+                  const SizedBox(width: 4),
+                  _buildStatItem("${selectedDayRecords.length}세트", const Color(0xFF8B5CF6)),
+                  const SizedBox(width: 4),
                   _buildStatItem("$totalSuccess회", AppTheme.accentGreen),
-                  const SizedBox(width: 4),
-                  _buildStatItem("${selectedDayRecords.length}세트", AppTheme.primarySky),
-                  const SizedBox(width: 4),
-                  _buildStatItem("$totalErrors회", Colors.orange),
                 ],
               ),
           ],

@@ -381,11 +381,6 @@ class _SquatCounterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int totalCount = squat.successCount +
-        squat.waistErrorCount +
-        squat.depthErrorCount +
-        squat.goodMorningCount;
-
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -422,7 +417,7 @@ class _SquatCounterCard extends StatelessWidget {
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
-                    "$totalCount",
+                    "${squat.totalCount}",
                     style: GoogleFonts.anton(
                       fontSize: 38,
                       color: AppTheme.primarySky,
@@ -463,8 +458,8 @@ class _SquatCounterCard extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           _CountRow(
-            label: "상체 선행",
-            count: squat.goodMorningCount,
+            label: "빠른 수행",
+            count: squat.fastRepCount,
             color: const Color(0xFFEF4444),
           ),
         ],

@@ -25,8 +25,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
   }
 
@@ -37,32 +38,59 @@ class DatabaseHelper {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         uuid TEXT NOT NULL UNIQUE,
         date TEXT NOT NULL,
+        totalCount INTEGER NOT NULL,
         successCount INTEGER NOT NULL,
         waistErrorCount INTEGER NOT NULL,
         depthErrorCount INTEGER NOT NULL,
-        goodMorningCount INTEGER NOT NULL,
+        fastRepCount INTEGER NOT NULL,
         is_synced INTEGER DEFAULT 0
       )
     ''');
   }
 
-  // 📥 1. 스쿼트 운동 기록 1건 저장
+  // 기존 DB를 새로운 구조로 업그레이드
+  Future _upgradeDB(
+      Database db,
+      int oldVersion,
+      int newVersion,
+      ) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        ALTER TABLE squat_records
+        ADD COLUMN totalCount INTEGER NOT NULL DEFAULT 0
+      ''');
+    }
+  }
+
+  // 스쿼트 운동 기록 1건 저장
   Future<int> insertRecord(SquatRecord record) async {
     final db = await instance.database;
-    return await db.insert('squat_records', record.toMap());
+    return await db.insert(
+      'squat_records',
+      record.toMap(),
+    );
   }
 
-  // 📤 2. 전체 운동 기록 조회 (최신순 정렬)
+  // 전체 운동 기록 조회 (최신순 정렬)
   Future<List<SquatRecord>> getAllRecords() async {
     final db = await instance.database;
-    final result = await db.query('squat_records', orderBy: 'date DESC');
+    final result = await db.query(
+      'squat_records',
+      orderBy: 'date DESC',
+    );
 
-    return result.map((json) => SquatRecord.fromMap(json)).toList();
+    return result
+        .map((json) => SquatRecord.fromMap(json))
+        .toList();
   }
 
-  // 🔄 3. 백업 성공 시 동기화 상태 업데이트 메서드
-  Future<int> updateSyncStatus(int id, bool isSynced) async {
+  // 백업 성공 시 동기화 상태 업데이트
+  Future<int> updateSyncStatus(
+      int id,
+      bool isSynced,
+      ) async {
     final db = await instance.database;
+
     return await db.update(
       'squat_records',
       {'is_synced': isSynced ? 1 : 0},
@@ -71,9 +99,10 @@ class DatabaseHelper {
     );
   }
 
-  // 🗑️ 4. 특정 기록 삭제 (옵션)
+  // 특정 기록 삭제
   Future<int> deleteRecord(int id) async {
     final db = await instance.database;
+
     return await db.delete(
       'squat_records',
       where: 'id = ?',
@@ -81,14 +110,14 @@ class DatabaseHelper {
     );
   }
 
-  // 5. 전체 로컬 기록 삭제
+  // 전체 로컬 기록 삭제
   Future<int> deleteAllRecords() async {
     final db = await instance.database;
 
     return await db.delete('squat_records');
   }
 
-  /// TODO 🧪 [테스트용] 로컬 DB에 더미 스쿼트 데이터 30개 생성 (is_synced = 0) (삭제할 것)
+  // 테스트용 로컬 DB 더미 데이터 생성
   Future<void> insertDummyRecords() async {
     final random = Random();
     final now = DateTime.now();
@@ -98,17 +127,76 @@ class DatabaseHelper {
       final daysAgo = random.nextInt(30);
       final hoursAgo = random.nextInt(24);
       final minutesAgo = random.nextInt(60);
+
       final recordDate = now.subtract(
-        Duration(days: daysAgo, hours: hoursAgo, minutes: minutesAgo),
+        Duration(
+          days: daysAgo,
+          hours: hoursAgo,
+          minutes: minutesAgo,
+        ),
       );
+
+      final totalCount = random.nextInt(15) + 5;
+
+      int successCount = 0;
+      int waistErrorCount = 0;
+      int depthErrorCount = 0;
+      int fastRepCount = 0;
+
+      // 실제 스쿼트 하나씩 판정한다고 가정
+      for (int rep = 0; rep < totalCount; rep++) {
+        // 성공 60%, 오류 발생 40%
+        final hasError = random.nextDouble() < 0.4;
+
+        if (!hasError) {
+          successCount++;
+          continue;
+        }
+
+        // 오류가 발생한 경우,
+        // 각 오류는 동일한 확률로 독립적으로 발생
+        final hasWaistError = random.nextBool();
+        final hasDepthError = random.nextBool();
+        final hasFastRepError = random.nextBool();
+
+        // 오류가 하나 이상 발생하도록 보장
+        if (!hasWaistError &&
+            !hasDepthError &&
+            !hasFastRepError) {
+          final errorType = random.nextInt(3);
+
+          if (errorType == 0) {
+            waistErrorCount++;
+          } else if (errorType == 1) {
+            depthErrorCount++;
+          } else {
+            fastRepCount++;
+          }
+
+          continue;
+        }
+
+        if (hasWaistError) {
+          waistErrorCount++;
+        }
+
+        if (hasDepthError) {
+          depthErrorCount++;
+        }
+
+        if (hasFastRepError) {
+          fastRepCount++;
+        }
+      }
 
       final record = SquatRecord(
         date: recordDate,
-        successCount: random.nextInt(15) + 5,   // 5 ~ 19회 성공
-        waistErrorCount: random.nextInt(5),     // 0 ~ 4회 오류
-        depthErrorCount: random.nextInt(5),     // 0 ~ 4회 오류
-        goodMorningCount: random.nextInt(4),   // 0 ~ 3회 오류
-        isSynced: false,                        // 💡 미전송(0) 상태로 설정
+        totalCount: totalCount,
+        successCount: successCount,
+        waistErrorCount: waistErrorCount,
+        depthErrorCount: depthErrorCount,
+        fastRepCount: fastRepCount,
+        isSynced: false,
       );
 
       await insertRecord(record);

@@ -4,7 +4,7 @@ class CoachingResponse {
   final int totalSuccessCount;
   final int totalWaistErrorCount;
   final int totalDepthErrorCount;
-  final int totalGoodMorningCount;
+  final int totalFastRepCount;
   final String coachingMessage;
 
   CoachingResponse({
@@ -13,7 +13,7 @@ class CoachingResponse {
     required this.totalSuccessCount,
     required this.totalWaistErrorCount,
     required this.totalDepthErrorCount,
-    required this.totalGoodMorningCount,
+    required this.totalFastRepCount,
     required this.coachingMessage,
   });
 
@@ -24,7 +24,7 @@ class CoachingResponse {
       totalSuccessCount: json['totalSuccessCount'] ?? 0,
       totalWaistErrorCount: json['totalWaistErrorCount'] ?? 0,
       totalDepthErrorCount: json['totalDepthErrorCount'] ?? 0,
-      totalGoodMorningCount: json['totalGoodMorningCount'] ?? 0,
+      totalFastRepCount: json['totalFastRepCount'] ?? 0,
       coachingMessage: json['coachingMessage'] ?? '코칭 메시지가 없습니다.',
     );
   }

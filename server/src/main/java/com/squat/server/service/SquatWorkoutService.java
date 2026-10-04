@@ -34,10 +34,11 @@ public class SquatWorkoutService {
         SquatWorkout workout = new SquatWorkout();
         workout.setUuid(request.getUuid());
         workout.setUser(user);
+        workout.setTotalCount(request.getTotalCount());
         workout.setSuccessCount(request.getSuccessCount());
         workout.setWaistErrorCount(request.getWaistErrorCount());
         workout.setDepthErrorCount(request.getDepthErrorCount());
-        workout.setGoodMorningCount(request.getGoodMorningCount());
+        workout.setFastRepCount(request.getFastRepCount());
         workout.setRecordTime(request.getRecordTime());
 
         return squatWorkoutRepository.save(workout);
