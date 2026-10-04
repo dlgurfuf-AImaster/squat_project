@@ -110,13 +110,19 @@ public class SquatCoachingService {
         }
 
         // 수치 합산
+        int totalCount = workouts.stream().mapToInt(SquatWorkout::getTotalCount).sum();
         int totalSuccess = workouts.stream().mapToInt(SquatWorkout::getSuccessCount).sum();
         int totalWaist = workouts.stream().mapToInt(SquatWorkout::getWaistErrorCount).sum();
         int totalDepth = workouts.stream().mapToInt(SquatWorkout::getDepthErrorCount).sum();
         int totalFastRepCount = workouts.stream().mapToInt(SquatWorkout::getFastRepCount).sum();
 
         String coachingMessage = geminiService.generateAggregateCoaching(
-                workouts.size(), totalSuccess, totalWaist, totalDepth, totalFastRepCount
+                workouts.size(),
+                totalCount,
+                totalSuccess,
+                totalWaist,
+                totalDepth,
+                totalFastRepCount
         );
 
         return new CoachingResponse("AGGREGATE", workouts.size(),

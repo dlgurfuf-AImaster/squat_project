@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 public class SquatWorkoutRequest {
     private String uuid;
 
+    private int totalCount;
     private int successCount;
     private int waistErrorCount;
     private int depthErrorCount;
@@ -23,6 +24,9 @@ public class SquatWorkoutRequest {
     public String getUuid() { return uuid; }
     public void setUuid(String uuid) { this.uuid = uuid; }
 
+    public int getTotalCount() { return totalCount; }
+    public void setTotalCount(int totalCount) { this.totalCount = totalCount; }
+
     public int getSuccessCount() { return successCount; }
     public void setSuccessCount(int successCount) { this.successCount = successCount; }
 
@@ -37,5 +41,4 @@ public class SquatWorkoutRequest {
 
     public LocalDateTime getRecordTime() { return recordTime; }
     public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
-
 }
