@@ -1122,11 +1122,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     const Color depthColor = Color(0xFFF97316);
     const Color fastRepColor = Color(0xFFEF4444);
 
-    final int totalCount = record.successCount +
-        record.waistErrorCount +
-        record.depthErrorCount +
-        record.fastRepCount;
-
     return GestureDetector(
       onTap: isSelectable ? onTap : null,
       child: Container(
@@ -1182,7 +1177,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                   _buildSyncChip(record.isSynced),
                   const Spacer(),
                   Text(
-                    "$totalCount",
+                    "${record.totalCount}",
                     style: GoogleFonts.anton(
                       fontSize: 22,
                       color: AppTheme.primarySky,

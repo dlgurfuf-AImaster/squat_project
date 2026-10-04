@@ -381,11 +381,6 @@ class _SquatCounterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int totalCount = squat.successCount +
-        squat.waistErrorCount +
-        squat.depthErrorCount +
-        squat.fastRepCount;
-
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -422,7 +417,7 @@ class _SquatCounterCard extends StatelessWidget {
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(
-                    "$totalCount",
+                    "${squat.totalCount}",
                     style: GoogleFonts.anton(
                       fontSize: 38,
                       color: AppTheme.primarySky,
