@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/bluetooth_provider.dart';
-import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
 import '../services/api_service.dart';
@@ -14,7 +13,12 @@ import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final ValueChanged<int> onTabSelected;
+
+  const HomeScreen({
+    super.key,
+    required this.onTabSelected,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -46,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final btProvider = context.watch<BluetoothProvider>();
     final squatProvider = context.watch<SquatProvider>();
-    final coachingProvider = context.read<CoachingProvider>();
     final bool isBTConnected = btProvider.connectionStatus == 'CONNECTED';
 
     final stats = WorkoutWeeklyStats.calculate(squatProvider.localRecords); // 주간 통계 데이터 객체
@@ -75,7 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
               // 3. 상단 문구 + 버튼 통합 영역
               MotivationalBanner(
                 child: _HomeGridMenu(
-                  coachingProvider: coachingProvider,
+                  onTabSelected: widget.onTabSelected,
                   isBTConnected: isBTConnected,
                 ),
               ),
@@ -666,11 +669,11 @@ class _PillChip extends StatelessWidget {
 // 4. 2x2 그리드 메뉴
 // =============================================================================
 class _HomeGridMenu extends StatelessWidget {
-  final CoachingProvider coachingProvider;
+  final ValueChanged<int> onTabSelected;
   final bool isBTConnected;
 
   const _HomeGridMenu({
-    required this.coachingProvider,
+    required this.onTabSelected,
     required this.isBTConnected,
   });
 
@@ -686,7 +689,7 @@ class _HomeGridMenu extends StatelessWidget {
                 subtitle: "Start Squat",
                 imagePath: "assets/images/main_icon.png",
                 isPrimary: true,
-                onTap: () => coachingProvider.setTabIndex(2),
+                onTap: () => onTabSelected(2),
               ),
             ),
             const SizedBox(width: 12),
@@ -697,10 +700,7 @@ class _HomeGridMenu extends StatelessWidget {
                 icon: Icons.auto_awesome_rounded,
                 iconBgColor: const Color(0xFFF3E8FF),
                 iconColor: Colors.purple,
-                onTap: () {
-                  coachingProvider.setTabIndex(4);
-                  coachingProvider.fetchServerRecords();
-                },
+                onTap: () => onTabSelected(4),
               ),
             ),
           ],
@@ -715,7 +715,7 @@ class _HomeGridMenu extends StatelessWidget {
                 icon: Icons.bar_chart_rounded,
                 iconBgColor: AppTheme.primarySky.withValues(alpha: 0.12),
                 iconColor: AppTheme.primarySky,
-                onTap: () => coachingProvider.setTabIndex(3),
+                onTap: () => onTabSelected(3),
               ),
             ),
             const SizedBox(width: 12),
@@ -726,7 +726,7 @@ class _HomeGridMenu extends StatelessWidget {
                 icon: isBTConnected ? Icons.bluetooth_connected : Icons.bluetooth,
                 iconBgColor: isBTConnected ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
                 iconColor: isBTConnected ? AppTheme.accentGreen : const Color(0xFF64748B),
-                onTap: () => coachingProvider.setTabIndex(1),
+                onTap: () => onTabSelected(1),
               ),
             ),
           ],

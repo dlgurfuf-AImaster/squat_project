@@ -19,14 +19,25 @@ class MainHolder extends StatefulWidget {
 }
 
 class _MainHolderState extends State<MainHolder> {
+  int _currentIndex = 0;
+
   // Index 매칭: 0(홈), 1(연결), 2(운동), 3(기록), 4(AI 코칭)
-  static const List<Widget> _pages = [
-    HomeScreen(),          // Index 0
-    ArduinoStatusScreen(), // Index 1
-    SquatScreen(),         // Index 2
-    RecordHistoryScreen(), // Index 3
-    CoachingScreen(),      // Index 4
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pages = [
+      HomeScreen(
+        onTabSelected: _onTabSelected,
+      ),
+      const ArduinoStatusScreen(),
+      const SquatScreen(),
+      const RecordHistoryScreen(),
+      const CoachingScreen(),
+    ];
+  }
 
   @override
   void didChangeDependencies() {
@@ -39,14 +50,15 @@ class _MainHolderState extends State<MainHolder> {
   }
 
   /// 탭 이동 처리 메서드
-  void _onTabSelected(int index, CoachingProvider coachingProvider) {
-    if (coachingProvider.currentTabIndex == index) return;
+  void _onTabSelected(int index) {
+    if (_currentIndex == index) return;
 
-    coachingProvider.setTabIndex(index);
+    setState(() {
+      _currentIndex = index;
+    });
 
-    // AI 코칭 탭(Index 4) 진입 시 서버 데이터 갱신
     if (index == 4) {
-      coachingProvider.fetchServerRecords();
+      context.read<CoachingProvider>().fetchServerRecords();
     }
   }
 
@@ -83,8 +95,7 @@ class _MainHolderState extends State<MainHolder> {
 
   @override
   Widget build(BuildContext context) {
-    final coachingProvider = context.watch<CoachingProvider>();
-    final currentIndex = coachingProvider.currentTabIndex;
+    final currentIndex = _currentIndex;
 
     return PopScope(
       canPop: false,
@@ -92,7 +103,9 @@ class _MainHolderState extends State<MainHolder> {
         if (didPop) return;
 
         if (currentIndex != 0) {
-          coachingProvider.setTabIndex(0);
+          setState(() {
+            _currentIndex = 0;
+          });
           return;
         }
 
@@ -108,13 +121,13 @@ class _MainHolderState extends State<MainHolder> {
           index: currentIndex,
           children: _pages,
         ),
-        bottomNavigationBar: _buildFloatingNavigationBar(coachingProvider, currentIndex),
+        bottomNavigationBar: _buildFloatingNavigationBar(currentIndex),
       ),
     );
   }
 
   /// 플로팅 모던 바텀 네비게이션 바 (Custom Row 방식)
-  Widget _buildFloatingNavigationBar(CoachingProvider coachingProvider, int currentIndex) {
+  Widget _buildFloatingNavigationBar(int currentIndex) {
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.only(left: 16, right: 16, bottom: 4),
@@ -137,19 +150,19 @@ class _MainHolderState extends State<MainHolder> {
               color: Colors.white.withValues(alpha: 0.88),
               child: Row(
                 children: [
-                  _buildNavItem(Icons.home_rounded, 0, currentIndex, coachingProvider),
-                  _buildNavItem(Icons.bluetooth_rounded, 1, currentIndex, coachingProvider),
+                  _buildNavItem(Icons.home_rounded, 0, currentIndex),
+                  _buildNavItem(Icons.bluetooth_rounded, 1, currentIndex),
                   Expanded(
                     child: GestureDetector(
-                      onTap: () => _onTabSelected(2, coachingProvider),
+                      onTap: () => _onTabSelected(2),
                       behavior: HitTestBehavior.opaque,
                       child: Center(
                         child: _buildCenterSquatIcon(currentIndex == 2),
                       ),
                     ),
                   ),
-                  _buildNavItem(Icons.bar_chart_rounded, 3, currentIndex, coachingProvider),
-                  _buildNavItem(Icons.auto_awesome_rounded, 4, currentIndex, coachingProvider),
+                  _buildNavItem(Icons.bar_chart_rounded, 3, currentIndex),
+                  _buildNavItem(Icons.auto_awesome_rounded, 4, currentIndex),
                 ],
               ),
             ),
@@ -164,13 +177,12 @@ class _MainHolderState extends State<MainHolder> {
       IconData icon,
       int index,
       int currentIndex,
-      CoachingProvider coachingProvider,
       ) {
     final bool isSelected = currentIndex == index;
 
     return Expanded(
       child: InkWell(
-        onTap: () => _onTabSelected(index, coachingProvider),
+        onTap: () => _onTabSelected(index),
         splashColor: Colors.transparent,
         highlightColor: Colors.transparent,
         child: Center(

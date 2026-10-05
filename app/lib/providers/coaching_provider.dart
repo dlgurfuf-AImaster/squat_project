@@ -19,9 +19,6 @@ class CoachingProvider with ChangeNotifier {
 
   String? _errorMessage;
 
-  // 메인 화면 탭 제어용 (0: 기록/운동 탭, 1: AI 코칭 탭)
-  int _currentTabIndex = 0;
-
   List<SquatWorkoutResponse> get serverRecords => _serverRecords;
   CoachingResponse? get latestCoaching => _latestCoaching;
 
@@ -33,12 +30,6 @@ class CoachingProvider with ChangeNotifier {
   bool get isLoading => _isFetching || _isAiAnalyzing;
 
   String? get errorMessage => _errorMessage;
-  int get currentTabIndex => _currentTabIndex;
-
-  void setTabIndex(int index) {
-    _currentTabIndex = index;
-    notifyListeners();
-  }
 
   // 서버 DB에 저장된 사용자의 스쿼트 기록 목록 조회 (일반 조회 -> isFetching 사용)
   Future<void> fetchServerRecords() async {
