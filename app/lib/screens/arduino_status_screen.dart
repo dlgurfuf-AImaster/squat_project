@@ -574,8 +574,10 @@ class ArduinoStatusScreen extends StatelessWidget {
   // ===========================================================================
   void _startScanAndConnect(BuildContext context) async {
     final bluetoothProvider = context.read<BluetoothProvider>();
+    final squatProvider = context.read<SquatProvider>();
+
     try {
-      await bluetoothProvider.startBluetoothWorkout(context);
+      await bluetoothProvider.startBluetoothWorkout(squatProvider);
     } catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
