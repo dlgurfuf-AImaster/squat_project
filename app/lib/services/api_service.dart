@@ -151,7 +151,7 @@ class ApiService {
     }
   }
 
-  /// 5. 집계 AI 코칭 요청 (개별 ID 선택 / 날짜 지정 / 최근 30일)
+  /// 5. 집계 AI 코칭 요청 (선택한 기록 기준)
   Future<CoachingResponse?> getAggregateCoaching(
       AggregateCoachingRequest request,
       ) async {
