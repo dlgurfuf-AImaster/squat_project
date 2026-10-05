@@ -18,7 +18,7 @@ class ApiService {
   final Dio _dio = Dio();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  final String _baseUrl = dotenv.get('BASE_URL');
+  final String _baseUrl = dotenv.get('BASE_URL_RENDER');
 
   ApiService._internal() {
     _dio.options.baseUrl = _baseUrl;
