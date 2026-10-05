@@ -6,7 +6,6 @@ import '../dtos/squat_workout_request.dart';
 import '../models/squat_record.dart';
 import '../providers/squat_provider.dart';
 import '../services/api_service.dart';
-import '../services/database_helper.dart';
 import '../theme/app_theme.dart';
 
 class RecordHistoryScreen extends StatefulWidget {
@@ -17,8 +16,6 @@ class RecordHistoryScreen extends StatefulWidget {
 }
 
 class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
-  late Future<List<SquatRecord>> _recordsFuture;
-
   // 선택된 로컬 기록 ID 저장 집합
   final Set<int> _selectedRecordIds = {};
 
@@ -38,7 +35,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     super.initState();
     final initialPage = (_focusedDay.year - 2000) * 12 + (_focusedDay.month - 1);
     _pageController = PageController(initialPage: initialPage);
-    _refreshRecords();
   }
 
   @override
@@ -48,11 +44,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   }
 
   // DB에서 기록 다시 불러오기
-  void _refreshRecords() {
-    setState(() {
-      _selectedRecordIds.clear();
-      _recordsFuture = DatabaseHelper.instance.getAllRecords();
-    });
+  Future<void> _refreshRecords() async {
+    _selectedRecordIds.clear();
+    await context.read<SquatProvider>().loadLocalRecords();
   }
 
   // 날짜 비교용 헬퍼
@@ -115,7 +109,10 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
       if (response != null) {
         successCount++;
         if (record.id != null) {
-          await DatabaseHelper.instance.updateSyncStatus(record.id!, true);
+          await context.read<SquatProvider>().updateRecordSyncStatus(
+            record.id!,
+            true,
+          );
         }
       } else {
         failCount++;
@@ -408,40 +405,44 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
-        child: FutureBuilder<List<SquatRecord>>(
-          future: _recordsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        child: Consumer<SquatProvider>(
+          builder: (context, squatProvider, child) {
+            final records =
+            List<SquatRecord>.from(squatProvider.localRecords);
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Text("❌ 데이터를 불러오는 중 오류가 발생했습니다: ${snapshot.error}"),
-              );
-            }
-
-            final rawRecords = snapshot.data ?? [];
-            final records = List<SquatRecord>.from(rawRecords);
             records.sort((a, b) => _isAscending
                 ? a.date.compareTo(b.date)
                 : b.date.compareTo(a.date));
 
-            final unsyncedCount = records.where((r) => !r.isSynced).length;
-            final recordEvents = _groupRecordsByDate(records);
+            final unsyncedCount =
+                records.where((r) => !r.isSynced).length;
+
+            final recordEvents =
+            _groupRecordsByDate(records);
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 16.0),
+                  padding: const EdgeInsets.only(
+                    left: 24.0,
+                    right: 24.0,
+                    top: 16.0,
+                  ),
                   child: _buildHeader(),
                 ),
                 const SizedBox(height: 20),
                 Expanded(
                   child: _isCalendarView
-                      ? _buildCircleCalendarView(records, recordEvents, unsyncedCount)
-                      : _buildListView(records, unsyncedCount),
+                      ? _buildCircleCalendarView(
+                    records,
+                    recordEvents,
+                    unsyncedCount,
+                  )
+                      : _buildListView(
+                    records,
+                    unsyncedCount,
+                  ),
                 ),
               ],
             );

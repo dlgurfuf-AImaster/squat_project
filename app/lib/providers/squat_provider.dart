@@ -220,6 +220,14 @@ class SquatProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // 특정 로컬 기록의 서버 동기화 상태 변경
+  Future<void> updateRecordSyncStatus(int id, bool isSynced) async {
+    await DatabaseHelper.instance.updateSyncStatus(id, isSynced);
+
+    // 변경된 최신 기록 목록 다시 불러오기
+    await loadLocalRecords();
+  }
+
   // 로컬 운동 기록 전체 삭제
   Future<void> clearLocalRecords() async {
     await DatabaseHelper.instance.deleteAllRecords();
