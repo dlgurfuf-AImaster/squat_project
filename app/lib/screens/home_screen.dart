@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../models/squat_record.dart';
 import '../providers/bluetooth_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
@@ -48,11 +49,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final btProvider = context.watch<BluetoothProvider>();
-    final squatProvider = context.watch<SquatProvider>();
-    final bool isBTConnected = btProvider.connectionStatus == 'CONNECTED';
+    final localRecords = context.select<SquatProvider, List<SquatRecord>>(
+          (provider) => provider.localRecords,
+    );
+    final bool isBTConnected = context.select<BluetoothProvider, bool>(
+          (provider) => provider.connectionStatus == 'CONNECTED',
+    );
 
-    final stats = WorkoutWeeklyStats.calculate(squatProvider.localRecords); // 주간 통계 데이터 객체
+    final stats = WorkoutWeeklyStats.calculate(localRecords);
+
 
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
