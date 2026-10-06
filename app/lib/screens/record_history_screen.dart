@@ -629,9 +629,9 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
 
     return Padding(
       padding: const EdgeInsets.only(
-        left: 24.0,
-        right: 24.0,
-        bottom: 24.0,
+        left: 16.0,
+        right: 16.0,
+        bottom: 20.0,
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -861,7 +861,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                 Icon(Icons.format_list_bulleted_rounded, size: 16, color: AppTheme.primarySky),
                 SizedBox(width: 6),
                 Text(
-                  "나열형 보기",
+                  "리스트",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -1026,9 +1026,16 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
         monthlyRecords.where((r) => !r.isSynced).length;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 20.0),
+      padding: const EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        bottom: 20.0,
+      ),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 20,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
@@ -1101,7 +1108,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                         Icon(Icons.calendar_month_rounded, size: 16, color: AppTheme.primarySky),
                         SizedBox(width: 6),
                         Text(
-                          "달력형 보기",
+                          "캘린더",
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,

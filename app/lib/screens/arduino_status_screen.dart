@@ -22,50 +22,68 @@ class ArduinoStatusScreen extends StatelessWidget {
       backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(
+            vertical: 16.0,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. 상단 앱 타이틀 헤더 (Bluetooth)
-              _buildHeader(),
+              // 상단 바
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: _buildHeader(),
+              ),
+
               const SizedBox(height: 20),
 
-              // 2. 메인 착용 가이드 및 상태 카드 (이미지 플레이스홀더 포함)
-              _buildMainSensorGuideCard(
-                isConnected: isConnected,
-                isConnecting: isConnecting,
-              ),
-              const SizedBox(height: 16),
-
-              // 3. 센서별 개별 상태 카운터 (가로 2개 배치 - 애니메이션 서브카드 적용)
-              Row(
-                children: [
-                  Expanded(
-                    child: PulsingSensorSubCard(
-                      title: "허리 센서",
-                      deviceName: "BT05_WAIST",
+              // 본문
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 20.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildMainSensorGuideCard(
                       isConnected: isConnected,
-                      icon: Icons.developer_board_rounded,
+                      isConnecting: isConnecting,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: PulsingSensorSubCard(
-                      title: "허벅지 센서",
-                      deviceName: "BT05_THIGH",
-                      isConnected: isConnected,
-                      icon: Icons.memory_rounded,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
 
-              // 4. 하단 동작 실행 버튼 (홈 화면 카드 버튼 테마)
-              _buildActionButton(
-                context: context,
-                isConnecting: isConnecting,
-                isConnected: isConnected,
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: PulsingSensorSubCard(
+                            title: "허리 센서",
+                            deviceName: "BT05_WAIST",
+                            isConnected: isConnected,
+                            icon: Icons.developer_board_rounded,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: PulsingSensorSubCard(
+                            title: "허벅지 센서",
+                            deviceName: "BT05_THIGH",
+                            isConnected: isConnected,
+                            icon: Icons.memory_rounded,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _buildActionButton(
+                      context: context,
+                      isConnecting: isConnecting,
+                      isConnected: isConnected,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

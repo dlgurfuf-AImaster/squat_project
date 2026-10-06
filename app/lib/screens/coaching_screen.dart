@@ -140,7 +140,7 @@ class _CoachingScreenState extends State<CoachingScreen> {
                       )
                           : ListView(
                         key: const ValueKey('normal_screen'),
-                        padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 16.0),
+                        padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 20.0),
                         children: [
                           if (errorMessage != null)
                             _buildErrorCard(errorMessage)
@@ -643,7 +643,7 @@ class _StaggeredResultContentViewState extends State<StaggeredResultContentView>
     final parsed = _parseCoachingMessage(coaching.coachingMessage);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(24.0, 0, 24.0, 16.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 20.0),
       children: [
         AiCoachingSloganBanner(
           slogan: parsed.summary.isNotEmpty ? parsed.summary : null,

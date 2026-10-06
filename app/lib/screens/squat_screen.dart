@@ -42,30 +42,44 @@ class _SquatScreenState extends State<SquatScreen> {
       backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. 상단 앱 타이틀 & 블루투스 상태 헤더
-              _SquatHeader(isBTConnected: isBTConnected),
+              // 상단바 → 기존 24px 유지
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: _SquatHeader(isBTConnected: isBTConnected),
+              ),
+
               const SizedBox(height: 20),
 
-              // 2. 실시간 자세 분석 카드 (블루투스 주석 상태 유지)
-              _RealtimePostureCard(
-                squat: squat,
-                isBTConnected: isBTConnected,
-                isReading: isReading,
-              ),
-              const SizedBox(height: 12),
+              // 본문 → 16px
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 20.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _RealtimePostureCard(
+                      squat: squat,
+                      isBTConnected: isBTConnected,
+                      isReading: isReading,
+                    ),
+                    const SizedBox(height: 12),
 
-              // 3. 스쿼트 카운터 카드
-              _SquatCounterCard(squat: squat),
-              const SizedBox(height: 10),
+                    _SquatCounterCard(squat: squat),
+                    const SizedBox(height: 10),
 
-              // 4. 하단 액션 버튼 영역
-              _ActionButtons(
-                isBTConnected: isBTConnected,
-                squatProvider: squatProvider,
+                    _ActionButtons(
+                      isBTConnected: isBTConnected,
+                      squatProvider: squatProvider,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

@@ -64,35 +64,46 @@ class _HomeScreenState extends State<HomeScreen> {
       endDrawer: const _ProfileDrawer(),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 상단 앱 타이틀 & 헤더
-              const _HomeHeader(),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                child: _HomeHeader(),
+              ),
               const SizedBox(height: 16),
 
-              // 2. 주간 운동 통계 칩 배지 (실데이터 연결)[cite: 4]
-              _HomeStatBadges(
-                streakDays: stats.streakDays,
-                weeklyTotalReps: stats.weeklyTotalReps,
-                maxReps: stats.maxRepsInSingle,
-              ),
-              const SizedBox(height: 15),
-
-              // 3. 상단 문구 + 버튼 통합 영역
-              MotivationalBanner(
-                child: _HomeGridMenu(
-                  onTabSelected: widget.onTabSelected,
-                  isBTConnected: isBTConnected,
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 20.0,
                 ),
-              ),
-              const SizedBox(height: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HomeStatBadges(
+                      streakDays: stats.streakDays,
+                      weeklyTotalReps: stats.weeklyTotalReps,
+                      maxReps: stats.maxRepsInSingle,
+                    ),
+                    const SizedBox(height: 15),
 
-              // 4. 3D 주간 스쿼트 리포트 (실데이터 연결)[cite: 4]
-              IsometricVerticalChart(
-                counts: stats.dailyCounts,
-                todayIndex: stats.todayIndex,
+                    MotivationalBanner(
+                      child: _HomeGridMenu(
+                        onTabSelected: widget.onTabSelected,
+                        isBTConnected: isBTConnected,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    IsometricVerticalChart(
+                      counts: stats.dailyCounts,
+                      todayIndex: stats.todayIndex,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
