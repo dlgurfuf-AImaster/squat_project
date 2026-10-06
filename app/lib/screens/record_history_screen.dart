@@ -7,6 +7,7 @@ import '../models/squat_record.dart';
 import '../providers/squat_provider.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import 'dart:math' as math;
 
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
@@ -120,9 +121,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     }
 
     if (!mounted) return;
-    Navigator.pop(context); // 로딩 다이얼로그 닫기
+    Navigator.pop(context);
 
-    _refreshRecords();
+    await _refreshRecords();
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("☁️ 서버 전송 완료 (성공: $successCount건 / 실패: $failCount건)"),
@@ -625,93 +628,115 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
         .toList();
 
     return Padding(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primarySky.withValues(alpha: 0.28),
-                    blurRadius: 22,
-                    spreadRadius: 5,
-                    offset: const Offset(0, 8),
-                  ),
-                  const BoxShadow(
-                    color: Color.fromRGBO(23, 32, 64, 0.04),
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildMonthHeader(),
-                  const SizedBox(height: 16),
-                  _buildWeekDayHeader(),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (pageIndex) {
-                        setState(() {
-                          final year = 2000 + (pageIndex ~/ 12);
-                          final month = (pageIndex % 12) + 1;
-                          _focusedDay = DateTime(year, month, 1);
-                        });
-                      },
-                      itemBuilder: (context, pageIndex) {
-                        final monthDate = DateTime(
-                          2000 + (pageIndex ~/ 12),
-                          (pageIndex % 12) + 1,
-                          1,
-                        );
-                        return _buildCircleGrid(eventMap, monthDate);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _buildDaySummaryCard(records, selectedDayRecords),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 54,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: _buildServerBackupButton(records, selectedDayRecords),
+      padding: const EdgeInsets.only(
+        left: 24.0,
+        right: 24.0,
+        bottom: 24.0,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double cardPadding =
+          constraints.maxWidth < 350 ? 16.0 : 20.0;
+
+          return Column(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.all(cardPadding),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primarySky.withValues(alpha: 0.28),
+                        blurRadius: 22,
+                        spreadRadius: 5,
+                        offset: const Offset(0, 8),
                       ),
-                      const SizedBox(height: 6),
+                      const BoxShadow(
+                        color: Color.fromRGBO(23, 32, 64, 0.04),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMonthHeader(),
+                      const SizedBox(height: 16),
+                      _buildWeekDayHeader(),
+                      const SizedBox(height: 12),
                       Expanded(
-                        child: _buildDetailReportButton(records, selectedDayRecords),
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (pageIndex) {
+                            setState(() {
+                              final year = 2000 + (pageIndex ~/ 12);
+                              final month = (pageIndex % 12) + 1;
+                              _focusedDay = DateTime(year, month, 1);
+                            });
+                          },
+                          itemBuilder: (context, pageIndex) {
+                            final monthDate = DateTime(
+                              2000 + (pageIndex ~/ 12),
+                              (pageIndex % 12) + 1,
+                              1,
+                            );
+
+                            return _buildCircleGrid(
+                              eventMap,
+                              monthDate,
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+              const SizedBox(height: 16),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildDaySummaryCard(
+                        records,
+                        selectedDayRecords,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 54,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: _buildServerBackupButton(
+                              selectedDayRecords,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Expanded(
+                            child: _buildDetailReportButton(
+                              records,
+                              selectedDayRecords,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildServerBackupButton(
-      List<SquatRecord> allRecords,
       List<SquatRecord> selectedDayRecords,
       ) {
     final unsyncedInDay = selectedDayRecords.where((r) => !r.isSynced).toList();
@@ -903,6 +928,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
         final double itemHeight = constraints.maxHeight / totalRows;
         final double dynamicAspectRatio = itemWidth / itemHeight;
 
+        final double circleSize = math.min(
+          36.0,
+          math.min(itemWidth, itemHeight) * 0.8,
+        );
+
         return GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           itemCount: totalCells,
@@ -944,8 +974,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
               child: Center(
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  width: 36,
-                  height: 36,
+                  width: circleSize,
+                  height: circleSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: bgColor,
@@ -1339,7 +1369,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           ),
         ],
       ),
-      // 2. SingleChildScrollView로 내부 Column을 감싸 1px 오차로 인한 에러 방지
+      // 2. 레이아웃 오차로 인한 미세한 overflow 방지
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(), // 스크롤 동작 차단
         child: Column(
