@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../providers/squat_provider.dart';
 import '../providers/bluetooth_provider.dart';
+import 'dart:math' as math;
 
 /// 블루투스 아두이노 센서 연결 및 상태 관리 화면
 class ArduinoStatusScreen extends StatelessWidget {
@@ -10,8 +11,10 @@ class ArduinoStatusScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bluetoothProvider = context.watch<BluetoothProvider>();
-    final String connectionStatus = bluetoothProvider.connectionStatus;
+    final String connectionStatus =
+    context.select<BluetoothProvider, String>(
+          (provider) => provider.connectionStatus,
+    );
     final bool isConnecting = connectionStatus == 'CONNECTING';
     final bool isConnected = connectionStatus == 'CONNECTED';
 
@@ -180,71 +183,100 @@ class ArduinoStatusScreen extends StatelessWidget {
             width: double.infinity,
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final double width = constraints.maxWidth;
-                final double centerX = width / 2;
+                const double designWidth = 325.0;
+                const double designHeight = 325.0;
 
-                final Offset actualWaistDot =
-                Offset(centerX + (waistDotPos.dx - 162.5), waistDotPos.dy);
-                final Offset actualThighDot =
-                Offset(centerX + (thighDotPos.dx - 162.5), thighDotPos.dy);
-                final Offset actualWaistTag = Offset(
-                    centerX + (waistTagAttach.dx - 162.5), waistTagAttach.dy);
-                final Offset actualThighTag = Offset(
-                    centerX + (thighTagAttach.dx - 162.5), thighTagAttach.dy);
+                final double scale = math.min(
+                  1.0,
+                  constraints.maxWidth / designWidth,
+                );
 
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Image.asset(
-                      'assets/images/body_wireframe.png',
+                final double scaledWidth = designWidth * scale;
+                final double scaledHeight = designHeight * scale;
+
+                return Center(
+                  child: SizedBox(
+                    width: scaledWidth,
+                    height: scaledHeight,
+                    child: FittedBox(
                       fit: BoxFit.contain,
-                      height: 325,
-                    ),
-                    Positioned.fill(
-                      child: CustomPaint(
-                        painter: _HudLinePainter(
-                          waistDot: actualWaistDot,
-                          waistTag: actualWaistTag,
-                          thighDot: actualThighDot,
-                          thighTag: actualThighTag,
-                          activeColor: activeColor,
-                          isConnected: isConnected,
+                      child: SizedBox(
+                        width: designWidth,
+                        height: designHeight,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // 몸체 이미지
+                            Image.asset(
+                              'assets/images/body_wireframe.png',
+                              fit: BoxFit.contain,
+                              height: 325,
+                            ),
+
+                            // 센서 연결선
+                            Positioned.fill(
+                              child: CustomPaint(
+                                painter: _HudLinePainter(
+                                  waistDot: waistDotPos,
+                                  waistTag: waistTagAttach,
+                                  thighDot: thighDotPos,
+                                  thighTag: thighTagAttach,
+                                  activeColor: activeColor,
+                                  isConnected: isConnected,
+                                ),
+                              ),
+                            ),
+
+                            // 허리 LED
+                            Positioned(
+                              left: waistDotPos.dx - 9,
+                              top: waistDotPos.dy - 9,
+                              child: _buildGlowingLedDot(
+                                activeColor,
+                                isConnected,
+                              ),
+                            ),
+
+                            // 허벅지 LED
+                            Positioned(
+                              left: thighDotPos.dx - 9,
+                              top: thighDotPos.dy - 9,
+                              child: _buildGlowingLedDot(
+                                activeColor,
+                                isConnected,
+                              ),
+                            ),
+
+                            // 허리 센서 태그
+                            Positioned(
+                              top: 160,
+                              left: 1,
+                              child: _buildMinimalPinTag(
+                                title: "허리 센서",
+                                subtitle: "BT05_WAIST",
+                                isConnected: isConnected,
+                                activeColor: activeColor,
+                                isLeftAlign: true,
+                              ),
+                            ),
+
+                            // 허벅지 센서 태그
+                            Positioned(
+                              bottom: 30,
+                              right: 6,
+                              child: _buildMinimalPinTag(
+                                title: "허벅지 센서",
+                                subtitle: "BT05_THIGH",
+                                isConnected: isConnected,
+                                activeColor: activeColor,
+                                isLeftAlign: false,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: actualWaistDot.dx - 9,
-                      top: actualWaistDot.dy - 9,
-                      child: _buildGlowingLedDot(activeColor, isConnected),
-                    ),
-                    Positioned(
-                      left: actualThighDot.dx - 9,
-                      top: actualThighDot.dy - 9,
-                      child: _buildGlowingLedDot(activeColor, isConnected),
-                    ),
-                    Positioned(
-                      top: 160,
-                      left: 1,
-                      child: _buildMinimalPinTag(
-                        title: "허리 센서",
-                        subtitle: "BT05_WAIST",
-                        isConnected: isConnected,
-                        activeColor: activeColor,
-                        isLeftAlign: true,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 30,
-                      right: 6,
-                      child: _buildMinimalPinTag(
-                        title: "허벅지 센서",
-                        subtitle: "BT05_THIGH",
-                        isConnected: isConnected,
-                        activeColor: activeColor,
-                        isLeftAlign: false,
-                      ),
-                    ),
-                  ],
+                  ),
                 );
               },
             ),
