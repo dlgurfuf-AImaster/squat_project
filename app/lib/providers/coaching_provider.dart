@@ -19,9 +19,6 @@ class CoachingProvider with ChangeNotifier {
 
   String? _errorMessage;
 
-  // 메인 화면 탭 제어용 (0: 기록/운동 탭, 1: AI 코칭 탭)
-  int _currentTabIndex = 0;
-
   List<SquatWorkoutResponse> get serverRecords => _serverRecords;
   CoachingResponse? get latestCoaching => _latestCoaching;
 
@@ -33,12 +30,6 @@ class CoachingProvider with ChangeNotifier {
   bool get isLoading => _isFetching || _isAiAnalyzing;
 
   String? get errorMessage => _errorMessage;
-  int get currentTabIndex => _currentTabIndex;
-
-  void setTabIndex(int index) {
-    _currentTabIndex = index;
-    notifyListeners();
-  }
 
   // 서버 DB에 저장된 사용자의 스쿼트 기록 목록 조회 (일반 조회 -> isFetching 사용)
   Future<void> fetchServerRecords() async {
@@ -61,13 +52,13 @@ class CoachingProvider with ChangeNotifier {
 
   // 단일 기록 AI 코칭 요청 (AI 분석 -> isAiAnalyzing + 6초 타이머 사용)
   Future<bool> requestSingleCoaching(String uuid) async {
-    _setAiAnalyzing(true);
+    if (_isAiAnalyzing) return false;
 
+    _setAiAnalyzing(true);
     try {
-      // API 요청과 6초 타이머를 병렬로 대기
       final results = await Future.wait([
         _apiService.getSingleCoaching(uuid),
-        Future.delayed(const Duration(seconds: 6)), // 최소 대기 시간
+        Future.delayed(const Duration(seconds: 6)),
       ]);
 
       final response = results[0] as CoachingResponse?;
@@ -75,29 +66,29 @@ class CoachingProvider with ChangeNotifier {
       if (response != null) {
         _latestCoaching = response;
         _errorMessage = null;
-        _setAiAnalyzing(false);
         return true;
       } else {
         _errorMessage = "단일 코칭 데이터를 불러오지 못했습니다.";
-        _setAiAnalyzing(false);
         return false;
       }
     } catch (e) {
       _errorMessage = "코칭 요청 중 오류가 발생했습니다: $e";
-      _setAiAnalyzing(false);
       return false;
+    } finally {
+      _setAiAnalyzing(false);
     }
   }
 
   // 다중 기록 집계 AI 코칭 요청 (AI 분석 -> isAiAnalyzing + 6초 타이머 사용)
-  Future<bool> requestAggregateCoaching(AggregateCoachingRequest request) async {
-    _setAiAnalyzing(true);
+  Future<bool> requestAggregateCoaching(
+      AggregateCoachingRequest request) async {
+    if (_isAiAnalyzing) return false;
 
+    _setAiAnalyzing(true);
     try {
-      // API 요청과 6초 타이머를 병렬로 대기
       final results = await Future.wait([
         _apiService.getAggregateCoaching(request),
-        Future.delayed(const Duration(seconds: 6)), // 최소 대기 시간
+        Future.delayed(const Duration(seconds: 6)),
       ]);
 
       final response = results[0] as CoachingResponse?;
@@ -105,17 +96,16 @@ class CoachingProvider with ChangeNotifier {
       if (response != null) {
         _latestCoaching = response;
         _errorMessage = null;
-        _setAiAnalyzing(false);
         return true;
       } else {
         _errorMessage = "종합 코칭 데이터를 불러오지 못했습니다.";
-        _setAiAnalyzing(false);
         return false;
       }
     } catch (e) {
       _errorMessage = "종합 코칭 요청 중 오류가 발생했습니다: $e";
-      _setAiAnalyzing(false);
       return false;
+    } finally {
+      _setAiAnalyzing(false);
     }
   }
 

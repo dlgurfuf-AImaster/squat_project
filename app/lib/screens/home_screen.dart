@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../models/squat_record.dart';
 import '../providers/bluetooth_provider.dart';
-import '../providers/coaching_provider.dart';
 import '../providers/squat_provider.dart';
 import '../providers/user_provider.dart';
 import '../services/api_service.dart';
@@ -14,7 +14,12 @@ import 'edit_profile_screen.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final ValueChanged<int> onTabSelected;
+
+  const HomeScreen({
+    super.key,
+    required this.onTabSelected,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -44,47 +49,61 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final btProvider = context.watch<BluetoothProvider>();
-    final squatProvider = context.watch<SquatProvider>();
-    final coachingProvider = context.read<CoachingProvider>();
-    final bool isBTConnected = btProvider.connectionStatus == 'CONNECTED';
+    final localRecords = context.select<SquatProvider, List<SquatRecord>>(
+          (provider) => provider.localRecords,
+    );
+    final bool isBTConnected = context.select<BluetoothProvider, bool>(
+          (provider) => provider.connectionStatus == 'CONNECTED',
+    );
 
-    final stats = WorkoutWeeklyStats.calculate(squatProvider.localRecords); // 주간 통계 데이터 객체
+    final stats = WorkoutWeeklyStats.calculate(localRecords);
+
 
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
       endDrawer: const _ProfileDrawer(),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 1. 상단 앱 타이틀 & 헤더
-              const _HomeHeader(),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.0),
+                child: _HomeHeader(),
+              ),
               const SizedBox(height: 16),
 
-              // 2. 주간 운동 통계 칩 배지 (실데이터 연결)[cite: 4]
-              _HomeStatBadges(
-                streakDays: stats.streakDays,
-                weeklyTotalReps: stats.weeklyTotalReps,
-                maxReps: stats.maxRepsInSingle,
-              ),
-              const SizedBox(height: 15),
-
-              // 3. 상단 문구 + 버튼 통합 영역
-              MotivationalBanner(
-                child: _HomeGridMenu(
-                  coachingProvider: coachingProvider,
-                  isBTConnected: isBTConnected,
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 20.0,
                 ),
-              ),
-              const SizedBox(height: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _HomeStatBadges(
+                      streakDays: stats.streakDays,
+                      weeklyTotalReps: stats.weeklyTotalReps,
+                      maxReps: stats.maxRepsInSingle,
+                    ),
+                    const SizedBox(height: 15),
 
-              // 4. 3D 주간 스쿼트 리포트 (실데이터 연결)[cite: 4]
-              IsometricVerticalChart(
-                counts: stats.dailyCounts,
-                todayIndex: stats.todayIndex,
+                    MotivationalBanner(
+                      child: _HomeGridMenu(
+                        onTabSelected: widget.onTabSelected,
+                        isBTConnected: isBTConnected,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    IsometricVerticalChart(
+                      counts: stats.dailyCounts,
+                      todayIndex: stats.todayIndex,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -666,11 +685,11 @@ class _PillChip extends StatelessWidget {
 // 4. 2x2 그리드 메뉴
 // =============================================================================
 class _HomeGridMenu extends StatelessWidget {
-  final CoachingProvider coachingProvider;
+  final ValueChanged<int> onTabSelected;
   final bool isBTConnected;
 
   const _HomeGridMenu({
-    required this.coachingProvider,
+    required this.onTabSelected,
     required this.isBTConnected,
   });
 
@@ -686,7 +705,7 @@ class _HomeGridMenu extends StatelessWidget {
                 subtitle: "Start Squat",
                 imagePath: "assets/images/main_icon.png",
                 isPrimary: true,
-                onTap: () => coachingProvider.setTabIndex(2),
+                onTap: () => onTabSelected(2),
               ),
             ),
             const SizedBox(width: 12),
@@ -697,10 +716,7 @@ class _HomeGridMenu extends StatelessWidget {
                 icon: Icons.auto_awesome_rounded,
                 iconBgColor: const Color(0xFFF3E8FF),
                 iconColor: Colors.purple,
-                onTap: () {
-                  coachingProvider.setTabIndex(4);
-                  coachingProvider.fetchServerRecords();
-                },
+                onTap: () => onTabSelected(4),
               ),
             ),
           ],
@@ -715,7 +731,7 @@ class _HomeGridMenu extends StatelessWidget {
                 icon: Icons.bar_chart_rounded,
                 iconBgColor: AppTheme.primarySky.withValues(alpha: 0.12),
                 iconColor: AppTheme.primarySky,
-                onTap: () => coachingProvider.setTabIndex(3),
+                onTap: () => onTabSelected(3),
               ),
             ),
             const SizedBox(width: 12),
@@ -726,7 +742,7 @@ class _HomeGridMenu extends StatelessWidget {
                 icon: isBTConnected ? Icons.bluetooth_connected : Icons.bluetooth,
                 iconBgColor: isBTConnected ? const Color(0xFFDCFCE7) : const Color(0xFFF1F5F9),
                 iconColor: isBTConnected ? AppTheme.accentGreen : const Color(0xFF64748B),
-                onTap: () => coachingProvider.setTabIndex(1),
+                onTap: () => onTabSelected(1),
               ),
             ),
           ],

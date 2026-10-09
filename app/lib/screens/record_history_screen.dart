@@ -6,8 +6,8 @@ import '../dtos/squat_workout_request.dart';
 import '../models/squat_record.dart';
 import '../providers/squat_provider.dart';
 import '../services/api_service.dart';
-import '../services/database_helper.dart';
 import '../theme/app_theme.dart';
+import 'dart:math' as math;
 
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
@@ -17,8 +17,6 @@ class RecordHistoryScreen extends StatefulWidget {
 }
 
 class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
-  late Future<List<SquatRecord>> _recordsFuture;
-
   // 선택된 로컬 기록 ID 저장 집합
   final Set<int> _selectedRecordIds = {};
 
@@ -38,7 +36,6 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     super.initState();
     final initialPage = (_focusedDay.year - 2000) * 12 + (_focusedDay.month - 1);
     _pageController = PageController(initialPage: initialPage);
-    _refreshRecords();
   }
 
   @override
@@ -47,12 +44,45 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     super.dispose();
   }
 
-  // DB에서 기록 다시 불러오기
-  void _refreshRecords() {
+  // 리스트형으로 전환: 오늘 날짜가 속한 달로 초기화
+  void _switchToListView() {
+    final today = DateTime.now();
+
     setState(() {
-      _selectedRecordIds.clear();
-      _recordsFuture = DatabaseHelper.instance.getAllRecords();
+      _selectedMonth = DateTime(today.year, today.month);
+      _isMonthPickerOpen = false;
+      _isCalendarView = false;
     });
+  }
+
+  // 캘린더형으로 전환: 오늘 날짜와 해당 월의 페이지로 초기화
+  void _switchToCalendarView() {
+    final today = DateTime.now();
+    final todayMonth = DateTime(today.year, today.month, 1);
+
+    final todayPage =
+        (today.year - 2000) * 12 + (today.month - 1);
+
+    setState(() {
+      _focusedDay = todayMonth;
+      _selectedDay = today;
+      _selectedMonth = todayMonth;
+      _isMonthPickerOpen = false;
+      _isCalendarView = true;
+    });
+
+    // 캘린더 화면이 다시 생성된 다음 페이지 위치를 이동
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+
+      _pageController.jumpToPage(todayPage);
+    });
+  }
+
+  // DB에서 기록 다시 불러오기
+  Future<void> _refreshRecords() async {
+    _selectedRecordIds.clear();
+    await context.read<SquatProvider>().loadLocalRecords();
   }
 
   // 날짜 비교용 헬퍼
@@ -115,7 +145,10 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
       if (response != null) {
         successCount++;
         if (record.id != null) {
-          await DatabaseHelper.instance.updateSyncStatus(record.id!, true);
+          await context.read<SquatProvider>().updateRecordSyncStatus(
+            record.id!,
+            true,
+          );
         }
       } else {
         failCount++;
@@ -123,9 +156,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     }
 
     if (!mounted) return;
-    Navigator.pop(context); // 로딩 다이얼로그 닫기
+    Navigator.pop(context);
 
-    _refreshRecords();
+    await _refreshRecords();
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text("☁️ 서버 전송 완료 (성공: $successCount건 / 실패: $failCount건)"),
@@ -408,40 +443,44 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     return Scaffold(
       backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
-        child: FutureBuilder<List<SquatRecord>>(
-          future: _recordsFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        child: Consumer<SquatProvider>(
+          builder: (context, squatProvider, child) {
+            final records =
+            List<SquatRecord>.from(squatProvider.localRecords);
 
-            if (snapshot.hasError) {
-              return Center(
-                child: Text("❌ 데이터를 불러오는 중 오류가 발생했습니다: ${snapshot.error}"),
-              );
-            }
-
-            final rawRecords = snapshot.data ?? [];
-            final records = List<SquatRecord>.from(rawRecords);
             records.sort((a, b) => _isAscending
                 ? a.date.compareTo(b.date)
                 : b.date.compareTo(a.date));
 
-            final unsyncedCount = records.where((r) => !r.isSynced).length;
-            final recordEvents = _groupRecordsByDate(records);
+            final unsyncedCount =
+                records.where((r) => !r.isSynced).length;
+
+            final recordEvents =
+            _groupRecordsByDate(records);
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 16.0),
+                  padding: const EdgeInsets.only(
+                    left: 24.0,
+                    right: 24.0,
+                    top: 16.0,
+                  ),
                   child: _buildHeader(),
                 ),
                 const SizedBox(height: 20),
                 Expanded(
                   child: _isCalendarView
-                      ? _buildCircleCalendarView(records, recordEvents, unsyncedCount)
-                      : _buildListView(records, unsyncedCount),
+                      ? _buildCircleCalendarView(
+                    records,
+                    recordEvents,
+                    unsyncedCount,
+                  )
+                      : _buildListView(
+                    records,
+                    unsyncedCount,
+                  ),
                 ),
               ],
             );
@@ -624,93 +663,115 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
         .toList();
 
     return Padding(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 24.0),
-      child: Column(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primarySky.withValues(alpha: 0.28),
-                    blurRadius: 22,
-                    spreadRadius: 5,
-                    offset: const Offset(0, 8),
-                  ),
-                  const BoxShadow(
-                    color: Color.fromRGBO(23, 32, 64, 0.04),
-                    blurRadius: 10,
-                    offset: Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildMonthHeader(),
-                  const SizedBox(height: 16),
-                  _buildWeekDayHeader(),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: (pageIndex) {
-                        setState(() {
-                          final year = 2000 + (pageIndex ~/ 12);
-                          final month = (pageIndex % 12) + 1;
-                          _focusedDay = DateTime(year, month, 1);
-                        });
-                      },
-                      itemBuilder: (context, pageIndex) {
-                        final monthDate = DateTime(
-                          2000 + (pageIndex ~/ 12),
-                          (pageIndex % 12) + 1,
-                          1,
-                        );
-                        return _buildCircleGrid(eventMap, monthDate);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  child: _buildDaySummaryCard(records, selectedDayRecords),
-                ),
-                const SizedBox(width: 8),
-                SizedBox(
-                  width: 54,
-                  child: Column(
-                    children: [
-                      Expanded(
-                        child: _buildServerBackupButton(records, selectedDayRecords),
+      padding: const EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        bottom: 20.0,
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final double cardPadding =
+          constraints.maxWidth < 350 ? 16.0 : 20.0;
+
+          return Column(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.all(cardPadding),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primarySky.withValues(alpha: 0.28),
+                        blurRadius: 22,
+                        spreadRadius: 5,
+                        offset: const Offset(0, 8),
                       ),
-                      const SizedBox(height: 6),
+                      const BoxShadow(
+                        color: Color.fromRGBO(23, 32, 64, 0.04),
+                        blurRadius: 10,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMonthHeader(),
+                      const SizedBox(height: 16),
+                      _buildWeekDayHeader(),
+                      const SizedBox(height: 12),
                       Expanded(
-                        child: _buildDetailReportButton(records, selectedDayRecords),
+                        child: PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (pageIndex) {
+                            setState(() {
+                              final year = 2000 + (pageIndex ~/ 12);
+                              final month = (pageIndex % 12) + 1;
+                              _focusedDay = DateTime(year, month, 1);
+                            });
+                          },
+                          itemBuilder: (context, pageIndex) {
+                            final monthDate = DateTime(
+                              2000 + (pageIndex ~/ 12),
+                              (pageIndex % 12) + 1,
+                              1,
+                            );
+
+                            return _buildCircleGrid(
+                              eventMap,
+                              monthDate,
+                            );
+                          },
+                        ),
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ],
+              ),
+              const SizedBox(height: 16),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildDaySummaryCard(
+                        records,
+                        selectedDayRecords,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 54,
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: _buildServerBackupButton(
+                              selectedDayRecords,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Expanded(
+                            child: _buildDetailReportButton(
+                              records,
+                              selectedDayRecords,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildServerBackupButton(
-      List<SquatRecord> allRecords,
       List<SquatRecord> selectedDayRecords,
       ) {
     final unsyncedInDay = selectedDayRecords.where((r) => !r.isSynced).toList();
@@ -821,7 +882,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           ),
         ),
         InkWell(
-          onTap: () => setState(() => _isCalendarView = false),
+          onTap: _switchToListView,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -835,7 +896,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                 Icon(Icons.format_list_bulleted_rounded, size: 16, color: AppTheme.primarySky),
                 SizedBox(width: 6),
                 Text(
-                  "나열형 보기",
+                  "리스트",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -902,6 +963,11 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
         final double itemHeight = constraints.maxHeight / totalRows;
         final double dynamicAspectRatio = itemWidth / itemHeight;
 
+        final double circleSize = math.min(
+          36.0,
+          math.min(itemWidth, itemHeight) * 0.8,
+        );
+
         return GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           itemCount: totalCells,
@@ -943,8 +1009,8 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
               child: Center(
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 180),
-                  width: 36,
-                  height: 36,
+                  width: circleSize,
+                  height: circleSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: bgColor,
@@ -995,9 +1061,16 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
         monthlyRecords.where((r) => !r.isSynced).length;
 
     return Padding(
-      padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 20.0),
+      padding: const EdgeInsets.only(
+        left: 16.0,
+        right: 16.0,
+        bottom: 20.0,
+      ),
       child: Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 20,
+        ),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(22),
@@ -1056,7 +1129,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
 
                 // 우측 '달력형 보기' 버튼 (기존 동일)
                 InkWell(
-                  onTap: () => setState(() => _isCalendarView = true),
+                  onTap: _switchToCalendarView,
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1070,7 +1143,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                         Icon(Icons.calendar_month_rounded, size: 16, color: AppTheme.primarySky),
                         SizedBox(width: 6),
                         Text(
-                          "달력형 보기",
+                          "캘린더",
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
@@ -1338,7 +1411,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           ),
         ],
       ),
-      // 2. SingleChildScrollView로 내부 Column을 감싸 1px 오차로 인한 에러 방지
+      // 2. 레이아웃 오차로 인한 미세한 overflow 방지
       child: SingleChildScrollView(
         physics: const NeverScrollableScrollPhysics(), // 스크롤 동작 차단
         child: Column(
