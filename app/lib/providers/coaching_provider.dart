@@ -89,7 +89,7 @@ class CoachingProvider with ChangeNotifier {
     }
   }
 
-  // 다중 / 조건별 집계 AI 코칭 요청 (AI 분석 -> isAiAnalyzing + 6초 타이머 사용)
+  // 다중 기록 집계 AI 코칭 요청 (AI 분석 -> isAiAnalyzing + 6초 타이머 사용)
   Future<bool> requestAggregateCoaching(AggregateCoachingRequest request) async {
     _setAiAnalyzing(true);
 

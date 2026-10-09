@@ -4,7 +4,6 @@ import com.squat.server.model.SquatWorkout;
 import com.squat.server.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,9 +11,6 @@ public interface SquatWorkoutRepository extends JpaRepository<SquatWorkout, Long
 
     // 특정 사용자 및 UUID 목록으로 조회
     List<SquatWorkout> findByUserAndUuidIn(User user, List<String> uuids);
-
-    // 특정 사용자 및 날짜 범위로 조회
-    List<SquatWorkout> findByUserAndRecordTimeBetween(User user, LocalDateTime start, LocalDateTime end);
 
     // ID 내림차순(최신순) 조회 메서드
     List<SquatWorkout> findByUserOrderByIdDesc(User user);

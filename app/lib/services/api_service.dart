@@ -18,7 +18,7 @@ class ApiService {
   final Dio _dio = Dio();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
-  final String _baseUrl = dotenv.get('BASE_URL');
+  final String _baseUrl = dotenv.get('BASE_URL_RENDER');
 
   ApiService._internal() {
     _dio.options.baseUrl = _baseUrl;
@@ -151,7 +151,7 @@ class ApiService {
     }
   }
 
-  /// 5. 집계 AI 코칭 요청 (개별 ID 선택 / 날짜 지정 / 최근 30일)
+  /// 5. 집계 AI 코칭 요청 (선택한 기록 기준)
   Future<CoachingResponse?> getAggregateCoaching(
       AggregateCoachingRequest request,
       ) async {

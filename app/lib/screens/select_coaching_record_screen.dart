@@ -643,17 +643,6 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
         bool showFullDate = false,
         required VoidCallback onSelect,
       }) {
-    const Color successColor = Color(0xFF10B981);
-    const Color waistColor = Color(0xFFF59E0B);
-    const Color depthColor = Color(0xFFF97316);
-    const Color morningColor = Color(0xFFEF4444);
-
-    final int successCount = record.successCount ?? 0;
-    final int waistErrorCount = record.waistErrorCount ?? 0;
-    final int depthErrorCount = record.depthErrorCount ?? 0;
-    final int goodMorningCount = record.goodMorningCount ?? 0;
-
-    final int totalCount = successCount + waistErrorCount + depthErrorCount + goodMorningCount;
     final DateTime recordDate = _getRecordDate(record);
 
     return GestureDetector(
@@ -662,10 +651,14 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
         duration: const Duration(milliseconds: 180),
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primarySky.withValues(alpha: 0.05) : Colors.white,
+          color: isSelected
+              ? AppTheme.primarySky.withValues(alpha: 0.05)
+              : Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: isSelected ? AppTheme.primarySky : const Color(0xFFE2E8F0),
+            color: isSelected
+                ? AppTheme.primarySky
+                : const Color(0xFFE2E8F0),
             width: isSelected ? 2.0 : 1.2,
           ),
           boxShadow: [
@@ -685,15 +678,25 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
               Row(
                 children: [
                   Icon(
-                    isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-                    color: isSelected ? AppTheme.primarySky : const Color(0xFFCBD5E1),
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    color: isSelected
+                        ? AppTheme.primarySky
+                        : const Color(0xFFCBD5E1),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF94A3B8)),
+                  const Icon(
+                    Icons.access_time_rounded,
+                    size: 14,
+                    color: Color(0xFF94A3B8),
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    showFullDate ? _formatFullDate(recordDate) : _formatTime(recordDate),
+                    showFullDate
+                        ? _formatFullDate(recordDate)
+                        : _formatTime(recordDate),
                     style: GoogleFonts.dmSans(
                       fontSize: showFullDate ? 11 : 13,
                       fontWeight: FontWeight.w600,
@@ -702,7 +705,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                   ),
                   const Spacer(),
                   Text(
-                    "$totalCount",
+                    "${record.totalCount}",
                     style: GoogleFonts.anton(
                       fontSize: 22,
                       color: AppTheme.primarySky,
@@ -721,13 +724,29 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _buildRecordStatBadge("정상", "${successCount}회", successColor),
+                  _buildRecordStatBadge(
+                    "정상",
+                    "${record.successCount}회",
+                    const Color(0xFF10B981),
+                  ),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("허리과숙임", "${waistErrorCount}회", waistColor),
+                  _buildRecordStatBadge(
+                    "허리과숙임",
+                    "${record.waistErrorCount}회",
+                    const Color(0xFFF59E0B),
+                  ),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("얕은깊이", "${depthErrorCount}회", depthColor),
+                  _buildRecordStatBadge(
+                    "얕은깊이",
+                    "${record.depthErrorCount}회",
+                    const Color(0xFFF97316),
+                  ),
                   const SizedBox(width: 4),
-                  _buildRecordStatBadge("상체선행", "${goodMorningCount}회", morningColor),
+                  _buildRecordStatBadge(
+                    "빠른수행",
+                    "${record.fastRepCount}회",
+                    const Color(0xFFEF4444),
+                  ),
                 ],
               ),
             ],
@@ -950,7 +969,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
       totalReps += (record.successCount as int? ?? 0) +
           (record.waistErrorCount as int? ?? 0) +
           (record.depthErrorCount as int? ?? 0) +
-          (record.goodMorningCount as int? ?? 0);
+          (record.fastRepCount as int? ?? 0);
     }
 
     return Container(
