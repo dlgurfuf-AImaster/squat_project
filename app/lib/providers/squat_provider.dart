@@ -36,18 +36,19 @@ class SquatProvider with ChangeNotifier {
 
   // 운동 시작
   void startReading() {
+    if (_isReading) return;
+
     _isReading = true;
 
-    // 기존 영점 제거. 다음으로 들어오는 데이터를 새로운 영점으로 사용
     _baseWaistVec = null;
     _baseThighVec = null;
 
-    // 이전 필터 상태 초기화
     _waistFilter.reset();
     _thighFilter.reset();
 
-    // 이전에 진행 중이던 스쿼트 상태 초기화
     _analyzer.resetCurrentRepFlags();
+
+    notifyListeners();
   }
 
   // 블루투스 연결 해제
