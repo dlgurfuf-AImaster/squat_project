@@ -44,6 +44,41 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
     super.dispose();
   }
 
+  // 리스트형으로 전환: 오늘 날짜가 속한 달로 초기화
+  void _switchToListView() {
+    final today = DateTime.now();
+
+    setState(() {
+      _selectedMonth = DateTime(today.year, today.month);
+      _isMonthPickerOpen = false;
+      _isCalendarView = false;
+    });
+  }
+
+  // 캘린더형으로 전환: 오늘 날짜와 해당 월의 페이지로 초기화
+  void _switchToCalendarView() {
+    final today = DateTime.now();
+    final todayMonth = DateTime(today.year, today.month, 1);
+
+    final todayPage =
+        (today.year - 2000) * 12 + (today.month - 1);
+
+    setState(() {
+      _focusedDay = todayMonth;
+      _selectedDay = today;
+      _selectedMonth = todayMonth;
+      _isMonthPickerOpen = false;
+      _isCalendarView = true;
+    });
+
+    // 캘린더 화면이 다시 생성된 다음 페이지 위치를 이동
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+
+      _pageController.jumpToPage(todayPage);
+    });
+  }
+
   // DB에서 기록 다시 불러오기
   Future<void> _refreshRecords() async {
     _selectedRecordIds.clear();
@@ -847,7 +882,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           ),
         ),
         InkWell(
-          onTap: () => setState(() => _isCalendarView = false),
+          onTap: _switchToListView,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -1094,7 +1129,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
 
                 // 우측 '달력형 보기' 버튼 (기존 동일)
                 InkWell(
-                  onTap: () => setState(() => _isCalendarView = true),
+                  onTap: _switchToCalendarView,
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
