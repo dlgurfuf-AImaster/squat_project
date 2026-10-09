@@ -36,18 +36,19 @@ class SquatProvider with ChangeNotifier {
 
   // 운동 시작
   void startReading() {
+    if (_isReading) return;
+
     _isReading = true;
 
-    // 기존 영점 제거. 다음으로 들어오는 데이터를 새로운 영점으로 사용
     _baseWaistVec = null;
     _baseThighVec = null;
 
-    // 이전 필터 상태 초기화
     _waistFilter.reset();
     _thighFilter.reset();
 
-    // 이전에 진행 중이던 스쿼트 상태 초기화
     _analyzer.resetCurrentRepFlags();
+
+    notifyListeners();
   }
 
   // 블루투스 연결 해제
@@ -218,6 +219,14 @@ class SquatProvider with ChangeNotifier {
     await DatabaseHelper.instance.getAllRecords();
 
     notifyListeners();
+  }
+
+  // 특정 로컬 기록의 서버 동기화 상태 변경
+  Future<void> updateRecordSyncStatus(int id, bool isSynced) async {
+    await DatabaseHelper.instance.updateSyncStatus(id, isSynced);
+
+    // 변경된 최신 기록 목록 다시 불러오기
+    await loadLocalRecords();
   }
 
   // 로컬 운동 기록 전체 삭제

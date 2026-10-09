@@ -42,6 +42,41 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
     super.dispose();
   }
 
+  // 나열형으로 전환: 오늘 날짜가 속한 달로 초기화
+  void _switchToListView() {
+    final today = DateTime.now();
+
+    setState(() {
+      _selectedMonth = DateTime(today.year, today.month);
+      _isMonthPickerOpen = false;
+      _isCalendarView = false;
+    });
+  }
+
+  // 캘린더형으로 전환: 오늘 날짜와 해당 월의 페이지로 초기화
+  void _switchToCalendarView() {
+    final today = DateTime.now();
+    final todayMonth = DateTime(today.year, today.month, 1);
+
+    final todayPage =
+        (today.year - 2000) * 12 + (today.month - 1);
+
+    setState(() {
+      _focusedDay = todayMonth;
+      _selectedDay = today;
+      _selectedMonth = todayMonth;
+      _isMonthPickerOpen = false;
+      _isCalendarView = true;
+    });
+
+    // 캘린더가 다시 표시된 뒤 오늘이 속한 페이지로 이동
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_pageController.hasClients) return;
+
+      _pageController.jumpToPage(todayPage);
+    });
+  }
+
   void _refreshRecords() {
     // 1. 선택된 기록 전체 초기화 (되돌리기 기능)
     if (_selectedRecords.isNotEmpty) {
@@ -374,7 +409,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
           ),
         ),
         InkWell(
-          onTap: () => setState(() => _isCalendarView = false),
+          onTap: _switchToListView,
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -388,7 +423,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                 Icon(Icons.format_list_bulleted_rounded, size: 16, color: AppTheme.primarySky),
                 SizedBox(width: 6),
                 Text(
-                  "나열형 보기",
+                  "리스트",
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -583,7 +618,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                 ],
               ),
               InkWell(
-                onTap: () => setState(() => _isCalendarView = true),
+                onTap: _switchToCalendarView,
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -597,7 +632,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
                       Icon(Icons.calendar_month_rounded, size: 16, color: AppTheme.primarySky),
                       SizedBox(width: 6),
                       Text(
-                        "달력형 보기",
+                        "캘린더",
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,

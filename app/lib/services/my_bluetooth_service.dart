@@ -83,10 +83,15 @@ class MyBluetoothService {
   }
 
   /// 단일 디바이스 연결 및 Rx 특성 구독 설정
-  Future<void> _connectAndSetupChar(BluetoothDevice device,
-      {required bool isWaist, required Function(List<double> w, List<double> t) onDataReceived}) async {
+  Future<void> _connectAndSetupChar(
+      BluetoothDevice device, {
+        required bool isWaist,
+        required Function(List<double> w, List<double> t) onDataReceived,
+      }) async {
     await device.connect();
-    List<BluetoothService> services = await device.discoverServices();
+
+    List<BluetoothService> services =
+    await device.discoverServices();
 
     for (var service in services) {
       for (var c in service.characteristics) {
@@ -94,27 +99,70 @@ class MyBluetoothService {
 
         if (isWaist) {
           waistRxChar = c;
+
           await waistRxChar!.setNotifyValue(true);
+
           _waistBuffer = "";
+
           await _waistStreamSub?.cancel();
 
-          _waistStreamSub = waistRxChar!.lastValueStream.listen((value) {
-            if (_waistBuffer.length > _maxBufferLength) _waistBuffer = "";
-            _waistBuffer += utf8.decode(value);
-            _processBuffer(isWaist: true, onDataReceived: onDataReceived);
-          });
+          _waistStreamSub =
+              waistRxChar!.lastValueStream.listen((value) {
+                print("📡 허리 raw bytes: $value");
+
+                if (_waistBuffer.length > _maxBufferLength) {
+                  _waistBuffer = "";
+                }
+
+                try {
+                  final decoded = utf8.decode(value);
+
+                  print("📡 허리 decoded: $decoded");
+
+                  _waistBuffer += decoded;
+
+                  _processBuffer(
+                    isWaist: true,
+                    onDataReceived: onDataReceived,
+                  );
+                } catch (e) {
+                  print("⚠️ 허리 센서 UTF-8 디코딩 실패: $e");
+                }
+              });
         } else {
           thighRxChar = c;
+
           await thighRxChar!.setNotifyValue(true);
+
           _thighBuffer = "";
+
           await _thighStreamSub?.cancel();
 
-          _thighStreamSub = thighRxChar!.lastValueStream.listen((value) {
-            if (_thighBuffer.length > _maxBufferLength) _thighBuffer = "";
-            _thighBuffer += utf8.decode(value);
-            _processBuffer(isWaist: false, onDataReceived: onDataReceived);
-          });
+          _thighStreamSub =
+              thighRxChar!.lastValueStream.listen((value) {
+                print("📡 허벅지 raw bytes: $value");
+
+                if (_thighBuffer.length > _maxBufferLength) {
+                  _thighBuffer = "";
+                }
+
+                try {
+                  final decoded = utf8.decode(value);
+
+                  print("📡 허벅지 decoded: $decoded");
+
+                  _thighBuffer += decoded;
+
+                  _processBuffer(
+                    isWaist: false,
+                    onDataReceived: onDataReceived,
+                  );
+                } catch (e) {
+                  print("⚠️ 허벅지 센서 UTF-8 디코딩 실패: $e");
+                }
+              });
         }
+
         return;
       }
     }
