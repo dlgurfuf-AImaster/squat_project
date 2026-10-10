@@ -7,6 +7,7 @@ import '../models/squat_model.dart';
 import '../providers/squat_provider.dart';
 import '../providers/bluetooth_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/common_snack_bar.dart';
 
 /// AI 스쿼트 코칭 실시간 모니터링 및 제어 화면
 class SquatScreen extends StatefulWidget {
@@ -536,8 +537,11 @@ class _ActionButtons extends StatelessWidget {
 
   void _handleStartWorkout(BuildContext context) {
     squatProvider.startReading();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("🟢 실시간 스쿼트 코칭을 시작합니다!")),
+
+    CommonSnackBar.show(
+      context,
+      message: "실시간 스쿼트 코칭을 시작합니다.",
+      type: SnackBarType.success,
     );
   }
 
@@ -566,19 +570,19 @@ class _ActionButtons extends StatelessWidget {
               icon: Icons.save_alt_rounded,
               isPrimary: true, // 👈 파란색 스타일 적용
               onTap: () async {
-                bool isSaved = await squatProvider.saveCurrentSessionRecord();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        isSaved ? "📊 운동 기록이 저장되었습니다!" : "⚠️ 저장할 기록이 없습니다.",
-                      ),
-                      backgroundColor: isSaved
-                          ? const Color(0xFF10B981)
-                          : const Color(0xFFF59E0B),
-                    ),
-                  );
-                }
+                final isSaved = await squatProvider.saveCurrentSessionRecord();
+
+                if (!context.mounted) return;
+
+                CommonSnackBar.show(
+                  context,
+                  message: isSaved
+                      ? "운동 기록이 저장되었습니다."
+                      : "저장할 기록이 없습니다.",
+                  type: isSaved
+                      ? SnackBarType.success
+                      : SnackBarType.error,
+                );
               },
             ),
           ),
@@ -588,13 +592,16 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _buildHomeStyleCardButton(
               title: "초기화",
-              subtitle: "Reset Counter",
+              subtitle: "Reset",
               icon: Icons.refresh_rounded,
               isPrimary: false, // 👈 흰색 배경 + 빨간 테두리/글씨 스타일 적용
               onTap: () {
-                squatProvider.resetCountersOnly();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("🔄 스쿼트 통계가 초기화되었습니다.")),
+                squatProvider.resetWorkoutState(resetZeroPoint: true);
+
+                CommonSnackBar.show(
+                  context,
+                  message: "스쿼트 통계 및 기준 벡터가 리셋되었습니다.",
+                  type: SnackBarType.success,
                 );
               },
             ),

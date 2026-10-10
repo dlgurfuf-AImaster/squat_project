@@ -9,6 +9,8 @@ import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'dart:math' as math;
 
+import '../widgets/common_snack_bar.dart';
+
 class RecordHistoryScreen extends StatefulWidget {
   const RecordHistoryScreen({super.key});
 
@@ -25,6 +27,7 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   bool _isAscending = false; // (false: 최신순, true: 과거순)
   bool _isMonthPickerOpen = false; // <-- 인라인 월 피커 열림 상태 변수 추가
   DateTime _selectedMonth = DateTime.now(); // 월별 필터링용 날짜
+  bool _isSendingRecords = false;
 
   // 캘린더 기준 날짜 및 PageController 상태
   DateTime _focusedDay = DateTime.now();
@@ -104,68 +107,73 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
   }
 
   // 서버 전송 통합 메서드 (선택된 항목 또는 지정 리스트 전송)
-  Future<void> _sendRecordsToServer(List<SquatRecord> recordsToSend) async {
-    final targetRecords = recordsToSend.where((r) => r.id != null && !r.isSynced).toList();
+  Future<void> _sendRecordsToServer(
+      List<SquatRecord> recordsToSend, {
+        VoidCallback? onSendingStateChanged,
+      }) async {
+    if (_isSendingRecords) return;
+
+    final targetRecords = recordsToSend
+        .where((r) => r.id != null && !r.isSynced)
+        .toList();
+
     if (targetRecords.isEmpty) return;
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => const Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: Colors.white),
-              SizedBox(height: 16),
-              Text(
-                "☁️ 선택한 기록을 서버로 전송 중입니다...",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    setState(() {
+      _isSendingRecords = true;
+    });
+
+    // 전송 시작 상태를 전달하여 버튼 로딩 UI 갱신
+    onSendingStateChanged?.call();
 
     int successCount = 0;
     int failCount = 0;
 
-    for (final record in targetRecords) {
-      final response = await ApiService().sendSquatRecord(
-        SquatWorkoutRequest.fromRecord(record),
-      );
-      if (response != null) {
-        successCount++;
-        if (record.id != null) {
-          await context.read<SquatProvider>().updateRecordSyncStatus(
-            record.id!,
-            true,
+    try {
+      for (final record in targetRecords) {
+        try {
+          final response = await ApiService().sendSquatRecord(
+            SquatWorkoutRequest.fromRecord(record),
           );
+
+          if (response != null) {
+            successCount++;
+
+            await context.read<SquatProvider>().updateRecordSyncStatus(
+              record.id!,
+              true,
+            );
+          } else {
+            failCount++;
+          }
+        } catch (_) {
+          failCount++;
         }
-      } else {
-        failCount++;
+      }
+
+      if (!mounted) return;
+
+      await _refreshRecords();
+
+      if (!mounted) return;
+
+      CommonSnackBar.show(
+        context,
+        message: "서버 전송 완료 (성공: $successCount건 / 실패: $failCount건)",
+        type: failCount == 0
+            ? SnackBarType.success
+            : SnackBarType.error,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSendingRecords = false;
+        });
+
+        // 전송 종료 상태를 전달하여 버튼 로딩 UI 해제
+        onSendingStateChanged?.call();
       }
     }
-
-    if (!mounted) return;
-    Navigator.pop(context);
-
-    await _refreshRecords();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("☁️ 서버 전송 완료 (성공: $successCount건 / 실패: $failCount건)"),
-      ),
-    );
   }
 
   // 일자별 이벤트 맵 변환
@@ -344,32 +352,62 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: hasSelected
+                              child: ElevatedButton(
+                                onPressed: hasSelected && !_isSendingRecords
                                     ? () async {
-                                  await _sendRecordsToServer(selectedInDay);
-                                  setBottomSheetState(() {});
+                                  await _sendRecordsToServer(
+                                    selectedInDay,
+                                    onSendingStateChanged: () {
+                                      if (context.mounted) {
+                                        setBottomSheetState(() {});
+                                      }
+                                    },
+                                  );
                                 }
                                     : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppTheme.primarySky,
                                   disabledBackgroundColor: const Color(0xFFE2E8F0),
                                   padding: const EdgeInsets.symmetric(vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   elevation: 0,
                                 ),
-                                icon: Icon(
-                                  Icons.cloud_upload_rounded,
-                                  size: 16,
-                                  color: hasSelected ? Colors.white : const Color(0xFF94A3B8),
-                                ),
-                                label: Text(
-                                  "서버 전송 (${selectedInDay.length})세트",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: hasSelected ? Colors.white : const Color(0xFF94A3B8),
+                                child: _isSendingRecords
+                                    ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
                                   ),
+                                )
+                                    : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.cloud_upload_rounded,
+                                      size: 16,
+                                      color: hasSelected
+                                          ? Colors.white
+                                          : const Color(0xFF94A3B8),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        "서버 전송 (${selectedInDay.length})세트",
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: hasSelected
+                                              ? Colors.white
+                                              : const Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),
@@ -617,32 +655,54 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           Expanded(
             flex: 3,
             child: InkWell(
-              onTap: hasSelected ? () => _sendRecordsToServer(selectedRecords) : null,
+              onTap: hasSelected && !_isSendingRecords
+                  ? () => _sendRecordsToServer(selectedRecords)
+                  : null,
               borderRadius: BorderRadius.circular(14),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: hasSelected ? AppTheme.primarySky : const Color(0xFFE2E8F0),
+                  color: hasSelected
+                      ? AppTheme.primarySky
+                      : const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.cloud_upload_rounded,
-                      size: 16,
-                      color: hasSelected ? Colors.white : const Color(0xFF94A3B8),
+                child: Center(
+                  child: _isSendingRecords
+                      ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      "서버 (${selectedRecords.length})",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: hasSelected ? Colors.white : const Color(0xFF94A3B8),
+                  )
+                      : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.cloud_upload_rounded,
+                        size: 16,
+                        color: hasSelected
+                            ? Colors.white
+                            : const Color(0xFF94A3B8),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Text(
+                        "서버 (${selectedRecords.length})",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: hasSelected
+                              ? Colors.white
+                              : const Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -800,15 +860,28 @@ class _RecordHistoryScreenState extends State<RecordHistoryScreen> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(14),
           child: InkWell(
-            onTap: hasUnsynced ? () => _sendRecordsToServer(unsyncedInDay) : null,
+            onTap: hasUnsynced && !_isSendingRecords
+                ? () => _sendRecordsToServer(unsyncedInDay)
+                : null,
             borderRadius: BorderRadius.circular(14),
             splashColor: Colors.white.withValues(alpha: 0.2),
             highlightColor: Colors.white.withValues(alpha: 0.1),
             child: Center(
-              child: Icon(
+              child: _isSendingRecords
+                  ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+                  : Icon(
                 Icons.cloud_upload_rounded,
                 size: 20,
-                color: hasUnsynced ? Colors.white : const Color(0xFF94A3B8),
+                color: hasUnsynced
+                    ? Colors.white
+                    : const Color(0xFF94A3B8),
               ),
             ),
           ),

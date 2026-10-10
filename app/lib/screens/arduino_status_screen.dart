@@ -5,6 +5,8 @@ import '../providers/squat_provider.dart';
 import '../providers/bluetooth_provider.dart';
 import 'dart:math' as math;
 
+import '../widgets/common_snack_bar.dart';
+
 /// 블루투스 아두이노 센서 연결 및 상태 관리 화면
 class ArduinoStatusScreen extends StatelessWidget {
   const ArduinoStatusScreen({super.key});
@@ -476,7 +478,7 @@ class ArduinoStatusScreen extends StatelessWidget {
   }) {
     if (isConnecting) {
       return _buildHomeStyleCardButton(
-        title: "센서 연결 시도 중...",
+        title: "센서 연결 시도 중",
         subtitle: "Connecting to sensors",
         icon: Icons.bluetooth_searching_rounded,
         isLoading: true,
@@ -630,12 +632,10 @@ class ArduinoStatusScreen extends StatelessWidget {
       await bluetoothProvider.startBluetoothWorkout(squatProvider);
     } catch (error) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('연결 실패: $error'),
-          backgroundColor: Colors.redAccent,
-        ),
+      CommonSnackBar.show(
+        context,
+        message: '연결 실패: $error',
+        type: SnackBarType.error,
       );
     }
   }
@@ -647,9 +647,11 @@ class ArduinoStatusScreen extends StatelessWidget {
     await bluetoothProvider.disconnectArduino(squatProvider);
 
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('모든 아두이노 연결이 해제되었습니다.')),
+
+    CommonSnackBar.show(
+      context,
+      message: '모든 아두이노 연결이 해제되었습니다.',
+      type: SnackBarType.success,
     );
   }
 }

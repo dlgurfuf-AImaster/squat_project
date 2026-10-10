@@ -121,11 +121,19 @@ class SquatProvider with ChangeNotifier {
     }
   }
 
-  // 운동 카운트 및 피드백 통계만 초기화
-  //
-  // 영점과 연결 상태는 유지
-  void resetCountersOnly() {
+  // 운동 통계 및 필요 시 영점 초기화
+  void resetWorkoutState({bool resetZeroPoint = false}) {
+    // 진행 중인 스쿼트 판정 상태 초기화
     _analyzer.resetCurrentRepFlags();
+
+    // 영점 초기화가 요청된 경우
+    if (resetZeroPoint) {
+      _baseWaistVec = null;
+      _baseThighVec = null;
+
+      _waistFilter.reset();
+      _thighFilter.reset();
+    }
 
     _data = _data.copyWith(
       totalCount: 0,
@@ -133,7 +141,9 @@ class SquatProvider with ChangeNotifier {
       waistErrorCount: 0,
       depthErrorCount: 0,
       fastRepCount: 0,
-      status: "운동 기록 초기화",
+      waistAngle: resetZeroPoint ? 0.0 : _data.waistAngle,
+      thighAngle: resetZeroPoint ? 0.0 : _data.thighAngle,
+      status: resetZeroPoint ? "영점 재설정 대기 중" : "운동 기록 초기화",
       currentState: "STAND",
     );
 
@@ -199,9 +209,8 @@ class SquatProvider with ChangeNotifier {
             "(Record ID: $savedId)",
       );
 
-      // 저장 후 현재 카운터만 초기화
-      // 연결 및 영점은 유지
-      resetCountersOnly();
+      // 저장 후 현재 카운터만 초기화, 연결 및 영점은 유지
+      resetWorkoutState();
 
       // 최신 기록 다시 불러오기
       await loadLocalRecords();
