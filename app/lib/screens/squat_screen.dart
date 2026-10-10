@@ -31,6 +31,7 @@ class _SquatScreenState extends State<SquatScreen> {
   Widget build(BuildContext context) {
     final squatProvider = context.watch<SquatProvider>();
     final squat = squatProvider.data;
+    final isReading = squatProvider.isReading;
 
     final connectionStatus = context.select<BluetoothProvider, String>(
           (p) => p.connectionStatus,
@@ -41,29 +42,44 @@ class _SquatScreenState extends State<SquatScreen> {
       backgroundColor: AppTheme.lightBackground,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+          padding: const EdgeInsets.symmetric(vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. 상단 앱 타이틀 & 블루투스 상태 헤더
-              _SquatHeader(isBTConnected: isBTConnected),
+              // 상단바 → 기존 24px 유지
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                child: _SquatHeader(isBTConnected: isBTConnected),
+              ),
+
               const SizedBox(height: 20),
 
-              // 2. 실시간 자세 분석 카드 (블루투스 주석 상태 유지)
-              _RealtimePostureCard(
-                squat: squat,
-                isBTConnected: isBTConnected,
-              ),
-              const SizedBox(height: 12),
+              // 본문 → 16px
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 20.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _RealtimePostureCard(
+                      squat: squat,
+                      isBTConnected: isBTConnected,
+                      isReading: isReading,
+                    ),
+                    const SizedBox(height: 12),
 
-              // 3. 스쿼트 카운터 카드
-              _SquatCounterCard(squat: squat),
-              const SizedBox(height: 10),
+                    _SquatCounterCard(squat: squat),
+                    const SizedBox(height: 10),
 
-              // 4. 하단 액션 버튼 영역
-              _ActionButtons(
-                isBTConnected: isBTConnected,
-                squatProvider: squatProvider,
+                    _ActionButtons(
+                      isBTConnected: isBTConnected,
+                      squatProvider: squatProvider,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -108,8 +124,8 @@ class _SquatHeader extends StatelessWidget {
                   offset: const Offset(1.0, 0.0), // 미세 위치 조정 값 유지
                   child: Image.asset(
                     'assets/images/main_icon.png',
-                    width: 38, // 원 크기와 동일하게 1:1 비율 적용
-                    height: 38,
+                    width: 36,
+                    height: 36,
                     color: Colors.white,
                     fit: BoxFit.contain,
                   ),
@@ -141,41 +157,21 @@ class _BTStatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final color = connected
+        ? const Color(0xFF10B981)
+        : const Color(0xFFEF4444);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      width: 28,
+      height: 28,
       decoration: BoxDecoration(
-        color: connected
-            ? const Color.fromRGBO(16, 185, 129, 0.1)
-            : const Color.fromRGBO(239, 68, 68, 0.09),
-        borderRadius: BorderRadius.circular(20),
+        color: color.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: connected ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            connected ? "연결됨" : "미연결",
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: connected ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Icon(
-            Icons.bluetooth,
-            size: 13,
-            color: connected ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-          ),
-        ],
+      child: Icon(
+        Icons.bluetooth,
+        size: 13,
+        color: color,
       ),
     );
   }
@@ -185,12 +181,14 @@ class _BTStatusChip extends StatelessWidget {
 // 📊 2. 실시간 자세 분석 카드 (하이브리드 피드백 반영)
 // =============================================================================
 class _RealtimePostureCard extends StatelessWidget {
-  final dynamic squat;
+  final SquatData squat;
   final bool isBTConnected;
+  final bool isReading;
 
   const _RealtimePostureCard({
     required this.squat,
     required this.isBTConnected,
+    required this.isReading,
   });
 
   /// 시스템 알림 + 각도 기반 실시간 하이브리드 메시지 생성 함수
@@ -266,8 +264,6 @@ class _RealtimePostureCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // SquatProvider에서 isReading 상태값 읽기
-    final isReading = context.watch<SquatProvider>().isReading;
     final statusInfo = _getSquatStatusInfo(squat, isReading);
 
     return Container(
@@ -375,8 +371,7 @@ class _RealtimePostureCard extends StatelessWidget {
 // 🔢 3. 스쿼트 카운터 카드
 // =============================================================================
 class _SquatCounterCard extends StatelessWidget {
-  final dynamic squat;
-
+  final SquatData squat;
   const _SquatCounterCard({required this.squat});
 
   @override
@@ -754,22 +749,31 @@ class _ArcGauge extends StatelessWidget {
 
     return Column(
       children: [
-        SizedBox(
-          width: double.infinity,
-          height: 90,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween<double>(end: targetRatio),
-            duration: const Duration(milliseconds: 100),
-            curve: Curves.easeOutCubic,
-            builder: (context, animatedRatio, child) {
-              return CustomPaint(
-                painter: _ArcGaugePainter(
-                  value: animatedRatio,
-                  activeColor: color,
-                ),
-              );
-            },
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final gaugeHeight = math.min(
+              90.0,
+              constraints.maxWidth * 0.55,
+            );
+
+            return SizedBox(
+              width: double.infinity,
+              height: gaugeHeight,
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(end: targetRatio),
+                duration: const Duration(milliseconds: 100),
+                curve: Curves.easeOutCubic,
+                builder: (context, animatedRatio, child) {
+                  return CustomPaint(
+                    painter: _ArcGaugePainter(
+                      value: animatedRatio,
+                      activeColor: color,
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
         Text(
           "$value°",
@@ -801,7 +805,11 @@ class _ArcGaugePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final double cx = size.width / 2;
     final double cy = size.height - 10;
-    final double r = (size.width - 20) / 2;
+
+    final double r = math.min(
+      (size.width - 20) / 2,
+      size.height - 10,
+    );
 
     // 1. 회색 배경 트랙
     final Paint bgPaint = Paint()

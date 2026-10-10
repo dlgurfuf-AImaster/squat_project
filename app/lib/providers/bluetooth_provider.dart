@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import '../providers/squat_provider.dart';
 import '../services/my_bluetooth_service.dart';
 
@@ -10,14 +9,15 @@ class BluetoothProvider with ChangeNotifier {
   String get connectionStatus => _connectionStatus;
 
   /// 듀얼 아두이노 블루투스 연결 시작
-  Future<void> startBluetoothWorkout(BuildContext context) async {
+  Future<void> startBluetoothWorkout(
+      SquatProvider squatProvider,
+      ) async {
     try {
       _connectionStatus = 'CONNECTING';
       notifyListeners();
 
       await _bluetoothService.connectToDualArduino((waistVec, thighVec) {
         try {
-          final squatProvider = context.read<SquatProvider>();
           squatProvider.updateRawData(waistVec, thighVec);
         } catch (e) {
           print("🚨 SquatProvider 업데이트 오류: $e");
