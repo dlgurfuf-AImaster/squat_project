@@ -592,15 +592,15 @@ class _ActionButtons extends StatelessWidget {
           Expanded(
             child: _buildHomeStyleCardButton(
               title: "초기화",
-              subtitle: "Reset Counter",
+              subtitle: "Reset",
               icon: Icons.refresh_rounded,
               isPrimary: false, // 👈 흰색 배경 + 빨간 테두리/글씨 스타일 적용
               onTap: () {
-                squatProvider.resetCountersOnly();
+                squatProvider.resetWorkoutState(resetZeroPoint: true);
 
                 CommonSnackBar.show(
                   context,
-                  message: "스쿼트 통계가 초기화되었습니다.",
+                  message: "스쿼트 통계 및 기준 벡터가 리셋되었습니다.",
                   type: SnackBarType.success,
                 );
               },
