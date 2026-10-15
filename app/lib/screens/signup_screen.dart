@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/common_snack_bar.dart';
 import '/services/api_service.dart';
 import '../dtos/signup_request.dart';
 import '../theme/app_theme.dart';
@@ -33,12 +34,12 @@ class _SignupScreenState extends State<SignupScreen> {
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty ||
         _nameController.text.isEmpty) {
-      _showSnackBar("모든 필드를 입력해주세요.");
+      _showSnackBar("모든 항목을 입력해주세요.");
       return;
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      _showSnackBar("비밀번호가 일치하지 않습니다.");
+      _showSnackBar("비밀번호가 일치하지 않습니다.", type: SnackBarType.error);
       return;
     }
 
@@ -54,18 +55,23 @@ class _SignupScreenState extends State<SignupScreen> {
     );
 
     if (isSuccess) {
-      _showSnackBar("회원가입이 완료되었습니다! 로그인해주세요.");
+      _showSnackBar("회원가입이 완료되었습니다!", type: SnackBarType.success);
       if (!mounted) return;
       Navigator.pop(context);
     } else {
-      _showSnackBar("회원가입에 실패했습니다. 서버 상태를 확인하세요.");
+      _showSnackBar("회원가입에 실패했습니다.", type: SnackBarType.error);
     }
   }
 
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(
+  void _showSnackBar(
+      String message, {
+        SnackBarType type = SnackBarType.info,
+      }) {
+    CommonSnackBar.show(
       context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+      message: message,
+      type: type,
+    );
   }
 
   @override

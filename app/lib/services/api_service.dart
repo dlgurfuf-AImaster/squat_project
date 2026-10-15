@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../dtos/aggregate_coaching_request.dart';
@@ -16,9 +15,11 @@ class ApiService {
   factory ApiService() => _instance;
 
   final Dio _dio = Dio();
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage =
+  const FlutterSecureStorage();
 
-  final String _baseUrl = dotenv.get('BASE_URL_RENDER');
+  static const String _baseUrl =
+      'https://squatmate-server.onrender.com/api/v1';
 
   ApiService._internal() {
     _dio.options.baseUrl = _baseUrl;

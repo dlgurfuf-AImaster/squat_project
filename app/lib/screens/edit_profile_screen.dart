@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/user_model.dart';
 import '../providers/user_provider.dart';
 import '../services/api_service.dart';
+import '../widgets/common_snack_bar.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -62,51 +63,69 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // ── 저장 비즈니스 로직 ─────────────────────────────────────────────────────
   Future<void> _handleSave(UserModel currentUser) async {
     final newNickname = _nicknameController.text.trim();
-    if (newNickname.isEmpty || newNickname == currentUser.name || _isLoading) return;
+    if (newNickname.isEmpty ||
+        newNickname == currentUser.name ||
+        _isLoading) {
+      return;
+    }
 
     FocusScope.of(context).unfocus();
+
     setState(() {
       _isLoading = true;
     });
 
-    final bool success = await ApiService().updateNickname(newNickname);
+    try {
+      final bool success =
+      await ApiService().updateNickname(newNickname);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (success) {
-      context.read<UserProvider>().setUser(
-        UserModel(
-          id: currentUser.id,
-          username: currentUser.username,
-          name: newNickname,
-        ),
+      if (success) {
+        context.read<UserProvider>().setUser(
+          UserModel(
+            id: currentUser.id,
+            username: currentUser.username,
+            name: newNickname,
+          ),
+        );
+
+        setState(() {
+          _isSaved = true;
+        });
+
+        _savedTimer?.cancel();
+        _savedTimer = Timer(
+          const Duration(milliseconds: 2400),
+              () {
+            if (mounted) {
+              setState(() {
+                _isSaved = false;
+              });
+            }
+          },
+        );
+      } else {
+        CommonSnackBar.show(
+          context,
+          message: "닉네임 변경에 실패했습니다. 네트워크 상태를 확인해 주세요.",
+          type: SnackBarType.error,
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+
+      CommonSnackBar.show(
+        context,
+        message: "닉네임 변경 중 오류가 발생했습니다. 다시 시도해 주세요.",
+        type: SnackBarType.error,
       );
-
-      setState(() {
-        _isLoading = false;
-        _isSaved = true;
-      });
-
-      _savedTimer?.cancel();
-      _savedTimer = Timer(const Duration(milliseconds: 2400), () {
-        if (mounted) {
-          setState(() {
-            _isSaved = false;
-          });
-        }
-      });
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("닉네임 변경에 실패했습니다. 네트워크 상태를 확인해 주세요."),
-          backgroundColor: Colors.redAccent,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -499,15 +518,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    "저장 중...",
-                    style: GoogleFonts.anton(
-                      fontSize: 15,
-                      letterSpacing: 0.75,
-                      color: Colors.white,
                     ),
                   ),
                 ] else ...[

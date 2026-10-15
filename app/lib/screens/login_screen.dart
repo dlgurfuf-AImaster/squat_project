@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:app/screens/signup_screen.dart';
+import '../widgets/common_snack_bar.dart';
 import '/services/api_service.dart';
 import 'main_holder.dart';
 import '../dtos/login_request.dart';
@@ -20,6 +21,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _idController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   // 컨트롤러 해제
   @override
@@ -29,53 +31,76 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+
   // 로그인 처리 함수
-  void _handleLogin() async {
-    if (_idController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+
+    if (_idController.text.isEmpty ||
+        _passwordController.text.isEmpty) {
+      CommonSnackBar.show(
         context,
-      ).showSnackBar(const SnackBar(content: Text("아이디와 비밀번호를 입력해주세요.")));
+        message: "아이디와 비밀번호를 입력해주세요.",
+        type: SnackBarType.info,
+      );
       return;
     }
 
-    // 비동기로 일단 띄움
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text("로그인 중...")));
+    setState(() {
+      _isLoading = true;
+    });
 
-    // LoginRequest DTO 생성 및 ApiService 호출
-    final LoginResponse? response = await ApiService().loginUser(
-      LoginRequest(
-        username: _idController.text,
-        password: _passwordController.text,
-      ),
-    );
-
-    // LoginResponse 객체 검증
-    if (response != null && response.token.isNotEmpty) {
-      if (!mounted) return;
-
-      // 로그인 성공 시 UserProvider에 실제 유저 데이터 전달!
-      context.read<UserProvider>().setUser(
-        UserModel(
-          id: 0, // LoginResponse에 id가 없다면 기본값 0 처리 (필요시 response.userId 활용)[cite: 5]
+    try {
+      final LoginResponse? response = await ApiService().loginUser(
+        LoginRequest(
           username: _idController.text,
-          name: response.name.isNotEmpty ? response.name : _idController.text, //[cite: 5, 6]
+          password: _passwordController.text,
         ),
       );
 
-      // 메인 화면으로 이동하며 로그인 화면은 스택에서 제거
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainHolder()),
-      );
-    } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("로그인 실패: 아이디 또는 비밀번호를 확인하세요.")),
+
+      if (response != null && response.token.isNotEmpty) {
+        context.read<UserProvider>().setUser(
+          UserModel(
+            id: 0,
+            username: _idController.text,
+            name: response.name.isNotEmpty
+                ? response.name
+                : _idController.text,
+          ),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MainHolder(),
+          ),
+        );
+      } else {
+        CommonSnackBar.show(
+          context,
+          message: "로그인 실패: 아이디 또는 비밀번호를 확인하세요.",
+          type: SnackBarType.error,
+        );
+      }
+    } catch (error) {
+      if (!mounted) return;
+
+      CommonSnackBar.show(
+        context,
+        message: "로그인 중 오류가 발생했습니다. 다시 시도해주세요.",
+        type: SnackBarType.error,
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -168,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // 5. 메인 로그인 버튼
                   ElevatedButton(
-                    onPressed: _handleLogin,
+                    onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primarySky,
                       foregroundColor: Colors.white,
@@ -192,7 +217,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ],
                       ),
-                      child: const Text(
+                      child: _isLoading
+                          ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                          : const Text(
                         "로그인",
                         style: TextStyle(
                           fontSize: 16,
