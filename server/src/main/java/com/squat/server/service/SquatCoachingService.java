@@ -1,6 +1,7 @@
 package com.squat.server.service;
 
 import com.squat.server.dto.AggregateCoachingRequest;
+import com.squat.server.dto.AggregateCoachingSession;
 import com.squat.server.dto.CoachingResponse;
 import com.squat.server.model.SquatWorkout;
 import com.squat.server.model.User;
@@ -9,7 +10,10 @@ import com.squat.server.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /// 단일, 장기 코칭 서비스 구현 파트
 @Service
@@ -99,17 +103,63 @@ public class SquatCoachingService {
                 );
 
         if (workouts.isEmpty()) {
-            return new CoachingResponse("AGGREGATE", 0, 0, 0, 0, 0, "선택하신 조건에 해당하는 운동 기록이 없습니다.");
+            return new CoachingResponse(
+                    "AGGREGATE", 0, 0, 0, 0, 0,
+                    "선택하신 조건에 해당하는 운동 기록이 없습니다."
+            );
         }
 
-        // 수치 합산
-        int totalCount = workouts.stream().mapToInt(SquatWorkout::getTotalCount).sum();
-        int totalSuccess = workouts.stream().mapToInt(SquatWorkout::getSuccessCount).sum();
-        int totalWaist = workouts.stream().mapToInt(SquatWorkout::getWaistErrorCount).sum();
-        int totalDepth = workouts.stream().mapToInt(SquatWorkout::getDepthErrorCount).sum();
-        int totalFastRepCount = workouts.stream().mapToInt(SquatWorkout::getFastRepCount).sum();
+        // 기록별 날짜와 통계를 유지하면서 시간순 정렬
+        workouts.sort(
+                Comparator.comparing(
+                        SquatWorkout::getRecordTime,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ).thenComparing(
+                        SquatWorkout::getId,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                )
+        );
+
+        // 전체 통계 계산
+        int totalCount = workouts.stream()
+                .mapToInt(SquatWorkout::getTotalCount)
+                .sum();
+
+        int totalSuccess = workouts.stream()
+                .mapToInt(SquatWorkout::getSuccessCount)
+                .sum();
+
+        int totalWaist = workouts.stream()
+                .mapToInt(SquatWorkout::getWaistErrorCount)
+                .sum();
+
+        int totalDepth = workouts.stream()
+                .mapToInt(SquatWorkout::getDepthErrorCount)
+                .sum();
+
+        int totalFastRepCount = workouts.stream()
+                .mapToInt(SquatWorkout::getFastRepCount)
+                .sum();
+
+        // AI 입력용 개별 기록 구성
+        DateTimeFormatter formatter =
+                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        List<AggregateCoachingSession> sessions = workouts.stream()
+                .map(workout -> new AggregateCoachingSession(
+                        workout.getRecordTime() == null
+                                ? null
+                                : workout.getRecordTime().format(formatter),
+                        workout.getTotalCount(),
+                        workout.getSuccessCount(),
+                        workout.getWaistErrorCount(),
+                        workout.getDepthErrorCount(),
+                        workout.getFastRepCount()
+                ))
+                .collect(Collectors.toList());
 
         String coachingMessage = geminiService.generateAggregateCoaching(
+                sessions,
                 workouts.size(),
                 totalCount,
                 totalSuccess,
