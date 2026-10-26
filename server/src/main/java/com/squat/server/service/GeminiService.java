@@ -77,48 +77,7 @@ public class GeminiService {
                 ? ((double) successCount / totalCount) * 100
                 : 0;
 
-        String sessionDetails = sessions.stream()
-                .map(session -> {
-                    int count = session.getTotalCount();
-
-                    String successRate = formatRate(
-                            session.getSuccessCount(), count
-                    );
-                    String waistRate = formatRate(
-                            session.getWaistErrorCount(), count
-                    );
-                    String depthRate = formatRate(
-                            session.getDepthErrorCount(), count
-                    );
-                    String fastRate = formatRate(
-                            session.getFastRepCount(), count
-                    );
-
-                    String time = session.getRecordTime() == null
-                            ? "시간 정보 없음"
-                            : session.getRecordTime();
-
-                    return String.format(
-                            Locale.ROOT,
-                            "- 시간: %s | 전체: %d | 성공: %d (%.1f%%) "
-                                    + "| 허리 오류: %d (%s) "
-                                    + "| 깊이 오류: %d (%s) "
-                                    + "| 빠른 수행 오류: %d (%s)",
-                            time,
-                            count,
-                            session.getSuccessCount(),
-                            count > 0
-                                    ? session.getSuccessCount() * 100.0 / count
-                                    : 0.0,
-                            session.getWaistErrorCount(),
-                            waistRate,
-                            session.getDepthErrorCount(),
-                            depthRate,
-                            session.getFastRepCount(),
-                            fastRate
-                    );
-                })
-                .collect(Collectors.joining("\n"));
+        String sessionDetails = buildSessionDetails(sessions);
 
         String prompt = String.format(
                 Locale.ROOT,
@@ -185,6 +144,48 @@ public class GeminiService {
         );
 
         return callGeminiApi(prompt);
+    }
+
+    String buildSessionDetails(List<AggregateCoachingSession> sessions) {
+        return sessions.stream()
+                .map(session -> {
+                    int count = session.getTotalCount();
+
+                    String waistRate = formatRate(
+                            session.getWaistErrorCount(), count
+                    );
+                    String depthRate = formatRate(
+                            session.getDepthErrorCount(), count
+                    );
+                    String fastRate = formatRate(
+                            session.getFastRepCount(), count
+                    );
+
+                    String time = session.getRecordTime() == null
+                            ? "시간 정보 없음"
+                            : session.getRecordTime();
+
+                    return String.format(
+                            Locale.ROOT,
+                            "- 시간: %s | 전체: %d | 성공: %d (%.1f%%) "
+                                    + "| 허리 오류: %d (%s) "
+                                    + "| 깊이 오류: %d (%s) "
+                                    + "| 빠른 수행 오류: %d (%s)",
+                            time,
+                            count,
+                            session.getSuccessCount(),
+                            count > 0
+                                    ? session.getSuccessCount() * 100.0 / count
+                                    : 0.0,
+                            session.getWaistErrorCount(),
+                            waistRate,
+                            session.getDepthErrorCount(),
+                            depthRate,
+                            session.getFastRepCount(),
+                            fastRate
+                    );
+                })
+                .collect(Collectors.joining("\n"));
     }
 
     private String formatRate(int errorCount, int totalCount) {
