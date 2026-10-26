@@ -2,9 +2,14 @@ package com.squat.server.service;
 
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
+import com.squat.server.dto.AggregateCoachingSession;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 @Service
 public class GeminiService {
@@ -60,6 +65,7 @@ public class GeminiService {
 
     // 2. 종합 세트 피드백
     public String generateAggregateCoaching(
+            List<AggregateCoachingSession> sessions,
             int totalSessions,
             int totalCount,
             int successCount,
@@ -71,38 +77,104 @@ public class GeminiService {
                 ? ((double) successCount / totalCount) * 100
                 : 0;
 
+        String sessionDetails = sessions.stream()
+                .map(session -> {
+                    int count = session.getTotalCount();
+
+                    String successRate = formatRate(
+                            session.getSuccessCount(), count
+                    );
+                    String waistRate = formatRate(
+                            session.getWaistErrorCount(), count
+                    );
+                    String depthRate = formatRate(
+                            session.getDepthErrorCount(), count
+                    );
+                    String fastRate = formatRate(
+                            session.getFastRepCount(), count
+                    );
+
+                    String time = session.getRecordTime() == null
+                            ? "시간 정보 없음"
+                            : session.getRecordTime();
+
+                    return String.format(
+                            Locale.ROOT,
+                            "- 시간: %s | 전체: %d | 성공: %d (%.1f%%) "
+                                    + "| 허리 오류: %d (%s) "
+                                    + "| 깊이 오류: %d (%s) "
+                                    + "| 빠른 수행 오류: %d (%s)",
+                            time,
+                            count,
+                            session.getSuccessCount(),
+                            count > 0
+                                    ? session.getSuccessCount() * 100.0 / count
+                                    : 0.0,
+                            session.getWaistErrorCount(),
+                            waistRate,
+                            session.getDepthErrorCount(),
+                            depthRate,
+                            session.getFastRepCount(),
+                            fastRate
+                    );
+                })
+                .collect(Collectors.joining("\n"));
+
         String prompt = String.format(
+                Locale.ROOT,
                 """
                         You are a professional AI fitness trainer.
-                        Here is the aggregated squat data for the member across %d sets:
+                        
+                        The member selected %d workout records.
+                        The records below are ordered chronologically where timestamps
+                        are available. Records without timestamps are listed last.
+                        
+                        [Individual workout records]
+                        %s
+                        
+                        [Overall totals]
+                        - Total workout records: %d
                         - Total squat attempts: %d
                         - Successful reps: %d (Success rate: %.1f%%)
-                        - Excessive forward lean: %d | Shallow squat: %d | Fast performance: %d
-    
-                        [Feedback Guidelines]
-                        - Base all feedback strictly on the provided squat measurements.
-                        - Never invent, assume, or mention problems that are not represented in the provided data.
-                        - Prioritize the error type with the highest occurrence when determining the main issue.
-                        - Do not rely solely on the success rate when determining the main feedback.
-                        - Even when the success rate is high, address a recurring form error if it occurs frequently.
-                        - Focus on recurring patterns across the entire session rather than isolated errors from a single set.
-                        - Each tip should connect the detected error to a specific movement and an immediately actionable correction.
-                        - Avoid vague advice such as "be careful", "maintain good posture", or "try harder".
-                        - "Excessive forward lean" means the torso leans too far forward during the squat.
+                        - Excessive forward lean: %d
+                        - Shallow squat: %d
+                        - Fast performance: %d
+                        
+                        [Analysis Guidelines]
+                        - Write the entire response in Korean.
+                        - Base every conclusion strictly on the provided data.
+                        - Analyze each error type independently because multiple error
+                          types can occur during the same squat repetition.
+                        - Never add the three error counts together as if they were
+                          mutually exclusive.
+                        - Compare both raw counts and per-record rates. A rate is
+                          unavailable when the record has zero attempts.
+                        - Identify error types that appear repeatedly across multiple
+                          timestamped records.
+                        - Describe improvement or worsening only when the chronological
+                          data supports that conclusion.
+                        - If there are too few timestamped records to establish a trend,
+                          do not infer unsupported changes. Do not mention data insufficiency
+                          or the lack of a long-term trend in the user-facing response.
+                        - Records without timestamps may contribute to overall totals,
+                          but must not be used to infer chronological trends.
+                        - Do not infer causes that are not supported by the measurements.
+                        - Give practical, specific movement corrections.
+                        - "Excessive forward lean" means the torso leans too far forward.
                         - "Shallow squat" means the squat does not reach sufficient depth.
-                        - "Fast performance" means the squat repetition was performed too quickly, preventing sufficient controlled movement and holding throughout the repetition.
-    
+                        - "Fast performance" means the repetition was performed too quickly
+                          to maintain controlled movement.
+                        
                         [Formatting Rules]
-                        1. CRITICAL: You MUST write the entire response in Korean.
-                        2. Start directly with the analysis without any intro, greetings, or concluding remarks.
-                        3. Line 1: Write an ultra-concise, high-impact punchline slogan in Korean (under 7 words) summarizing overall performance.
-                           - VARIETY RULE: Avoid static boilerplate phrases. Actively use creative Korean phrasing, synonyms, and varied vocabulary so each session analysis feels fresh and distinct.
-                           - Concept Variations for Line 1:
-                             * Shallow squat dominant: Dynamically vary between Korean concepts like "today's key is depth", "completing full range of motion", or "securing depth for lower body activation".
-                             * Fast performance dominant: Dynamically vary between Korean concepts like "slow down and control the movement", "move with deliberate control", or "focus on a steady tempo".
-                             * Overall good posture: Dynamically vary between Korean concepts like "stable form maintained", "perfect tempo & execution", or "keep this exact momentum".
-                        4. Line break, then write 2-3 bullet points (- ) in Korean explaining main causes and practical actionable tips with fresh, varied wording.
-                        5. Never use emojis. Use bold text (**keyword**) for key terms to improve readability.""",
+                        1. Start directly with a concise Korean slogan under 7 words.
+                        2. Follow with 2-3 Korean bullet points.
+                        3. Prioritize the most meaningful recurring error or data-supported trend.
+                        4. Each bullet must present one key finding and one actionable correction.
+                        5. Use bold text for key terms. Do not use emojis, greetings, or concluding remarks.
+                        6. Keep the response concise and information-dense. Avoid repetition, unnecessary background, and data limitations that do not affect practical recommendations.
+                        """,
+                totalSessions,
+                sessionDetails,
                 totalSessions,
                 totalCount,
                 successCount,
@@ -113,6 +185,18 @@ public class GeminiService {
         );
 
         return callGeminiApi(prompt);
+    }
+
+    private String formatRate(int errorCount, int totalCount) {
+        if (totalCount <= 0) {
+            return "계산 불가";
+        }
+
+        return String.format(
+                Locale.ROOT,
+                "%.1f%%",
+                errorCount * 100.0 / totalCount
+        );
     }
 
     // 공식 Gen AI SDK 호출 메서드
