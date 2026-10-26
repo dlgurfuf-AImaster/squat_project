@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,13 +25,23 @@ public class SquatWorkoutService {
         this.userRepository = userRepository;
     }
 
+
     // 스쿼트 기록 저장 메소드
     @Transactional
     public SquatWorkout saveWorkout(String username, SquatWorkoutRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다: " + username));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "존재하지 않는 사용자입니다: " + username));
 
-        // SquatWorkout 엔티티 생성 및 pure 데이터 세팅
+        // 해당 사용자의 UUID 기록이 이미 존재하면 기존 기록 반환
+        Optional<SquatWorkout> existingWorkout =
+                squatWorkoutRepository.findByUserAndUuid(user, request.getUuid());
+
+        if (existingWorkout.isPresent()) {
+            return existingWorkout.get();
+        }
+
+        // 존재하지 않는 기록이면 새로 생성
         SquatWorkout workout = new SquatWorkout();
         workout.setUuid(request.getUuid());
         workout.setUser(user);
@@ -43,6 +54,7 @@ public class SquatWorkoutService {
 
         return squatWorkoutRepository.save(workout);
     }
+
 
     // 로그인한 사용자의 서버 저장 운동 기록 전체 조회 메서드
     @Transactional(readOnly = true)

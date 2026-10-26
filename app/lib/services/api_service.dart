@@ -41,18 +41,39 @@ class ApiService {
     return await _storage.read(key: 'user_name');
   }
 
+
   /// 1. 회원가입 요청
-  Future<bool> registerUser(SignupRequest request) async {
+  Future<String?> registerUser(SignupRequest request) async {
     try {
       final response = await _dio.post(
         "/user/signup",
         data: request.toJson(),
       );
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode == 200 ||
+          response.statusCode == 201) {
+        return null; // 성공
+      }
+
+      return "회원가입에 실패했습니다.";
+    } on DioException catch (e) {
+      final data = e.response?.data;
+
+      if (data is String && data.isNotEmpty) {
+        return data;
+      }
+
+      if (data is Map) {
+        final message = data['message'] ?? data['error'];
+        if (message != null) {
+          return message.toString();
+        }
+      }
+
+      return "회원가입에 실패했습니다. 잠시 후 다시 시도해 주세요.";
     } catch (e) {
-      print("회원가입 통신 에러: $e");
-      return false;
+      print("회원가입 예상치 못한 오류: $e");
+      return "예기치 않은 오류가 발생했습니다.";
     }
   }
 

@@ -28,8 +28,10 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  // 유효성 검사 (비즈니스 로직 100% 유지)
-  void _handleSignup() async {
+
+  // 회원가입 요청 및 결과 처리 (유효성 검사)
+  Future<void> _handleSignup() async {
+    // 1. 입력값 검증
     if (_idController.text.isEmpty ||
         _passwordController.text.isEmpty ||
         _confirmPasswordController.text.isEmpty ||
@@ -38,15 +40,20 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    if (_passwordController.text != _confirmPasswordController.text) {
-      _showSnackBar("비밀번호가 일치하지 않습니다.", type: SnackBarType.error);
+    if (_passwordController.text !=
+        _confirmPasswordController.text) {
+      _showSnackBar(
+        "비밀번호가 일치하지 않습니다.",
+        type: SnackBarType.error,
+      );
       return;
     }
 
+    // 2. 회원가입 요청 안내
     _showSnackBar("회원가입 요청 중...");
 
-    // SignupRequest DTO 생성 및 전송
-    bool isSuccess = await ApiService().registerUser(
+    // 3. 서버에 회원가입 요청
+    final errorMessage = await ApiService().registerUser(
       SignupRequest(
         name: _nameController.text,
         username: _idController.text,
@@ -54,14 +61,25 @@ class _SignupScreenState extends State<SignupScreen> {
       ),
     );
 
-    if (isSuccess) {
-      _showSnackBar("회원가입이 완료되었습니다!", type: SnackBarType.success);
-      if (!mounted) return;
+    // 요청이 완료되기 전에 화면이 종료되었는지 확인
+    if (!mounted) return;
+
+    // 4. 결과 처리
+    if (errorMessage == null) {
+      _showSnackBar(
+        "회원가입이 완료되었습니다!",
+        type: SnackBarType.success,
+      );
+
       Navigator.pop(context);
     } else {
-      _showSnackBar("회원가입에 실패했습니다.", type: SnackBarType.error);
+      _showSnackBar(
+        errorMessage,
+        type: SnackBarType.error,
+      );
     }
   }
+
 
   void _showSnackBar(
       String message, {

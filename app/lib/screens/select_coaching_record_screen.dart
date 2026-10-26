@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../dtos/squat_workout_response.dart';
 import '../providers/coaching_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -14,7 +15,7 @@ class SelectCoachingRecordScreen extends StatefulWidget {
 
 class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen> {
   // 복수 선택을 위한 Set 구조
-  final Set<dynamic> _selectedRecords = {};
+  final Set<SquatWorkoutResponse> _selectedRecords = {};
 
   // UI 상태 관리 (달력형 / 나열형)
   bool _isCalendarView = true;
@@ -141,8 +142,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
   // 선택 완료 시 UUID Set 반환
   void _confirmSelection() {
     final selectedUuids = _selectedRecords
-        .map((r) => r.uuid?.toString())
-        .whereType<String>()
+        .map((r) => r.uuid)
         .toSet();
 
     Navigator.pop(context, selectedUuids);
@@ -1001,10 +1001,7 @@ class _SelectCoachingRecordScreenState extends State<SelectCoachingRecordScreen>
   Widget _buildBottomConfirmButton() {
     int totalReps = 0;
     for (final record in _selectedRecords) {
-      totalReps += (record.successCount as int? ?? 0) +
-          (record.waistErrorCount as int? ?? 0) +
-          (record.depthErrorCount as int? ?? 0) +
-          (record.fastRepCount as int? ?? 0);
+      totalReps += record.totalCount;
     }
 
     return Container(
